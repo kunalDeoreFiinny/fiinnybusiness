@@ -453,6 +453,227 @@ function MainContent() {
         </div>
       </section>
 
+<<<<<<< Updated upstream
+=======
+      {/* NEW FEATURES SECTION - APPLE STYLE BENTO GRID */}
+      {/* NEW "EVERYTHING YOU NEED" BENTO GRID SECTION - PREMIUM DESIGN */}
+      <section className="py-32 bg-slate-50 relative overflow-hidden" id="features">
+
+        {/* Premium Background Glows */}
+        <div className="absolute top-40 left-0 w-[600px] h-[600px] bg-teal-200/20 rounded-full blur-[120px] pointer-events-none mix-blend-multiply" />
+        <div className="absolute bottom-40 right-0 w-[600px] h-[600px] bg-blue-200/20 rounded-full blur-[120px] pointer-events-none mix-blend-multiply" />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+
+          {/* Section Header shown in the screenshot */}
+          <div className="text-center max-w-3xl mx-auto mb-20">
+            <h2 className="text-4xl lg:text-6xl font-black text-slate-900 mb-6 tracking-tight leading-tight">
+              Everything you need. <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-emerald-500">
+                All in one place.
+              </span>
+            </h2>
+            <p className="text-xl text-slate-500 leading-relaxed font-medium">
+              Powerful tools wrapped in a stunning interface. Designed to make managing money feel effortless.
+            </p>
+          </div>
+
+          {/* Advanced Bento Grid Layout */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+
+            {/* CARD 1: Analytics (Large White Card) */}
+            <motion.div
+              layoutId="analytics"
+              onClick={() => setSelectedId("analytics")}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              whileHover={{ y: -8 }}
+              className="md:col-span-2 bg-white rounded-[2.5rem] p-10 md:p-12 border border-slate-100 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-teal-900/5 transition-all duration-500 overflow-hidden relative group cursor-pointer"
+            >
+              <div className="flex flex-col md:flex-row items-center justify-between h-full gap-8">
+                <div className="relative z-10 flex-1 text-center md:text-left">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-50 text-teal-700 text-xs font-bold uppercase tracking-widest mb-6 border border-teal-100">
+                    <PieChart className="w-3 h-3" /> Analytics
+                  </div>
+                  <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-4 leading-tight">
+                    Know where every <br /> penny goes.
+                  </h3>
+                  <p className="text-slate-500 text-lg font-medium">Deep insights into your spending patterns.</p>
+                </div>
+                <div className="flex-1 w-full flex justify-center md:justify-end relative">
+                  {/* 3D Image with Hover Effect */}
+                  <Image
+                    src="/assets/images/3d-analytics.png"
+                    alt="Analytics"
+                    width={400}
+                    height={400}
+                    className="w-[80%] md:w-full max-w-[320px] h-auto object-contain drop-shadow-2xl transition-transform duration-700 ease-out group-hover:scale-105 group-hover:rotate-1 group-hover:-translate-y-2"
+                  />
+                </div>
+              </div>
+            </motion.div>
+
+            {/* CARD 2: Shared Finances (Small Dark Blue Card) */}
+            <motion.div
+              layoutId="shared"
+              onClick={() => setSelectedId("shared")}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              whileHover={{ y: -8 }}
+              transition={{ delay: 0.1 }}
+              // Using a specific dark color to match the screenshot's premium feel
+              className="md:col-span-1 bg-[#0F172A] rounded-[2.5rem] p-8 md:p-10 shadow-xl hover:shadow-2xl hover:shadow-slate-900/20 transition-all duration-500 overflow-hidden relative group text-white cursor-pointer border border-slate-800"
+            >
+              {/* Subtle gradient overlay for depth */}
+              <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-b from-slate-800/0 to-slate-900/80 pointer-events-none" />
+
+              <div className="relative z-10 h-full flex flex-col items-center text-center">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-white text-xs font-bold uppercase tracking-widest mb-4 backdrop-blur-md border border-white/10">
+                  <Users className="w-3 h-3" /> Shared Finances
+                </div>
+                <h3 className="text-2xl font-bold mb-2">Better Together.</h3>
+                <p className="text-slate-400 mb-6 text-sm font-medium">Manage bills with your partner.</p>
+                <div className="mt-auto">
+                  <Image
+                    src="/assets/images/3d-couple.png"
+                    alt="Couples"
+                    width={250}
+                    height={250}
+                    className="w-44 h-auto drop-shadow-2xl transition-transform duration-700 ease-out group-hover:scale-110 group-hover:-translate-y-2"
+                  />
+                </div>
+              </div>
+            </motion.div>
+
+            {/* CARD 3: Goals/Optimization (Small White Card) */}
+            <motion.div
+              layoutId="goals"
+              onClick={() => setSelectedId("goals")}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              whileHover={{ y: -8 }}
+              transition={{ delay: 0.2 }}
+              className="md:col-span-1 bg-white rounded-[2.5rem] p-8 md:p-10 border border-slate-100 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-amber-900/5 transition-all duration-500 overflow-hidden relative group cursor-pointer"
+            >
+              {/* Warm gradient at bottom */}
+              <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-amber-50/50 to-transparent" />
+
+              <div className="relative z-10 h-full flex flex-col items-center text-center">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-bold uppercase tracking-widest mb-4 border border-amber-100">
+                  <Trophy className="w-3 h-3" /> Optimization
+                </div>
+                <h3 className="text-2xl font-bold text-slate-900 mb-2">Dream big.</h3>
+                <p className="text-slate-500 mb-6 text-sm font-medium">Allocate for what matters.</p>
+                <div className="mt-auto">
+                  <Image
+                    src="/assets/images/3d-goals.png"
+                    alt="Goals"
+                    width={250}
+                    height={250}
+                    className="w-44 h-auto drop-shadow-xl transition-transform duration-500 ease-out group-hover:rotate-6 group-hover:scale-110"
+                  />
+                </div>
+              </div>
+            </motion.div>
+
+            {/* CARD 4: Global (Large Teal Gradient Card) */}
+            <motion.div
+              layoutId="global"
+              onClick={() => setSelectedId("global")}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              whileHover={{ y: -8 }}
+              transition={{ delay: 0.3 }}
+              className="md:col-span-2 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-[2.5rem] p-10 md:p-12 shadow-xl shadow-teal-900/20 hover:shadow-2xl hover:shadow-teal-900/30 transition-all duration-500 overflow-hidden relative group text-white cursor-pointer"
+            >
+              <div className="flex flex-col md:flex-row items-center justify-between h-full gap-8 relative z-10">
+                <div className="flex-1 order-2 md:order-1 flex justify-center md:justify-start">
+                  {/* Globe Image on the left */}
+                  <Image
+                    src="/assets/images/3d-network.png"
+                    alt="Global"
+                    width={400}
+                    height={400}
+                    className="w-[80%] md:w-full max-w-[320px] h-auto drop-shadow-2xl transition-transform duration-700 ease-out group-hover:scale-110 group-hover:rotate-2"
+                  />
+                </div>
+                <div className="flex-1 order-1 md:order-2 text-center md:text-left">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-bold uppercase tracking-widest mb-6 backdrop-blur-md border border-white/20">
+                    <Globe className="w-3 h-3" /> Multi-Currency
+                  </div>
+                  <h3 className="text-3xl lg:text-4xl font-bold mb-4 leading-tight">Track globally. <br /> Live locally.</h3>
+                  <p className="text-teal-50 text-lg font-medium opacity-90">Handle 100+ currencies with real-time conversion.</p>
+                </div>
+              </div>
+            </motion.div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* Section 1: The Problem with Most Finance Apps - UPDATED */}
+      < section className="pt-24 pb-20 bg-slate-50 border-t border-slate-100" >
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-6 font-display">
+            Stop managing <span className="text-rose-500">chaos.</span> <br />
+            Start building <span className="text-teal-600">wealth.</span>
+          </h2>
+          <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed mb-12">
+            The old way is manual, messy, and public. The Fiinny way is automated, private, and precise.
+          </p>
+
+          <div className="grid md:grid-cols-2 gap-8 text-left">
+            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 opacity-70 hover:opacity-100 transition-opacity">
+              <h3 className="font-bold text-slate-900 mb-6 flex items-center gap-2">
+                <span className="text-rose-500">⚠</span>
+                The Chaos (Most Apps)
+              </h3>
+              <ul className="space-y-4">
+                {[
+                  "Manual entry feels like homework",
+                  "Data sold to advertisers",
+                  "Monthly ledgers that ignore daily reality",
+                  "Restrictive limits on your own data",
+                  "Public by default"
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-3 text-slate-600 text-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-2 flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="bg-slate-900 p-8 rounded-3xl shadow-xl text-white relative overflow-hidden ring-1 ring-teal-500/30">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/20 rounded-full blur-3xl" />
+              <h3 className="font-bold text-white mb-6 flex items-center gap-2 relative z-10">
+                <CheckCircle2 className="w-5 h-5 text-teal-400" />
+                The Fiinny System
+              </h3>
+              <ul className="space-y-4 relative z-10">
+                {[
+                  "Auto-capture in seconds",
+                  "Zero knowledge privacy architecture",
+                  "Real-time wealth optimization",
+                  "Unlimited freedom",
+                  "Private by design"
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-3 text-teal-50 text-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal-400 mt-2 flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section >
+
+>>>>>>> Stashed changes
       {/* Watch Videos Section */}
       < section id="fiinny-ai" className="py-24 bg-slate-900 text-white overflow-hidden scroll-mt-24" >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
