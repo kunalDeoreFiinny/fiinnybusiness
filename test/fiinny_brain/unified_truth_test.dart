@@ -41,7 +41,7 @@ void main() {
           ),
         ],
         creditCards: [
-          const CreditCardModel(
+          CreditCardModel(
             id: 'c1',
             bankName: 'Amex',
             last4Digits: '8888',

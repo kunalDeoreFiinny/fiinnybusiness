@@ -9,7 +9,12 @@ import 'package:lifemap/services/user_service.dart';
 
 class MainNavScreen extends StatefulWidget {
   final String userPhone;
-  const MainNavScreen({required this.userPhone, super.key});
+  final bool showSmsPrompt; // NEW
+  const MainNavScreen({
+    required this.userPhone,
+    this.showSmsPrompt = false, // default false
+    super.key,
+  });
 
   @override
   State<MainNavScreen> createState() => _MainNavScreenState();
@@ -133,7 +138,10 @@ class _MainNavScreenState extends State<MainNavScreen>
   Widget build(BuildContext context) {
     final phone = _effectivePhone;
     final screens = <Widget>[
-      DashboardScreen(userPhone: phone),
+      DashboardScreen(
+        userPhone: phone,
+        showSmsPrompt: widget.showSmsPrompt, // Pass it down
+      ),
       ExpensesScreen(userPhone: phone),
       FriendsScreen(userPhone: phone),
       SharingScreen(currentUserPhone: phone),

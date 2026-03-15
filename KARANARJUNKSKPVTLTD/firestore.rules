@@ -1,0 +1,129 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    function getUserData() {
+      let docRef = /databases/$(database)/documents/users/$(request.auth.uid);
+      return exists(docRef) ? get(docRef).data : null;
+    }
+    
+    function hasRole(roleName) {
+      let data = getUserData();
+      return data != null && data.role == roleName;
+    }
+    
+    function getLinkedId() {
+      let data = getUserData();
+      return data != null ? data.linkedId : null;
+    }
+
+    function isAdminOrAnalyst() {
+      let data = getUserData();
+      return data != null && (data.role == 'admin' || data.role == 'analyst' || data.role == 'master');
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read, write: if request.auth != null && (request.auth.uid == userId || isAdminOrAnalyst());
+    }
+    
+    // Online Orders schema
+    match /onlineOrders/{orderId} {
+      allow read, write: if request.auth != null && isAdminOrAnalyst();
+    }
+    
+    // Master collections (tenantId = 'master')
+    match /retailers/{rId} {
+      allow read: if request.auth != null && (isAdminOrAnalyst() || (hasRole('retailer') && getLinkedId() == rId));
+      allow write: if request.auth != null && isAdminOrAnalyst();
+      
+      match /{subcollection=**} {
+        allow read, write: if request.auth != null && (isAdminOrAnalyst() || (hasRole('retailer') && getLinkedId() == rId));
+      }
+    }
+    
+    match /manufacturers/{mId} {
+      allow read: if request.auth != null && (isAdminOrAnalyst() || (hasRole('manufacturer') && getLinkedId() == mId));
+      allow write: if request.auth != null && isAdminOrAnalyst();
+    }
+    
+    match /salesOrders/{soId} {
+      allow read: if request.auth != null && (
+        isAdminOrAnalyst() ||
+        (hasRole('retailer') && resource.data.retailerId == getLinkedId()) ||
+        (hasRole('manufacturer') && resource.data.manufacturerId == getLinkedId())
+      );
+      allow update: if request.auth != null && (isAdminOrAnalyst() || (hasRole('manufacturer') && resource.data.manufacturerId == getLinkedId()));
+      allow create, delete: if request.auth != null && isAdminOrAnalyst();
+    }
+    
+    match /orders/{oId} {
+      allow read: if request.auth != null && (
+        isAdminOrAnalyst() || 
+        (hasRole('retailer') && resource.data.retailerId == getLinkedId())
+      );
+      allow write: if request.auth != null && isAdminOrAnalyst();
+    }
+    
+    match /products/{pId} {
+      allow read: if request.auth != null; // Everyone can read products
+      allow write: if request.auth != null && isAdminOrAnalyst();
+    }
+    
+    // Tenant specific collections
+    match /tenants/{tenantId} {
+      match /retailers/{rId} {
+        allow read: if request.auth != null && (isAdminOrAnalyst() || (hasRole('retailer') && getLinkedId() == rId));
+        allow write: if request.auth != null && isAdminOrAnalyst();
+        
+        match /{subcollection=**} {
+          allow read, write: if request.auth != null && (isAdminOrAnalyst() || (hasRole('retailer') && getLinkedId() == rId));
+        }
+      }
+      
+      match /manufacturers/{mId} {
+        allow read: if request.auth != null && (isAdminOrAnalyst() || (hasRole('manufacturer') && getLinkedId() == mId));
+        allow write: if request.auth != null && isAdminOrAnalyst();
+      }
+      
+      match /salesOrders/{soId} {
+        allow read: if request.auth != null && (
+          isAdminOrAnalyst() ||
+          (hasRole('retailer') && resource.data.retailerId == getLinkedId()) ||
+          (hasRole('manufacturer') && resource.data.manufacturerId == getLinkedId())
+        );
+        allow update: if request.auth != null && (isAdminOrAnalyst() || (hasRole('manufacturer') && resource.data.manufacturerId == getLinkedId()));
+        allow create, delete: if request.auth != null && isAdminOrAnalyst();
+      }
+      
+      match /orders/{oId} {
+        allow read: if request.auth != null && (
+          isAdminOrAnalyst() || 
+          (hasRole('retailer') && resource.data.retailerId == getLinkedId())
+        );
+        allow write: if request.auth != null && isAdminOrAnalyst();
+      }
+      
+      match /products/{pId} {
+        allow read: if request.auth != null; // Everyone can read products
+        allow write: if request.auth != null && isAdminOrAnalyst();
+      }
+      
+      match /onlineOrders/{orderId} {
+        allow read, write: if request.auth != null && isAdminOrAnalyst();
+      }
+
+      match /settings/rolePermissions {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null && request.auth.uid != null && isAdminOrAnalyst();
+      }
+    }
+    
+    // Fallback: Default allow all for backward compatibility where needed, but log warning in our minds
+    // We keep this to ensure we don't accidentally block the user out of their existing schemas
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

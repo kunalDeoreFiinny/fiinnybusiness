@@ -52,6 +52,7 @@ class ExpenseItem {
   final List<String> settledFriendIds;
   final String payerId;
   final Map<String, double>? customSplits;
+  final Map<String, double>? paidBy; // New: Multi-payer support
 
   // Card basics (existing)
   final String? cardType; // "Credit Card" | "Debit Card"
@@ -139,6 +140,7 @@ class ExpenseItem {
     this.settledFriendIds = const [],
     required this.payerId,
     this.customSplits,
+    this.paidBy,
     this.cardType,
     this.cardLast4,
     this.isBill = false,
@@ -195,6 +197,7 @@ class ExpenseItem {
     List<String>? settledFriendIds,
     String? payerId,
     Map<String, double>? customSplits,
+    Map<String, double>? paidBy,
     String? cardType,
     String? cardLast4,
     bool? isBill,
@@ -251,6 +254,7 @@ class ExpenseItem {
           settledFriendIds ?? List<String>.from(this.settledFriendIds),
       payerId: payerId ?? this.payerId,
       customSplits: customSplits ?? this.customSplits,
+      paidBy: paidBy ?? this.paidBy,
       cardType: cardType ?? this.cardType,
       cardLast4: cardLast4 ?? this.cardLast4,
       isBill: isBill ?? this.isBill,
@@ -346,6 +350,7 @@ class ExpenseItem {
       'settledFriendIds': settledFriendIds,
       'payerId': payerId,
       if (customSplits != null) 'customSplits': customSplits,
+      if (paidBy != null) 'paidBy': paidBy,
       if (cardType != null) 'cardType': cardType,
       if (cardLast4 != null) 'cardLast4': cardLast4,
       'isBill': isBill,
@@ -462,6 +467,7 @@ class ExpenseItem {
           : const [],
       payerId: json['payerId'] ?? '',
       customSplits: parseCustomSplits(json['customSplits']),
+      paidBy: parseCustomSplits(json['paidBy']),
       cardType: json['cardType'],
       cardLast4: json['cardLast4'],
       isBill: json['isBill'] ?? false,
@@ -566,6 +572,7 @@ class ExpenseItem {
           : const [],
       payerId: data['payerId'] ?? '',
       customSplits: parseCustomSplits(data['customSplits']),
+      paidBy: parseCustomSplits(data['paidBy']),
       cardType: data['cardType'],
       cardLast4: data['cardLast4'],
       isBill: data['isBill'] ?? false,

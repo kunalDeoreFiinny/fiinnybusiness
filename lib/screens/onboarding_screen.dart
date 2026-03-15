@@ -27,7 +27,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
-  final _email = TextEditingController();
+
   final _phone = TextEditingController();
 
   String? _country = 'India';
@@ -47,11 +47,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     List.generate(kAvatarCount, (i) => 'assets/avatars/avatar${i + 1}.png'),
   );
 
-  bool get _needsEmail {
-    final u = FirebaseAuth.instance.currentUser;
-    return (u?.email ?? '').isEmpty;
-  }
-
   @override
   void initState() {
     super.initState();
@@ -62,7 +57,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   void dispose() {
     _name.dispose();
-    _email.dispose();
+
     _phone.dispose();
     super.dispose();
   }
@@ -71,7 +66,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final u = FirebaseAuth.instance.currentUser;
     if (u != null) {
       _name.text = u.displayName ?? '';
-      if ((u.email ?? '').isNotEmpty) _email.text = u.email!;
+
       if ((u.phoneNumber ?? '').isNotEmpty) _phone.text = u.phoneNumber!;
     }
   }
@@ -91,7 +86,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => MainNavScreen(userPhone: authPhone)),
+        MaterialPageRoute(
+          builder: (_) => MainNavScreen(
+            userPhone: authPhone,
+            showSmsPrompt:
+                true, // Returning user, might need prompt if never done?
+            // Actually, for existing users who are ALREADY onboarded,
+            // the logic in DashboardScreen handles the 'if (!sms_perm)' check
+            // if we pass true.
+            // BUT the requirement is "as soon as user come to dashboard after the onboarding screen".
+            // So technically only for NEW onboardings.
+            // However, _checkOnboarded is for people who ARE onboarded but somehow ended up here.
+            // Let's safe-guard it: if they are already onboarded, maybe don't force it?
+            // The prompt says "after the onboarding screen".
+            // If satisfied with 'only new', pass true only in _save.
+            // If satisfied with 'anytime they hit dashboard from here', pass true.
+            // Let's pass FALSE here to be less intrusive for re-installs who might have denied it before.
+            // WAIT, prompt says "after the onboarding screen we will direclty ask".
+            // So let's stick to the _save() flow for the "direct ask".
+          ),
+        ),
       );
     }
   }
@@ -130,7 +144,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
 
     final name = _name.text.trim();
-    final email = _email.text.trim();
 
     late final String docId;
     try {
@@ -164,7 +177,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         'language': _language,
         'avatar': photo ?? _avatarAsset ?? '',
         'onboarded': true,
-        'email': email,
+        // 'email': email, // Removed
         'phone': _phone.text.trim().isNotEmpty
             ? _phone.text.trim()
             : (u.phoneNumber ?? ''),
@@ -188,7 +201,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (!mounted) return;
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => MainNavScreen(userPhone: docId)),
+      MaterialPageRoute(
+        builder: (_) => MainNavScreen(
+          userPhone: docId,
+          showSmsPrompt: true, // ✅ Just finished onboarding, so SHOW PROMPT
+        ),
+      ),
     );
   }
 
@@ -312,32 +330,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               : null,
                         ),
                         const SizedBox(height: 12),
-
-                        if (_needsEmail)
-                          Column(
-                            children: [
-                              TextFormField(
-                                controller: _email,
-                                keyboardType: TextInputType.emailAddress,
-                                decoration: _glassFieldDecoration(
-                                  label: "Email",
-                                  icon: Icons.email,
-                                  filledBorder: filledField,
-                                ),
-                                validator: (val) {
-                                  if (val == null || val.trim().isEmpty) {
-                                    return "Please enter your email";
-                                  }
-                                  if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
-                                      .hasMatch(val)) {
-                                    return "Enter a valid email";
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 12),
-                            ],
-                          ),
 
                         TextFormField(
                           controller: _phone,
@@ -520,8 +512,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                   Navigator.pushReplacement(
                                     context,
                                     MaterialPageRoute(
-                                        builder: (_) =>
-                                            MainNavScreen(userPhone: docId)),
+                                        builder: (_) => MainNavScreen(
+                                              userPhone: docId,
+                                              showSmsPrompt:
+                                                  true, // ✅ Skip means they want to use app, so SHOW PROMPT
+                                            )),
                                   );
                                 },
                           child: const Text("Skip for now"),

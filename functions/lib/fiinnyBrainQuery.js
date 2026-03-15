@@ -41,7 +41,34 @@ export const fiinnyBrainQuery = functions.https.onRequest(async (req, res) => {
             .get();
         const recentHistory = recentSnap.docs.map(doc => {
             const d = doc.data();
-            return `ID: ${doc.id} | ${d.date?.toDate?.().toISOString().split('T')[0]} | ₹${d.amount} | ${d.category} | ${d.description}`;
+            let dateStr = "Unknown Date";
+            if (d.date) {
+                if (typeof d.date.toDate === 'function') {
+                    dateStr = d.date.toDate().toISOString().split('T')[0];
+                }
+                else {
+                    dateStr = String(d.date).split('T')[0];
+                }
+            }
+            return `Expense ID: ${doc.id} | ${dateStr} | ₹${d.amount} | ${d.category} | ${d.description}`;
+        }).join("\n");
+        // Fetch Loans, Goals, and Assets
+        const [loansSnap, goalsSnap, assetsSnap] = await Promise.all([
+            db.collection("users").doc(userPhone).collection("loans").get(),
+            db.collection("users").doc(userPhone).collection("goals").get(),
+            db.collection("users").doc(userPhone).collection("assets").get()
+        ]);
+        const loansInfo = loansSnap.docs.map(doc => {
+            const d = doc.data();
+            return `Loan: ${d.title} | Amount: ₹${d.amount} | EMI: ₹${d.emiAmount}`;
+        }).join("\n");
+        const goalsInfo = goalsSnap.docs.map(doc => {
+            const d = doc.data();
+            return `Goal: ${d.title} | Target: ₹${d.targetAmount} | Saved: ₹${d.savedAmount}`;
+        }).join("\n");
+        const assetsInfo = assetsSnap.docs.map(doc => {
+            const d = doc.data();
+            return `Asset: ${d.name} | Value: ₹${d.value}`;
         }).join("\n");
         // Call OpenAI with function calling
         const openai = getOpenAI();
@@ -71,7 +98,7 @@ TOOLS:
                 },
                 {
                     role: "user",
-                    content: `My recent expenses:\n${recentHistory}\n\nMy Friend List is accessible via tools.`
+                    content: `My recent expenses:\n${recentHistory}\n\nMy Active Loans:\n${loansInfo}\n\nMy Active Goals:\n${goalsInfo}\n\nMy Assets:\n${assetsInfo}\n\nMy Friend List is accessible via tools.`
                 },
                 {
                     role: "assistant",

@@ -1,0 +1,81 @@
+import { db } from "@/lib/firebase";
+import {
+    collection,
+    doc,
+    getDocs,
+    deleteDoc,
+    query,
+    orderBy,
+    onSnapshot,
+    setDoc,
+    writeBatch,
+    limit,
+    where
+} from "firebase/firestore";
+import { ExpenseItem, expenseConverter } from "@/lib/models/ExpenseItem";
+
+export class ExpenseService {
+    static async getExpenses(userId: string, limitCount?: number): Promise<ExpenseItem[]> {
+        let q = query(collection(db, "users", userId, "expenses"), orderBy("date", "desc"));
+        if (limitCount) {
+            q = query(q, limit(limitCount));
+        }
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => expenseConverter.fromFirestore(doc));
+    }
+
+    static streamExpenses(userId: string, callback: (items: ExpenseItem[]) => void) {
+        const q = query(collection(db, "users", userId, "expenses"), orderBy("date", "desc"));
+        return onSnapshot(q, (snapshot) => {
+            const items = snapshot.docs.map(doc => expenseConverter.fromFirestore(doc));
+            callback(items);
+        });
+    }
+
+    static async deleteExpense(userId: string, expenseId: string) {
+        await deleteDoc(doc(db, "users", userId, "expenses", expenseId));
+    }
+
+    static async addExpense(userId: string, expense: ExpenseItem) {
+        let ref;
+        if (!expense.id) {
+            ref = doc(collection(db, "users", userId, "expenses"));
+            expense.id = ref.id;
+        } else {
+            ref = doc(db, "users", userId, "expenses", expense.id);
+        }
+
+        console.log(`[ExpenseService] Save/Update expense ${expense.id} for ${userId}`);
+        try {
+            await setDoc(ref, expenseConverter.toFirestore(expense));
+            console.log(`[ExpenseService] Successfully wrote expense ${expense.id}`);
+        } catch (e) {
+            console.error(`[ExpenseService] Failed to write expense`, e);
+            throw e;
+        }
+    }
+
+    static async updateExpense(userId: string, expense: ExpenseItem) {
+        return this.addExpense(userId, expense);
+    }
+
+    static async getExpensesByFriend(userId: string, friendId: string): Promise<ExpenseItem[]> {
+        const q = query(
+            collection(db, "users", userId, "expenses"),
+            where("friendIds", "array-contains", friendId),
+            orderBy("date", "desc")
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => expenseConverter.fromFirestore(doc));
+    }
+
+    static async getExpensesByGroup(userId: string, groupId: string): Promise<ExpenseItem[]> {
+        const q = query(
+            collection(db, "users", userId, "expenses"),
+            where("groupId", "==", groupId),
+            orderBy("date", "desc")
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => expenseConverter.fromFirestore(doc));
+    }
+}

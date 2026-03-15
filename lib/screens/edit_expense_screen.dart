@@ -81,6 +81,13 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
   bool _loading = true;
   bool _saving = false;
 
+  // Multi-payer state
+  bool _isMultiPayer = false;
+  Map<String, double> _confirmedPaidBy = {};
+
+  bool _isCustomSplit = false;
+  Map<String, double> _customSplits = {};
+
   @override
   void initState() {
     super.initState();
@@ -147,6 +154,21 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
         !_labels.contains(widget.expense.label)) {
       _labels.insert(0, widget.expense.label!);
       _selectedLabel = widget.expense.label!;
+    }
+
+    // Init Multi-payer
+    if (widget.expense.paidBy != null && widget.expense.paidBy!.isNotEmpty) {
+      _isMultiPayer = true;
+      _confirmedPaidBy = Map.from(widget.expense.paidBy!);
+    } else {
+      _isMultiPayer = false;
+      _confirmedPaidBy = {};
+    }
+
+    if (widget.expense.customSplits != null &&
+        widget.expense.customSplits!.isNotEmpty) {
+      _isCustomSplit = true;
+      _customSplits = Map.from(widget.expense.customSplits!);
     }
 
     _loadInitialData();
@@ -333,17 +355,36 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
   void _onGroupChanged(String? value) {
     setState(() {
       final normalized = (value == null || value.isEmpty) ? null : value;
-      final wasGroup = (_selectedGroupId ?? '').isNotEmpty;
       _selectedGroupId = normalized;
-      final nowGroup = (_selectedGroupId ?? '').isNotEmpty;
-      if (nowGroup) {
+
+      if (_selectedGroupId != null) {
+        // 1. Find the group
+        final group = _groups.firstWhere((g) => g.id == _selectedGroupId,
+            orElse: () => GroupModel(
+                id: '',
+                name: '',
+                memberPhones: [],
+                createdBy: '',
+                createdAt: DateTime.now()));
+
+        // 2. Populate friends from group members (excluding current user)
         _cachedFriendSelection = List<String>.from(_selectedFriendPhones);
         _selectedFriendPhones.clear();
-      } else if (wasGroup &&
-          _selectedFriendPhones.isEmpty &&
-          _cachedFriendSelection.isNotEmpty) {
-        _selectedFriendPhones = List<String>.from(_cachedFriendSelection);
-        _cachedFriendSelection = List<String>.from(_selectedFriendPhones);
+        for (final phone in group.memberPhones) {
+          if (phone != widget.userPhone) {
+            _selectedFriendPhones.add(phone);
+          }
+        }
+      } else {
+        // Revert to cached if we deselected group?
+        // Or just leave empty? behavior depends on preference.
+        // Current logic was handling 'wasGroup' vs 'nowGroup'.
+        // Let's just restore cached instructions if they exist, or leave empty.
+        if (_cachedFriendSelection.isNotEmpty) {
+          _selectedFriendPhones = List<String>.from(_cachedFriendSelection);
+        } else {
+          _selectedFriendPhones.clear();
+        }
       }
     });
   }
@@ -386,9 +427,18 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
   }
 
   bool _validStep1() {
-    if (_selectedPayerPhone == null || _selectedPayerPhone!.isEmpty) {
-      _toast('Please select who paid');
-      return false;
+    if (!_isMultiPayer) {
+      if (_selectedPayerPhone == null || _selectedPayerPhone!.isEmpty) {
+        _toast('Please select who paid');
+        return false;
+      }
+    } else {
+      final total = double.tryParse(_amountCtrl.text.trim()) ?? 0.0;
+      final entered = _confirmedPaidBy.values.fold(0.0, (sum, v) => sum + v);
+      if ((total - entered).abs() > 0.1) {
+        _toast('Paid amounts must equal total transaction amount');
+        return false;
+      }
     }
     return true;
   }
@@ -403,8 +453,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
       return;
     }
     if (!_validStep1()) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Please select a Payer'), backgroundColor: Colors.red));
+      // Toast already shown in _validStep1
       return;
     }
 
@@ -472,13 +521,14 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
             ? _counterpartyCtrl.text.trim()
             : null,
         settledFriendIds: settledFriends,
-        customSplits: widget.expense.customSplits,
         label: label,
         comments: personalNote.isNotEmpty ? personalNote : null,
         createdAt: widget.expense.createdAt,
         createdBy: widget.expense.createdBy,
         updatedAt: DateTime.now(),
         updatedBy: 'user',
+        paidBy: _isMultiPayer ? _confirmedPaidBy : null,
+        customSplits: _isCustomSplit ? _customSplits : null,
       );
 
       // 4. Call Service
@@ -678,6 +728,20 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                         onBack: _back,
                         saving: _saving,
                         showButtons: false,
+                        isMultiPayer: _isMultiPayer,
+                        paidBy: _confirmedPaidBy,
+                        totalAmount:
+                            double.tryParse(_amountCtrl.text.trim()) ?? 0.0,
+                        onMultiPayerToggle: (val) =>
+                            setState(() => _isMultiPayer = val),
+                        onPaidByChanged: (val) =>
+                            setState(() => _confirmedPaidBy = val),
+                        isCustomSplit: _isCustomSplit,
+                        customSplits: _customSplits,
+                        onCustomSplitToggle: (v) =>
+                            setState(() => _isCustomSplit = v),
+                        onCustomSplitsChanged: (v) =>
+                            setState(() => _customSplits = v),
                       ),
 
                       // STEP 2: REVIEW (Existing Logic)

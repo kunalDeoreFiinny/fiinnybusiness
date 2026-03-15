@@ -53,6 +53,15 @@ import 'details/recurring/add_recurring_basic_screen.dart';
 import 'details/models/recurring_scope.dart';
 import 'screens/subscriptions/add_subscription_screen.dart';
 
+import 'screens/b2b/b2b_dashboard.dart'; // [NEW] Native B2B Mode
+import 'screens/b2b/pos_billing.dart';
+import 'screens/b2b/inventory_screen.dart';
+import 'screens/b2b/b2b_khata_dashboard.dart';
+import 'screens/b2b/b2b_khata_detail.dart';
+import 'screens/b2b/b2b_profile.dart';
+import 'screens/b2b/b2b_role_selection.dart';
+import 'screens/b2b/b2b_onboarding.dart';
+
 /// Static routes that don't require arguments.
 /// (Do NOT put `/analytics` here because it requires a userPhone.)
 final Map<String, WidgetBuilder> appRoutes = {
@@ -152,6 +161,73 @@ Route<dynamic>? appOnGenerateRoute(RouteSettings settings) {
     case '/premium':
       // UpgradeScreen handles logic internally, we don't strictly need the phone argument but we accept it to avoid errors if passed.
       return MaterialPageRoute(builder: (_) => const UpgradeScreen());
+
+    // --- NEW: Native B2B Routes ---
+    case '/business':
+      if (args is String) {
+        return MaterialPageRoute(builder: (_) => B2BRoleSelectionScreen(userId: args));
+      } else if (args is Map<String, dynamic> && args['userId'] is String) {
+        return MaterialPageRoute(builder: (_) => B2BRoleSelectionScreen(userId: args['userId'] as String));
+      }
+      break;
+
+    case '/b2b/dashboard':
+      if (args is String) {
+        return MaterialPageRoute(builder: (_) => B2BDashboardScreen(userId: args));
+      } else if (args is Map<String, dynamic> && args['userId'] is String) {
+        return MaterialPageRoute(builder: (_) => B2BDashboardScreen(userId: args['userId'] as String));
+      }
+      break;
+      
+    case '/b2b/onboarding':
+      if (args is String) {
+        return MaterialPageRoute(builder: (_) => B2BOnboardingScreen(userId: args));
+      }
+      break;
+
+    case '/b2b/profile':
+      if (args is String) {
+        return MaterialPageRoute(builder: (_) => B2BProfileScreen(userId: args));
+      }
+      break;
+
+    case '/b2b/pos':
+      if (args is String) {
+        return MaterialPageRoute(builder: (_) => POSBillingScreen(userId: args));
+      } else if (args is Map<String, dynamic> && args['userId'] is String) {
+        return MaterialPageRoute(builder: (_) => POSBillingScreen(userId: args['userId'] as String));
+      }
+      break;
+      
+    case '/b2b/inventory':
+      if (args is String) {
+        return MaterialPageRoute(builder: (_) => InventoryScreen(userId: args));
+      } else if (args is Map<String, dynamic> && args['userId'] is String) {
+        return MaterialPageRoute(builder: (_) => InventoryScreen(userId: args['userId'] as String));
+      }
+      break;
+
+    case '/b2b/khata':
+      if (args is String) {
+        return MaterialPageRoute(builder: (_) => B2BKhataDashboardScreen(userId: args));
+      }
+      break;
+
+    case '/b2b/khata/detail':
+      if (args is Map<String, dynamic> &&
+          args['userId'] is String &&
+          args['customerId'] is String &&
+          args['customerName'] is String) {
+        return MaterialPageRoute(
+          builder: (_) => B2BKhataDetailScreen(
+            userId: args['userId'] as String,
+            customerId: args['customerId'] as String,
+            customerName: args['customerName'] as String,
+          ),
+        );
+      }
+      break;
+    // ------------------------------
 
     // Optional aliases: route them to AnalyticsScreen as well (no preset filter needed)
     case '/analytics-weekly':
@@ -394,6 +470,8 @@ Route<dynamic>? appOnGenerateRoute(RouteSettings settings) {
         }
       }
       break;
+
+
 
     default:
       return null;

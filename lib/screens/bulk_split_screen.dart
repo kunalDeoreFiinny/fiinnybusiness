@@ -205,6 +205,16 @@ class _BulkSplitScreenState extends State<BulkSplitScreen> {
                 onNext: _onSave,
                 onBack: () => Navigator.pop(context),
                 saving: _saving,
+                // Multi-payer disabled for bulk split for now
+                isMultiPayer: false,
+                paidBy: const {},
+                totalAmount: 0.0,
+                onMultiPayerToggle: (_) {},
+                onPaidByChanged: (_) {},
+                isCustomSplit: false,
+                customSplits: const {},
+                onCustomSplitToggle: (_) {},
+                onCustomSplitsChanged: (_) {},
               ),
             ),
     );

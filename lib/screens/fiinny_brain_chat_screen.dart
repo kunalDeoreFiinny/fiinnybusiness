@@ -147,13 +147,13 @@ class _FiinnyBrainChatScreenState extends State<FiinnyBrainChatScreen> {
       final history = await _chatService.getRecentMessages(
           widget.userPhone, _currentSessionId!);
 
-      final response =
-          await GptService.chatWithContext(text, snapshot, history);
+      final response = await GptService.chatWithContext(
+          text, snapshot, history, widget.userPhone);
 
       if (!mounted) return;
 
       final aiResponseText = response ??
-          "I'm having trouble thinking right now. Please try again.";
+          "I'm having trouble thinking right now. Please check your internet connection or API key and try again.";
 
       // Send AI response to Firestore
       await _chatService.addAiResponse(

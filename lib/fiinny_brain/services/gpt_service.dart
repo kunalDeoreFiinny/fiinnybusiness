@@ -166,50 +166,31 @@ class GptService {
     }
   }
 
-  /// Chat with Fiinny using standard messages + RAG context
-  static Future<String?> chatWithContext(String userMessage,
-      FiinnyUserSnapshot snapshot, List<AiMessage> history) async {
+  /// Chat with Fiinny using standard messages via Cloud Function
+  static Future<String?> chatWithContext(
+      String userMessage,
+      FiinnyUserSnapshot snapshot,
+      List<AiMessage> history,
+      String userPhone) async {
     try {
-      final apiKey = await _getApiKey();
-      if (apiKey == null || apiKey.isEmpty) return null;
-
-      final systemPrompt = AdvisorPrompts.chatSystemPersona;
-      final contextPrompt = AdvisorPrompts.buildChatContext(snapshot);
-
-      // Construct messages: System + Context + History + User
-      final messages = <Map<String, String>>[];
-
-      messages.add({'role': 'system', 'content': systemPrompt});
-      messages.add({'role': 'system', 'content': 'CONTEXT:\n$contextPrompt'});
-
-      // Add last 5 messages for conversation flow
-      for (final msg in history.take(5)) {
-        messages.add(
-            {'role': msg.isUser ? 'user' : 'assistant', 'content': msg.text});
-      }
-
-      messages.add({'role': 'user', 'content': userMessage});
-
       final response = await http
           .post(
-            Uri.parse(_kOpenAiBaseUrl),
+            Uri.parse(
+                'https://us-central1-lifemap-72b21.cloudfunctions.net/fiinnyBrainQuery'),
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': 'Bearer $apiKey',
             },
             body: jsonEncode({
-              'model': 'gpt-4o-mini', // Faster model for chat
-              'messages': messages,
-              'temperature': 0.7, // Slightly creative for chat
-              'max_tokens': 300,
+              'userPhone': userPhone,
+              'query': userMessage,
             }),
           )
-          .timeout(const Duration(seconds: 15));
+          .timeout(const Duration(seconds: 30));
 
       if (response.statusCode != 200) return null;
 
       final data = jsonDecode(response.body);
-      return data['choices']?[0]?['message']?['content'];
+      return data['response'];
     } catch (e) {
       return null;
     }

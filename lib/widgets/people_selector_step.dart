@@ -37,6 +37,19 @@ class PeopleSelectorStep extends StatelessWidget {
   final bool saving;
   final bool showButtons;
 
+  // Multi-payer new fields
+  final bool isMultiPayer;
+  final Map<String, double> paidBy;
+  final double totalAmount;
+  final ValueChanged<bool> onMultiPayerToggle;
+  final ValueChanged<Map<String, double>> onPaidByChanged;
+
+  // Custom Split new fields
+  final bool isCustomSplit;
+  final Map<String, double> customSplits;
+  final ValueChanged<bool> onCustomSplitToggle;
+  final ValueChanged<Map<String, double>> onCustomSplitsChanged;
+
   const PeopleSelectorStep({
     super.key,
     required this.userPhone,
@@ -60,6 +73,15 @@ class PeopleSelectorStep extends StatelessWidget {
     required this.onBack,
     required this.saving,
     this.showButtons = true,
+    required this.isMultiPayer,
+    required this.paidBy,
+    required this.totalAmount,
+    required this.onMultiPayerToggle,
+    required this.onPaidByChanged,
+    required this.isCustomSplit,
+    required this.customSplits,
+    required this.onCustomSplitToggle,
+    required this.onCustomSplitsChanged,
   });
 
   @override
@@ -89,24 +111,206 @@ class PeopleSelectorStep extends StatelessWidget {
           const _H2('Who paid?'),
           const SizedBox(height: 8),
           _Box(
-            child: DropdownButtonFormField<String>(
-              initialValue: payerPhone,
-              isExpanded: true,
-              decoration: _inputDec(),
-              items: payers.map((p) {
-                return DropdownMenuItem(
-                  value: p['phone'],
-                  child: Row(
-                    children: [
-                      Text(p['avatar'] ?? '👤',
-                          style: const TextStyle(fontSize: 18)),
-                      const SizedBox(width: 8),
-                      Text(p['name'] ?? ''),
-                    ],
+            child: Column(
+              children: [
+                SwitchListTile(
+                  value: isMultiPayer,
+                  onChanged: saving ? null : onMultiPayerToggle,
+                  title: const Text("Multiple people paid",
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  activeColor: kPrimary,
+                  dense: true,
+                ),
+                if (!isMultiPayer)
+                  Padding(
+                    padding: const EdgeInsets.only(
+                        left: 12, right: 12, bottom: 12, top: 4),
+                    child: DropdownButtonFormField<String>(
+                      initialValue: payerPhone,
+                      isExpanded: true,
+                      decoration: _inputDec(),
+                      items: payers.map((p) {
+                        return DropdownMenuItem(
+                          value: p['phone'],
+                          child: Row(
+                            children: [
+                              Text(p['avatar'] ?? '👤',
+                                  style: const TextStyle(fontSize: 18)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                  child: Text(p['name'] ?? '',
+                                      overflow: TextOverflow.ellipsis)),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: saving ? null : onPayer,
+                    ),
                   ),
-                );
-              }).toList(),
-              onChanged: saving ? null : onPayer,
+                if (isMultiPayer) ...[
+                  const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      children: [
+                        // List active payers
+                        ...payers
+                            .where((p) => paidBy.containsKey(p['phone']))
+                            .map((p) {
+                          final phone = p['phone']!;
+                          final amt = paidBy[phone] ?? 0.0;
+                          final ctrl = TextEditingController(
+                              text: amt == 0 ? '' : amt.toStringAsFixed(2));
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              children: [
+                                Text(p['avatar'] ?? '👤',
+                                    style: const TextStyle(fontSize: 18)),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(p['name'] ?? '',
+                                      overflow: TextOverflow.ellipsis),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.close,
+                                      size: 18, color: kSubtle),
+                                  onPressed: () {
+                                    final newMap =
+                                        Map<String, double>.from(paidBy);
+                                    newMap.remove(phone);
+                                    onPaidByChanged(newMap);
+                                  },
+                                ),
+                                SizedBox(
+                                  width: 90,
+                                  child: TextField(
+                                    controller: ctrl,
+                                    keyboardType: TextInputType.number,
+                                    decoration: _inputDec().copyWith(
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 8),
+                                      prefixText: '₹',
+                                    ),
+                                    onChanged: (val) {
+                                      final d = double.tryParse(val) ?? 0.0;
+                                      final activeIds = payers
+                                          .where((p) =>
+                                              paidBy.containsKey(p['phone']))
+                                          .map((p) => p['phone']!)
+                                          .toList();
+                                      final newMap = _distribute(
+                                        phone,
+                                        d,
+                                        paidBy,
+                                        activeIds,
+                                      );
+                                      onPaidByChanged(newMap);
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+
+                        // Add Payer Button
+                        TextButton.icon(
+                          onPressed: () async {
+                            FocusScope.of(context).unfocus();
+                            // Candidates: All friends + You - Already selected
+
+                            // If group selected, filter candidates to only group members
+                            var pool = payers;
+                            if (selectedGroupId != null &&
+                                selectedGroupId!.isNotEmpty) {
+                              final g = groups.firstWhere(
+                                  (x) => x.id == selectedGroupId,
+                                  orElse: () => GroupModel(
+                                      id: '',
+                                      name: '',
+                                      memberPhones: [],
+                                      createdBy: '',
+                                      createdAt: DateTime.now()));
+                              if (g.id.isNotEmpty) {
+                                // Allow User + Group Members
+                                final allowed = [userPhone, ...g.memberPhones];
+                                pool = payers
+                                    .where((p) => allowed.contains(p['phone']))
+                                    .toList();
+                              }
+                            }
+
+                            final candidates = pool
+                                .where((p) => !paidBy.containsKey(p['phone']))
+                                .toList();
+                            if (candidates.isEmpty) return;
+
+                            final picked = await showModalBottomSheet<String>(
+                              context: context,
+                              builder: (ctx) => Container(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text("Add Payer",
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16)),
+                                    const SizedBox(height: 8),
+                                    Expanded(
+                                      child: ListView(
+                                        shrinkWrap: true,
+                                        children: candidates
+                                            .map((c) => ListTile(
+                                                  leading:
+                                                      Text(c['avatar'] ?? '👤'),
+                                                  title: Text(c['name'] ?? ''),
+                                                  onTap: () => Navigator.pop(
+                                                      ctx, c['phone']),
+                                                ))
+                                            .toList(),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+
+                            if (picked != null) {
+                              final newMap = Map<String, double>.from(paidBy);
+                              newMap[picked] = 0.0;
+                              onPaidByChanged(newMap);
+                            }
+                          },
+                          icon: const Icon(Icons.add, color: kPrimary),
+                          label: const Text("Add Payer"),
+                        ),
+
+                        // Total validation
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            "Total paid: ₹${paidBy.values.fold(0.0, (sum, v) => sum + v).toStringAsFixed(2)} / ₹${totalAmount.toStringAsFixed(2)}",
+                            style: TextStyle(
+                              color: (paidBy.values.fold(
+                                                  0.0, (sum, v) => sum + v) -
+                                              totalAmount)
+                                          .abs() <
+                                      0.1
+                                  ? kPrimary
+                                  : Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
           const SizedBox(height: 18),
@@ -161,19 +365,7 @@ class PeopleSelectorStep extends StatelessWidget {
           const SizedBox(height: 18),
           const _H2('Split With'),
           const SizedBox(height: 8),
-          if (groupSelected) ...[
-            _GlassCard(
-              child: ListTile(
-                leading: const Icon(Icons.groups_2_rounded, color: kPrimary),
-                title: const Text(
-                  "This expense is linked to a group",
-                  style: TextStyle(fontWeight: FontWeight.w800),
-                ),
-                subtitle: const Text(
-                    "Pick 'No group' above to manage friends manually."),
-              ),
-            ),
-          ] else if (friends.isEmpty) ...[
+          if (friends.isEmpty && !groupSelected) ...[
             _GlassCard(
               child: ListTile(
                 leading: const Icon(Icons.info_outline, color: kPrimary),
@@ -384,6 +576,97 @@ class PeopleSelectorStep extends StatelessWidget {
                       TextStyle(color: kSubtle, fontWeight: FontWeight.w600)),
           ],
           const SizedBox(height: 18),
+          Row(
+            children: [
+              Checkbox(
+                value: isCustomSplit,
+                onChanged:
+                    saving ? null : (v) => onCustomSplitToggle(v ?? false),
+                activeColor: kPrimary,
+              ),
+              const Text("Custom Split (Who Owes)",
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+            ],
+          ),
+          if (isCustomSplit) ...[
+            const SizedBox(height: 8),
+            _Box(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  children: [
+                    // Include "You" + Selected Friends
+                    ...[userPhone, ...selectedFriends].map((phone) {
+                      final p = payers.firstWhere((x) => x['phone'] == phone,
+                          orElse: () => {'name': phone, 'avatar': '👤'});
+                      final amt = customSplits[phone] ?? 0.0;
+                      final ctrl = TextEditingController(
+                          text: amt == 0 ? '' : amt.toStringAsFixed(2));
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            Text(p['avatar'] ?? '👤',
+                                style: const TextStyle(fontSize: 16)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                                child: Text(p['name'] ?? '',
+                                    overflow: TextOverflow.ellipsis)),
+                            SizedBox(
+                              width: 90,
+                              child: TextField(
+                                controller: ctrl,
+                                keyboardType: TextInputType.number,
+                                decoration: _inputDec().copyWith(
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 8),
+                                  prefixText: '₹',
+                                ),
+                                onChanged: (val) {
+                                  final d = double.tryParse(val) ?? 0.0;
+                                  // For Custom Split, visible IDs are User + Selected Friends
+                                  final visibleIds = [
+                                    userPhone,
+                                    ...selectedFriends
+                                  ];
+                                  final newMap = _distribute(
+                                    phone,
+                                    d,
+                                    customSplits,
+                                    visibleIds,
+                                  );
+                                  onCustomSplitsChanged(newMap);
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        "Total split: ₹${customSplits.values.fold(0.0, (sum, v) => sum + v).toStringAsFixed(2)} / ₹${totalAmount.toStringAsFixed(2)}",
+                        style: TextStyle(
+                          color: (customSplits.values
+                                              .fold(0.0, (sum, v) => sum + v) -
+                                          totalAmount)
+                                      .abs() <
+                                  0.1
+                              ? kPrimary
+                              : Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 18),
           const _H2('Note for you (optional)'),
           const SizedBox(height: 8),
           if (isActive)
@@ -477,6 +760,56 @@ class PeopleSelectorStep extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Map<String, double> _distribute(
+    String activeId,
+    double newVal,
+    Map<String, double> currentMap,
+    List<String> visibleIds,
+  ) {
+    final newMap = Map<String, double>.from(currentMap);
+    if (newVal > 0) {
+      newMap[activeId] = newVal;
+    } else {
+      newMap.remove(activeId);
+    }
+
+    final others = visibleIds.where((id) => id != activeId).toList();
+    if (others.isEmpty) return newMap;
+
+    // Distribute remainder equally (Smear logic)
+    // 1. Calculate target for others
+    final targetSumOthers = totalAmount - newVal;
+
+    // 2. Calculate current sum of others
+    double currentSumOthers = 0.0;
+    for (var id in others) {
+      currentSumOthers += (newMap[id] ?? 0.0);
+    }
+
+    // 3. Diff to distribute
+    final diff = targetSumOthers - currentSumOthers;
+    final share = diff / others.length;
+
+    for (var id in others) {
+      final oldV = newMap[id] ?? 0.0;
+      double newV = oldV + share;
+
+      // Clamp to 0 to avoid negative splits
+      if (newV < 0) newV = 0;
+
+      // Round to 2 decimals
+      newV = (newV * 100).roundToDouble() / 100;
+
+      if (newV > 0) {
+        newMap[id] = newV;
+      } else {
+        newMap.remove(id);
+      }
+    }
+
+    return newMap;
   }
 }
 

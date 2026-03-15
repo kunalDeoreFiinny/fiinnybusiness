@@ -118,29 +118,68 @@ class AdService {
       return;
     }
     try {
-      final initStatus = await MobileAds.instance.initialize();
-      assert(() {
-        final entries = initStatus.adapterStatuses.entries.map((entry) {
-          final state = entry.value.state.toString().split('.').last;
-          return '${entry.key}:$state(${entry.value.description})';
-        }).join(', ');
-        debugPrint('[AdService] MobileAds initialised (adapters: $entries)');
-        return true;
-      }());
-      await MobileAds.instance.updateRequestConfiguration(
-        RequestConfiguration(
-          testDeviceIds: <String>[],
-        ),
+      // --- Google UMP Consent Flow ---
+      final consentManager = ConsentInformation.instance;
+      final params = ConsentRequestParameters(
+        consentDebugSettings: ConsentDebugSettings(
+            debugGeography: DebugGeography.debugGeographyDisabled,
+            testIdentifiers: []),
       );
-      _adsEnabled = true;
-      _ready = true;
-      preloadInterstitial();
-      preloadRewarded();
+
+      consentManager.requestConsentInfoUpdate(
+        params,
+        () async {
+          // If consent is required, show the form
+          if (await consentManager.isConsentFormAvailable()) {
+            final consentStatus = await consentManager.getConsentStatus();
+            if (consentStatus == ConsentStatus.required) {
+              await ConsentForm.loadAndShowConsentFormIfRequired(
+                (FormError? formError) {
+                  if (formError != null) {
+                    debugPrint('[AdService] UMP Consent Form error: ${formError.message}');
+                  }
+                },
+              );
+            }
+          }
+
+          final canRequestAds = await consentManager.canRequestAds();
+          
+          if (!canRequestAds) {
+            debugPrint('[AdService] UMP Consent missing. Ads disabled.');
+            _adsEnabled = false;
+            _ready = false;
+            return;
+          }
+          // -------------------------------
+
+          final initStatus = await MobileAds.instance.initialize();
+          assert(() {
+            final entries = initStatus.adapterStatuses.entries.map((entry) {
+              final state = entry.value.state.toString().split('.').last;
+              return '${entry.key}:$state(${entry.value.description})';
+            }).join(', ');
+            debugPrint('[AdService] MobileAds initialised (adapters: $entries)');
+            return true;
+          }());
+          await MobileAds.instance.updateRequestConfiguration(
+            RequestConfiguration(
+              testDeviceIds: <String>[],
+            ),
+          );
+          _adsEnabled = true;
+          _ready = true;
+          preloadInterstitial();
+          preloadRewarded();
+        },
+        (FormError formError) {
+          debugPrint('[AdService] UMP Consent update failed: ${formError.message}');
+          _adsEnabled = false;
+          _ready = false;
+        },
+      );
     } catch (err, stackTrace) {
       _adsEnabled = false;
-      // The original instruction had `missingIds` here, which is not in scope.
-      // Reverting to the original behavior for this catch block, as the `missingIds` check
-      // is already handled in `initLater` before calling `_initializeInternal`.
       _ready = false;
       debugPrint(
           '[AdService] Google Mobile Ads init failed: $err\n$stackTrace');

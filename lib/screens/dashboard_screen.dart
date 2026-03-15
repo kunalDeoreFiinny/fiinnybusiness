@@ -46,6 +46,7 @@ import '../widgets/empty_state_card.dart';
 import '../widgets/gmail_backfill_banner.dart';
 import '../widgets/loan_suggestions_sheet.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 // NEW portfolio module imports (aliased so they don't clash with your old service/model)
 import '../fiinny_assets/modules/portfolio/services/asset_service.dart'
     as p_asset_service;
@@ -92,7 +93,12 @@ double getTxAmount(dynamic tx) =>
 
 class DashboardScreen extends StatefulWidget {
   final String userPhone;
-  const DashboardScreen({required this.userPhone, super.key});
+  final bool showSmsPrompt; // NEW
+  const DashboardScreen({
+    required this.userPhone,
+    this.showSmsPrompt = false, // default false
+    super.key,
+  });
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -681,6 +687,14 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await Future<void>.delayed(const Duration(milliseconds: 500));
+      // Auto-prompt SMS permission if requested (onboarding flow)
+      if (widget.showSmsPrompt && _isAndroidPlatform) {
+        // checks internal state again just in case
+        if (_hasSmsPermission != true) {
+          _updateSmsPermission(requestPrompt: true);
+        }
+      }
+
       await NotificationService.initFull();
       await AdService.initLater();
     });
@@ -2001,6 +2015,78 @@ class _DashboardScreenState extends State<DashboardScreen>
                       final sections = <Widget>[
                         const SizedBox(height: 6),
                         CriticalAlertBanner(userId: widget.userPhone),
+                        Padding(
+                          padding: horizontalPadding,
+                          child: InkWell(
+                            onTap: () async {
+                              final prefs = await SharedPreferences.getInstance();
+                              final businessName = prefs.getString('b2b_business_name_${widget.userPhone}');
+                              if (businessName != null && businessName.isNotEmpty) {
+                                Navigator.pushNamed(context, '/business', arguments: widget.userPhone);
+                              } else {
+                                Navigator.pushNamed(context, '/b2b/onboarding', arguments: widget.userPhone);
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [Colors.blue.shade800, Colors.blue.shade600],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.blue.withOpacity(0.3),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 24),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  const Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Switch to Business Mode',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        SizedBox(height: 2),
+                                        Text(
+                                          'Manage retailer POS & inventory',
+                                          style: TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 16),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
                         if (!sub.isPremium) ...[
                           Padding(
                             padding: horizontalPadding,
