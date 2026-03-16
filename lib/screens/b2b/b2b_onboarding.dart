@@ -46,6 +46,10 @@ class _B2BOnboardingScreenState extends State<B2BOnboardingScreen> {
     }
   }
 
+  void _skipOnboarding() {
+    Navigator.pushReplacementNamed(context, '/b2b/dashboard', arguments: widget.userId);
+  }
+
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<String>(
@@ -56,60 +60,105 @@ class _B2BOnboardingScreenState extends State<B2BOnboardingScreen> {
           appBar: AppBar(
             backgroundColor: Colors.white,
             elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_rounded, color: Colors.black87),
-              onPressed: () => Navigator.of(context).pop(),
+            automaticallyImplyLeading: false, // Match screenshot (no back button)
+            title: Row(
+               children: [
+                 Image.asset('assets/icons/fiinny_logo.png', height: 28, errorBuilder: (ctx,err,stack)=>Icon(Icons.business_rounded, color:Colors.green.shade800)),
+                 const SizedBox(width: 8),
+                 Text('Fiinny Business', style: TextStyle(color: Colors.green.shade800, fontWeight: FontWeight.bold, fontSize: 20)),
+               ]
             ),
             actions: [
-               Padding(
-                padding: const EdgeInsets.only(right: 8.0),
-                child: buildB2BLanguageDropdown(),
-              )
+              TextButton(
+                onPressed: _skipOnboarding,
+                style: TextButton.styleFrom(
+                   shape: StadiumBorder(side: BorderSide(color: Colors.grey.shade400)),
+                   padding: const EdgeInsets.symmetric(horizontal: 20),
+                ),
+                child: Text(lang.t('Skip'), style: const TextStyle(color: Colors.black87, fontSize: 16)),
+              ),
+              const SizedBox(width: 16),
             ],
           ),
           body: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 48.0),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Spacer(flex: 1),
-                  const Icon(Icons.storefront_rounded, size: 80, color: Colors.indigo),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                       color: Colors.blue.shade50,
+                       borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(Icons.storefront_outlined, size: 40, color: Colors.blue.shade700),
+                  ),
                   const SizedBox(height: 24),
                   Text(
-                    lang.t('Start your Digital Book'),
-                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
+                    lang.t('Add your business/shop name'),
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    lang.t('Manage your sales, inventory, and udhari easily.'),
-                    style: const TextStyle(fontSize: 16, color: Colors.grey),
-                    textAlign: TextAlign.center,
+                    lang.t('This will help your customers identify your business/ shop.'),
+                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600, height: 1.4),
                   ),
                   const SizedBox(height: 40),
-                  TextField(
-                    controller: _nameController,
-                    decoration: InputDecoration(
-                      labelText: lang.t('Business Name'),
-                      prefixIcon: const Icon(Icons.business_rounded),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                      filled: true,
-                      fillColor: Colors.grey[50],
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _nameController,
+                          autofocus: true,
+                          decoration: InputDecoration(
+                            labelText: lang.t('Business/ Shop Name'),
+                            labelStyle: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.w500),
+                            prefixIcon: Icon(Icons.store_mall_directory_outlined, color: Colors.green.shade700),
+                            border: OutlineInputBorder(
+                               borderRadius: BorderRadius.circular(12),
+                               borderSide: BorderSide(color: Colors.green.shade700, width: 2),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                               borderRadius: BorderRadius.circular(12),
+                               borderSide: BorderSide(color: Colors.green.shade700, width: 2),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                               borderRadius: BorderRadius.circular(12),
+                               borderSide: BorderSide(color: Colors.green.shade700, width: 2),
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 20)
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      InkWell(
+                        onTap: _isLoading ? null : _completeOnboarding,
+                        borderRadius: BorderRadius.circular(28),
+                        child: Container(
+                           height: 56,
+                           width: 56,
+                           decoration: BoxDecoration(
+                              color: Colors.green.shade700,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                 BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4)
+                                 )
+                              ]
+                           ),
+                           child: _isLoading 
+                             ? const Padding(padding: EdgeInsets.all(16.0), child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                             : const Icon(Icons.check_rounded, color: Colors.white, size: 32),
+                        )
+                      )
+                    ],
                   ),
-                  const Spacer(flex: 2),
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _completeOnboarding,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.indigo,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))
-                    ),
-                    child: _isLoading 
-                      ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : Text(lang.t('Continue'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                  )
                 ],
               ),
             ),

@@ -61,6 +61,17 @@ import 'screens/b2b/b2b_khata_detail.dart';
 import 'screens/b2b/b2b_profile.dart';
 import 'screens/b2b/b2b_role_selection.dart';
 import 'screens/b2b/b2b_onboarding.dart';
+import 'screens/b2b/b2b_add_customer.dart'; // [NEW]
+import 'screens/b2b/b2b_account.dart'; // [NEW]
+import 'screens/b2b/b2b_order_history.dart'; // [NEW]
+import 'screens/b2b/b2b_ai_chat_screen.dart'; // [NEW]
+import 'screens/b2b/b2b_settings.dart'; // [NEW]
+import 'screens/b2b/b2b_multi_devices.dart'; // [NEW]
+import 'screens/b2b/b2b_account_statement.dart'; // [NEW]
+import 'screens/b2b/b2b_search_screen.dart'; // [NEW]
+import 'screens/b2b/b2b_analytics.dart'; // [NEW]
+import 'screens/budgeting_screen.dart'; // [NEW] Budgeting
+import 'screens/project_budgets_screen.dart'; // [NEW] Project Budgets
 
 /// Static routes that don't require arguments.
 /// (Do NOT put `/analytics` here because it requires a userPhone.)
@@ -91,7 +102,14 @@ final Map<String, WidgetBuilder> appRoutes = {
   '/partner-dashboard': (_) =>
       const _SimpleStubScreen(title: 'Partner Dashboard'),
   '/friends': (_) => const _SimpleStubScreen(title: 'Friends & Settle Up'),
-  '/budget': (_) => const _SimpleStubScreen(title: 'Weekly Budget'),
+  '/budget': (ctx) {
+    final phone = ModalRoute.of(ctx)?.settings.arguments as String? ?? '';
+    return BudgetingScreen(userId: phone);
+  },
+  '/project-budgets': (ctx) {
+    final phone = ModalRoute.of(ctx)?.settings.arguments as String? ?? '';
+    return ProjectBudgetsScreen(userId: phone);
+  },
   '/transactions': (ctx) {
     final phone = ModalRoute.of(ctx)?.settings.arguments as String? ?? '';
     return TransactionsScreen(userPhone: phone);
@@ -101,6 +119,9 @@ final Map<String, WidgetBuilder> appRoutes = {
       userPhone: '', userName: '', friend: null as dynamic), // Placeholder
   '/group-detail': (context) =>
       GroupDetailScreen(userId: '', group: null as dynamic), // Placeholder
+      
+  // B2B Static routes
+  '/b2b/settings': (_) => const B2BSettingsScreen(),
 };
 
 /// Routes that require arguments (or custom building) are handled here.
@@ -126,6 +147,14 @@ Route<dynamic>? appOnGenerateRoute(RouteSettings settings) {
       if (args is String) {
         return MaterialPageRoute(
             builder: (_) => DashboardScreen(userPhone: args));
+      }
+      break;
+
+    case '/b2b/analytics':
+      if (args is Map<String, dynamic> && args['userId'] is String) {
+        return MaterialPageRoute(
+          builder: (_) => B2BAnalyticsScreen(userId: args['userId'] as String),
+        );
       }
       break;
 
@@ -198,6 +227,22 @@ Route<dynamic>? appOnGenerateRoute(RouteSettings settings) {
         return MaterialPageRoute(builder: (_) => POSBillingScreen(userId: args['userId'] as String));
       }
       break;
+
+    case '/b2b/history':
+      if (args is String) {
+        return MaterialPageRoute(builder: (_) => B2BOrderHistoryScreen(userId: args));
+      } else if (args is Map<String, dynamic> && args['userId'] is String) {
+        return MaterialPageRoute(builder: (_) => B2BOrderHistoryScreen(userId: args['userId'] as String));
+      }
+      break;
+
+    case '/b2b/ai':
+      if (args is String) {
+        return MaterialPageRoute(builder: (_) => B2BAiChatScreen(userId: args));
+      } else if (args is Map<String, dynamic> && args['userId'] is String) {
+        return MaterialPageRoute(builder: (_) => B2BAiChatScreen(userId: args['userId'] as String));
+      }
+      break;
       
     case '/b2b/inventory':
       if (args is String) {
@@ -224,6 +269,35 @@ Route<dynamic>? appOnGenerateRoute(RouteSettings settings) {
             customerId: args['customerId'] as String,
             customerName: args['customerName'] as String,
           ),
+        );
+      }
+      break;
+      
+    case '/b2b/add-customer':
+      if (args is Map<String, dynamic> &&
+          args['userId'] is String &&
+          args['isCustomer'] is bool) {
+        return MaterialPageRoute(
+          builder: (_) => B2BAddCustomerScreen(
+            userId: args['userId'] as String,
+            isCustomer: args['isCustomer'] as bool,
+          ),
+        );
+      }
+      break;
+      
+    case '/b2b/account':
+      if (args is Map<String, dynamic> && args['userId'] is String) {
+        return MaterialPageRoute(
+          builder: (_) => B2BAccountScreen(userId: args['userId'] as String),
+        );
+      }
+      break;
+      
+    case '/b2b/multi-devices':
+      if (args is Map<String, dynamic> && args['userId'] is String) {
+        return MaterialPageRoute(
+          builder: (_) => B2BMultiDevicesScreen(userId: args['userId'] as String),
         );
       }
       break;
@@ -471,7 +545,39 @@ Route<dynamic>? appOnGenerateRoute(RouteSettings settings) {
       }
       break;
 
+    case '/b2b/add_customer':
+      if (args is Map<String, dynamic> && args['userId'] is String) {
+        return MaterialPageRoute(
+          builder: (_) => B2BAddCustomerScreen(
+            userId: args['userId'] as String,
+            isCustomer: args['isCustomer'] ?? true,
+          ),
+        );
+      }
+      break;
 
+    case '/b2b/account-statement':
+      if (args is Map<String, dynamic> &&
+          args['userId'] is String &&
+          args['customerId'] is String &&
+          args['customerName'] is String) {
+        return MaterialPageRoute(
+          builder: (_) => B2BAccountStatementScreen(
+            userId: args['userId'] as String,
+            customerId: args['customerId'] as String,
+            customerName: args['customerName'] as String,
+          ),
+        );
+      }
+      break;
+
+    case '/b2b/search':
+      if (args is Map<String, dynamic> && args['userId'] is String) {
+        return MaterialPageRoute(
+          builder: (_) => B2BSearchScreen(userId: args['userId'] as String),
+        );
+      }
+      break;
 
     default:
       return null;

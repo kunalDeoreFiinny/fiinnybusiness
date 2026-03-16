@@ -11,6 +11,10 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 if (getApps().length === 0) initializeApp();
 const db = getFirestore();
 
+// ✅ KaranArjun AI Business Advisor (secure OpenAI proxy)
+export { karanArjunAIChat } from "./karanArjunAI";
+
+
 /* ----------------------------- Shared helpers ----------------------------- */
 
 async function getPrefs(uid: string) {
@@ -232,7 +236,13 @@ export {
   cancelSubscription,
   razorpayWebhook
 } from "./subscriptions.js";
+export {
+  createSaaSOrder,
+  verifySaaSPayment,
+  getSaaSSubscription,
+} from "./saasSubscriptions.js";
 export { fiinnyBrainQuery } from "./fiinnyBrainQuery.js";
+
 
 
 /* ----------------------- New: Cloud reminder pipeline ---------------------- */

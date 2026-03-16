@@ -261,6 +261,7 @@ class _InventoryItemSheetState extends State<InventoryItemSheet> {
                       childrenPadding: const EdgeInsets.only(top: 8, bottom: 8),
                       children: [
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
                               child: TextFormField(

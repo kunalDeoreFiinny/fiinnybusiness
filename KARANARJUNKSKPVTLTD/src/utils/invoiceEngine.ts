@@ -11,10 +11,10 @@ export interface InvoiceData {
 }
 
 // ── Helpers ────────────────────────────────────────────────────
-function getFieldValue(field: any, data: any): string {
+function getFieldValue(field: any, data: any, isPdf = false): string {
     const raw = data[field.sourceKey];
     if (raw === undefined || raw === null || raw === '') return '—';
-    if (field.isCurrency) return `₹ ${Number(raw).toLocaleString('en-IN')}`;
+    if (field.isCurrency) return `${isPdf ? 'Rs.' : '₹'} ${Number(raw).toLocaleString('en-IN')}`;
     return String(raw);
 }
 
@@ -88,7 +88,7 @@ export function generateInvoicePDF(
     // ── Table ──
     const head = visibleFields.map(f => f.label);
     const body = allOrders.map(ord =>
-        visibleFields.map(f => getFieldValue(f, ord))
+        visibleFields.map(f => getFieldValue(f, ord, true))
     );
 
     autoTable(doc, {
@@ -110,7 +110,7 @@ export function generateInvoicePDF(
     doc.setFontSize(13);
     doc.setTextColor(0, 0, 0);
     const label = isOutstanding ? 'TOTAL OUTSTANDING' : 'GRAND TOTAL';
-    doc.text(`${label}: ₹ ${totalAmt.toLocaleString('en-IN')}`, 190, finalY + 14, { align: 'right' });
+    doc.text(`${label}: Rs. ${totalAmt.toLocaleString('en-IN')}`, 190, finalY + 14, { align: 'right' });
 
     // ── Bank Details ──
     if (branding.bankDetails) {

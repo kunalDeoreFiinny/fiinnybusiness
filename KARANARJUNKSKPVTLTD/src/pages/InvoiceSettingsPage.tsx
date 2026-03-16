@@ -19,7 +19,7 @@ export default function InvoiceSettingsPage() {
         gstin: '',
         licenseNumbers: '',
         logoUrl: '',
-        bankDetails: '',
+        bankDetails: `A/c Holder's Name : KARANARJUN KRUSHI SEVA KENDRA\nBank Name          : Bank of Maharashtra\nA/c No.            : 60377054187\nIFSC Code          : MAHB0001571\nBranch             : Karjat - 414402`,
         signatureName: '',
         terms: '1. Goods once sold will not be taken back.\n2. Payment should be made within 30 days.'
     });

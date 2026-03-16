@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/credit_card_cycle.dart';
-
 import '../../services/credit_card_service.dart';
 
 class CreditCardsSummaryCard extends StatefulWidget {
@@ -33,9 +32,8 @@ class _CreditCardsSummaryCardState extends State<CreditCardsSummaryCard> {
 
   Future<_Summary> _load() async {
     final cards = await _svc.getUserCards(widget.userId);
-    final futures = cards
-        .map((card) => _svc.getLatestCycle(widget.userId, card.id))
-        .toList();
+    final futures =
+        cards.map((card) => _svc.getLatestCycle(widget.userId, card.id)).toList();
     final cycles = await Future.wait(futures);
 
     final now = DateTime.now();
@@ -46,19 +44,20 @@ class _CreditCardsSummaryCardState extends State<CreditCardsSummaryCard> {
 
     for (var i = 0; i < cards.length; i++) {
       final CreditCardCycle? cyc = cycles[i];
-      if (cyc == null) continue;
+      // If no cycle, use card-level fields
+      final double remaining = cyc != null
+          ? math.max(0, cyc.totalDue - cyc.paidAmount)
+          : (cards[i].isPaid ? 0 : cards[i].totalDue);
 
-      final remaining = math.max(0, cyc.totalDue - cyc.paidAmount);
-      if (remaining <= 0.01) {
-        continue;
-      }
+      if (remaining <= 0.01) continue;
 
       totalDue += remaining;
 
-      if (now.isAfter(cyc.dueDate)) {
+      final dueDate = cyc?.dueDate ?? cards[i].dueDate;
+      if (now.isAfter(dueDate)) {
         overdue++;
       } else {
-        final days = cyc.dueDate.difference(now).inDays;
+        final days = dueDate.difference(now).inDays;
         if (days <= 0) {
           dueToday++;
         } else if (days <= 7) {
@@ -78,9 +77,10 @@ class _CreditCardsSummaryCardState extends State<CreditCardsSummaryCard> {
 
   @override
   Widget build(BuildContext context) {
-    final inr = NumberFormat.compactCurrency(
+    final inr = NumberFormat.currency(
       locale: 'en_IN',
       symbol: '₹',
+      decimalDigits: 0,
     );
 
     return FutureBuilder<_Summary>(
@@ -90,83 +90,93 @@ class _CreditCardsSummaryCardState extends State<CreditCardsSummaryCard> {
           return _shell();
         }
         final summary = snapshot.data ?? const _Summary();
+        final hasAlert = summary.overdue > 0 || summary.dueToday > 0;
+
         return Card(
-          elevation: 0,
+          elevation: 3,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(18),
           ),
-          margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
           child: InkWell(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(18),
             onTap: widget.onOpen,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(13),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // ── Header row ─────────────────────────────────
                   Row(
                     children: [
-                      const Icon(Icons.credit_card, size: 22),
-                      const SizedBox(width: 8),
-                      const Text(
+                      Text(
                         'Credit Cards',
                         style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.teal[800],
                           fontSize: 16,
-                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       const Spacer(),
                       if (widget.onOpen != null)
-                        const Icon(Icons.chevron_right, size: 22),
+                        Icon(Icons.chevron_right,
+                            size: 20, color: Colors.teal[300]),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 7),
+
+                  // ── Total due amount ────────────────────────────
+                  Text(
+                    summary.totalDue > 0
+                        ? inr.format(summary.totalDue)
+                        : '₹0',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: hasAlert
+                          ? Colors.red[700]
+                          : summary.dueSoon > 0
+                              ? Colors.orange[700]
+                              : Colors.green[700],
+                    ),
+                  ),
+
+                  // ── Bottom row: status chips + card count ───────
+                  const SizedBox(height: 4),
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        inr.format(summary.totalDue),
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
+                      // Status text
+                      Expanded(
+                        child: Text(
+                          _statusText(summary),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: hasAlert
+                                ? Colors.red[600]
+                                : Colors.grey[600],
+                            fontWeight: hasAlert
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'total due',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _chip(
-                        Icons.warning_amber_rounded,
-                        'Overdue',
-                        summary.overdue,
-                        color: Colors.red,
-                      ),
-                      _chip(
-                        Icons.today,
-                        'Due today',
-                        summary.dueToday,
-                        color: Colors.orange,
-                      ),
-                      _chip(
-                        Icons.schedule,
-                        '≤ 7 days',
-                        summary.dueSoon,
-                        color: Colors.blue,
-                      ),
-                      _chip(
-                        Icons.layers,
-                        'Cards',
-                        summary.totalCards,
-                        color: Colors.grey,
+                      // Card count badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.teal.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${summary.totalCards} card${summary.totalCards != 1 ? 's' : ''}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.teal[800],
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -179,43 +189,32 @@ class _CreditCardsSummaryCardState extends State<CreditCardsSummaryCard> {
     );
   }
 
-  Widget _shell() {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.shade300),
-      ),
-      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-      child: const Padding(
-        padding: EdgeInsets.all(16),
-        child: SizedBox(
-          height: 72,
-          child: Center(child: CircularProgressIndicator()),
-        ),
-      ),
-    );
+  String _statusText(_Summary s) {
+    if (s.totalCards == 0) return 'No cards added yet';
+    if (s.totalDue <= 0) return 'All bills paid ✅';
+    if (s.overdue > 0) {
+      return '⚠️ ${s.overdue} overdue — pay now!';
+    }
+    if (s.dueToday > 0) {
+      return '🔴 ${s.dueToday} due today';
+    }
+    if (s.dueSoon > 0) {
+      return '🟡 ${s.dueSoon} due within 7 days';
+    }
+    return 'Total bill outstanding';
   }
 
-  Widget _chip(IconData icon, String label, int value, {Color? color}) {
-    final chipColor = color ?? Colors.teal;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: chipColor.withValues(alpha: .1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: chipColor.withValues(alpha: .3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: chipColor),
-          const SizedBox(width: 6),
-          Text(
-            '$label: $value',
-            style: TextStyle(fontSize: 12, color: chipColor),
-          ),
-        ],
+  Widget _shell() {
+    return Card(
+      elevation: 3,
+      shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: const Padding(
+        padding: EdgeInsets.all(13),
+        child: SizedBox(
+          height: 72,
+          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        ),
       ),
     );
   }

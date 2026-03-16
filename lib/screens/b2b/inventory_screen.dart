@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/local_database_helper.dart';
+import '../../core/ads/ads_banner_card.dart';
 import 'inventory_item_sheet.dart';
 
 class InventoryScreen extends StatefulWidget {
@@ -24,13 +25,20 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   Future<void> _loadInventory() async {
     setState(() => _isLoading = true);
-    final db = await LocalDatabaseHelper.instance.database;
-    final List<Map<String, dynamic>> results = await db.query('inventory', orderBy: 'name ASC');
-    setState(() {
-      _allProducts = results;
-      _filteredProducts = _filterProducts(results, _searchQuery);
-      _isLoading = false;
-    });
+    try {
+      final db = await LocalDatabaseHelper.instance.database;
+      final List<Map<String, dynamic>> results = await db.query('inventory', orderBy: 'name ASC');
+      if (mounted) {
+        setState(() {
+          _allProducts = results;
+          _filteredProducts = _filterProducts(results, _searchQuery);
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('[Inventory] _loadInventory error: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   List<Map<String, dynamic>> _filterProducts(List<Map<String, dynamic>> list, String query) {
@@ -80,6 +88,23 @@ class _InventoryScreenState extends State<InventoryScreen> {
             onPressed: () => _showAddEditSheet(),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showAddEditSheet(),
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Add Product'),
+        backgroundColor: Colors.orange,
+        foregroundColor: Colors.white,
+      ),
+      bottomNavigationBar: const AdsBannerCard(
+        placement: 'b2b_inventory_bottom',
+        inline: false,
+        inlineMaxHeight: 60,
+        margin: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        padding: EdgeInsets.zero,
+        backgroundColor: Colors.transparent,
+        boxShadow: [],
+        minHeight: 52,
       ),
       body: Column(
         children: [
@@ -202,13 +227,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddEditSheet(),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Add Product'),
-        backgroundColor: Colors.orange,
-        foregroundColor: Colors.white,
       ),
     );
   }

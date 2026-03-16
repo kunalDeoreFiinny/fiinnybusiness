@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/ads/ads_banner_card.dart';
 import '../../services/b2b_language_service.dart';
+import '../../services/local_database_helper.dart';
+import 'package:intl/intl.dart';
 
 class B2BDashboardScreen extends StatefulWidget {
   final String userId;
@@ -14,123 +16,348 @@ class B2BDashboardScreen extends StatefulWidget {
 class _B2BDashboardScreenState extends State<B2BDashboardScreen> {
   String _businessName = '';
 
+  // Stats
+  int _billsToday = 0;
+  double _totalUdhari = 0;
+  int _customerCount = 0;
+  int _stockItems = 0;
+  double _revenueToday = 0;
+
+  // Recent activity (last 8 invoices)
+  List<Map<String, dynamic>> _recentInvoices = [];
+  bool _loadingStats = true;
+
   @override
   void initState() {
     super.initState();
     _loadBusinessName();
+    _loadStats();
   }
 
   Future<void> _loadBusinessName() async {
     final prefs = await SharedPreferences.getInstance();
     final name = prefs.getString('b2b_business_name_${widget.userId}') ?? '';
+    if (mounted) setState(() => _businessName = name);
+  }
+
+  Future<void> _loadStats() async {
+    setState(() => _loadingStats = true);
+    final db = await LocalDatabaseHelper.instance.database;
+
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+    // Bills today & revenue today
+    final todayInvoices = await db.rawQuery(
+      "SELECT count(*) as cnt, IFNULL(SUM(totalAmount),0) as rev FROM invoices WHERE createdAt LIKE ?",
+      ['$today%'],
+    );
+    final billsToday = (todayInvoices.first['cnt'] as int?) ?? 0;
+    final revenueToday = (todayInvoices.first['rev'] as num?)?.toDouble() ?? 0.0;
+
+    // Total udhari (amount where type = 'given')
+    final udhariResult = await db.rawQuery(
+      "SELECT IFNULL(SUM(amount),0) as total FROM khata WHERE type = 'given'",
+    );
+    final totalUdhari = (udhariResult.first['total'] as num?)?.toDouble() ?? 0.0;
+
+    // Total jama (payments received)
+    final jamaResult = await db.rawQuery(
+      "SELECT IFNULL(SUM(amount),0) as total FROM khata WHERE type = 'received'",
+    );
+    final totalJama = (jamaResult.first['total'] as num?)?.toDouble() ?? 0.0;
+    final netUdhari = (totalUdhari - totalJama).clamp(0.0, double.infinity);
+
+    // Customer count
+    final custResult = await db.rawQuery("SELECT count(DISTINCT contactId) as cnt FROM b2b_contacts");
+    final customerCount = (custResult.first['cnt'] as int?) ?? 0;
+
+    // Stock items count
+    final stockResult = await db.rawQuery("SELECT count(*) as cnt, IFNULL(SUM(stockCount),0) as total FROM inventory");
+    final stockItems = (stockResult.first['total'] as int?) ?? 0;
+
+    // Recent invoices (last 8)
+    final recent = await db.query('invoices', orderBy: 'createdAt DESC', limit: 8);
+
     if (mounted) {
       setState(() {
-        _businessName = name;
+        _billsToday = billsToday;
+        _revenueToday = revenueToday;
+        _totalUdhari = netUdhari;
+        _customerCount = customerCount;
+        _stockItems = stockItems;
+        _recentInvoices = recent.map((r) => Map<String, dynamic>.from(r)).toList();
+        _loadingStats = false;
       });
+    }
+  }
+
+  String _formatDate(String? iso) {
+    if (iso == null) return '';
+    try {
+      final dt = DateTime.parse(iso).toLocal();
+      final now = DateTime.now();
+      if (DateFormat('yyyy-MM-dd').format(dt) == DateFormat('yyyy-MM-dd').format(now)) {
+        return 'Today, ${DateFormat('hh:mm a').format(dt)}';
+      }
+      return DateFormat('dd MMM, hh:mm a').format(dt);
+    } catch (_) {
+      return iso.substring(0, 10);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final lang = B2BLanguageService();
-    return ValueListenableBuilder<String>(
-      valueListenable: lang.currentLanguage,
-      builder: (context, currentLang, child) {
-        return Scaffold(
-          backgroundColor: Colors.grey[50],
-          appBar: AppBar(
-            title: Text(
-              lang.t('Business Dashboard'),
-              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo),
-            ),
-            backgroundColor: Colors.white,
-            elevation: 1,
-            systemOverlayStyle: Theme.of(context).appBarTheme.systemOverlayStyle,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_rounded, color: Colors.black87),
-              onPressed: () => Navigator.of(context).pop(),
-              tooltip: 'Back to Personal',
-            ),
-            actions: [
-              Padding(
-                padding: const EdgeInsets.only(right: 8.0),
-                child: buildB2BLanguageDropdown(),
-              )
-            ],
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        title: Text(
+          lang.t('Business Dashboard'),
+          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 1,
+        systemOverlayStyle: Theme.of(context).appBarTheme.systemOverlayStyle,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.black87),
+          onPressed: () => Navigator.of(context).pop(),
+          tooltip: 'Back to Personal',
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: Colors.indigo),
+            onPressed: _loadStats,
+            tooltip: 'Refresh',
           ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _businessName.isNotEmpty ? _businessName : lang.t('Welcome to Retailer Mode'),
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: buildB2BLanguageDropdown(),
+          ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: _loadStats,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Business name header ──────────────────────────────────
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _businessName.isNotEmpty ? _businessName : lang.t('My Business'),
+                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          DateFormat('EEEE, dd MMM yyyy').format(DateTime.now()),
+                          style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                        ),
+                      ],
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.edit_square, color: Colors.indigo),
-                      tooltip: lang.t('Edit Profile'),
-                      onPressed: () async {
-                        final changed = await Navigator.pushNamed(context, '/b2b/profile', arguments: widget.userId);
-                        if (changed == true) {
-                          _loadBusinessName();
-                        }
-                      },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.edit_square, color: Colors.indigo),
+                    tooltip: lang.t('Edit Profile'),
+                    onPressed: () async {
+                      final changed = await Navigator.pushNamed(context, '/b2b/profile', arguments: widget.userId);
+                      if (changed == true) _loadBusinessName();
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // ── Insight Cards ─────────────────────────────────────────
+              _loadingStats
+                  ? const Center(child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: CircularProgressIndicator(),
+                    ))
+                  : Column(
+                      children: [
+                        // Row 1: Bills Today + Revenue Today
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _InsightCard(
+                                icon: Icons.receipt_long_rounded,
+                                iconColor: Colors.blue.shade700,
+                                bgColor: Colors.blue.shade50,
+                                label: "Bills Today",
+                                value: '$_billsToday',
+                                sub: '₹${_revenueToday.toStringAsFixed(0)} revenue',
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _InsightCard(
+                                icon: Icons.account_balance_wallet_rounded,
+                                iconColor: Colors.orange.shade700,
+                                bgColor: Colors.orange.shade50,
+                                label: "Total Udhari",
+                                value: '₹${_totalUdhari.toStringAsFixed(0)}',
+                                sub: 'Outstanding balance',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        // Row 2: Customers + Stock
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _InsightCard(
+                                icon: Icons.people_rounded,
+                                iconColor: Colors.purple.shade700,
+                                bgColor: Colors.purple.shade50,
+                                label: "Customers",
+                                value: '$_customerCount',
+                                sub: 'in your Khata',
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _InsightCard(
+                                icon: Icons.inventory_2_rounded,
+                                iconColor: Colors.green.shade700,
+                                bgColor: Colors.green.shade50,
+                                label: "Stock Units",
+                                value: '$_stockItems',
+                                sub: 'total in inventory',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                _buildActionGrid(context, lang),
-                const SizedBox(height: 24),
-                AdsBannerCard(
-                  placement: 'b2b_dashboard_mid',
-                  inline: false,
-                  inlineMaxHeight: 120,
-                  minHeight: 96,
-                  margin: EdgeInsets.zero,
-                  backgroundColor: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
+
+              const SizedBox(height: 24),
+
+              // ── Action Grid ───────────────────────────────────────────
+              _buildActionGrid(context, lang),
+
+              const SizedBox(height: 24),
+
+              // ── Ad Banner ─────────────────────────────────────────────
+              AdsBannerCard(
+                placement: 'b2b_dashboard_mid',
+                inline: false,
+                inlineMaxHeight: 120,
+                minHeight: 96,
+                margin: EdgeInsets.zero,
+                backgroundColor: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12, offset: const Offset(0, 4))],
+              ),
+
+              const SizedBox(height: 24),
+
+              // ── Recent Activity ───────────────────────────────────────
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(lang.t('Recent Activity'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                  if (_recentInvoices.isNotEmpty)
+                    TextButton(
+                      onPressed: () => Navigator.pushNamed(context, '/b2b/history', arguments: widget.userId),
+                      child: const Text('View All', style: TextStyle(color: Colors.indigo)),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 32),
-                Text(
-                  lang.t('Recent Activity'),
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 12),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              if (_loadingStats)
+                const Center(child: CircularProgressIndicator())
+              else if (_recentInvoices.isEmpty)
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(28),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: Colors.grey.shade200),
                   ),
-                  child: Center(
-                    child: Text(
-                      lang.t('No recent orders yet.\nStart billing to see activity!'),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.grey, height: 1.5),
-                    ),
+                  child: Column(
+                    children: [
+                      Icon(Icons.receipt_long_outlined, size: 48, color: Colors.grey[300]),
+                      const SizedBox(height: 10),
+                      Text(
+                        lang.t('No recent orders yet.\nStart billing to see activity!'),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.grey, height: 1.5),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
+                )
+              else
+                ...(_recentInvoices.map((inv) {
+                  final amount = (inv['totalAmount'] as num?)?.toDouble() ?? 0.0;
+                  final name = inv['customerName'] as String? ?? 'Walk-in';
+                  final phone = inv['customerPhone'] as String? ?? '';
+                  final date = _formatDate(inv['createdAt'] as String?);
+                  final synced = (inv['synced'] as int?) == 1;
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.grey.shade100),
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      leading: CircleAvatar(
+                        backgroundColor: Colors.blue.shade50,
+                        child: Icon(Icons.receipt_rounded, color: Colors.blue.shade700, size: 20),
+                      ),
+                      title: Row(
+                        children: [
+                          Expanded(
+                            child: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                overflow: TextOverflow.ellipsis),
+                          ),
+                          Text('₹${amount.toStringAsFixed(0)}',
+                              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade700, fontSize: 15)),
+                        ],
+                      ),
+                      subtitle: Row(
+                        children: [
+                          Icon(Icons.access_time_rounded, size: 11, color: Colors.grey[400]),
+                          const SizedBox(width: 3),
+                          Expanded(
+                            child: Text('$date${phone.isNotEmpty ? '  •  $phone' : ''}',
+                                style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                                overflow: TextOverflow.ellipsis),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: synced ? Colors.green.shade50 : Colors.orange.shade50,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              synced ? 'Synced' : 'Offline',
+                              style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold,
+                                  color: synced ? Colors.green.shade700 : Colors.orange.shade700),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                })),
+              const SizedBox(height: 16),
+            ],
           ),
-        );
-      }
+        ),
+      ),
     );
   }
 
@@ -141,60 +368,38 @@ class _B2BDashboardScreenState extends State<B2BDashboardScreen> {
       crossAxisCount: 2,
       mainAxisSpacing: 16,
       crossAxisSpacing: 16,
-      childAspectRatio: 1.1, // slightly taller
+      childAspectRatio: 1.1,
       children: [
-        _buildActionCard(
-          context,
-          title: lang.t('Digital Khata'),
-          subtitle: lang.t('Manage your udhar and jama natively'),
-          icon: Icons.menu_book_rounded,
-          color: Colors.orange,
-          onTap: () {
-            Navigator.pushNamed(context, '/b2b/khata', arguments: widget.userId);
-          },
-        ),
-        _buildActionCard(
-          context,
-          title: lang.t('POS Billing'),
-          subtitle: lang.t('Fast checkout offline or online'),
-          icon: Icons.point_of_sale_rounded,
-          color: Colors.blue,
-          onTap: () {
-            Navigator.pushNamed(context, '/b2b/pos', arguments: widget.userId);
-          },
-        ),
-        _buildActionCard(
-          context,
-          title: lang.t('Inventory'),
-          subtitle: lang.t('Add or manage stock'),
-          icon: Icons.inventory_2_rounded,
-          color: Colors.green,
-          onTap: () {
-            Navigator.pushNamed(context, '/b2b/inventory', arguments: widget.userId);
-          },
-        ),
-        _buildActionCard(
-          context,
-          title: lang.t('Order History'),
-          subtitle: lang.t('View past sales summaries (Coming Soon)'),
-          icon: Icons.history_rounded,
-          color: Colors.purple,
-          onTap: () {
-            // Navigator.pushNamed(context, '/b2b/history', arguments: widget.userId);
-          },
-        ),
+        _buildActionCard(context, title: lang.t('Digital Khata'), subtitle: lang.t('Manage your udhar and jama'),
+            icon: Icons.menu_book_rounded, color: Colors.orange,
+            onTap: () => Navigator.pushNamed(context, '/b2b/khata', arguments: widget.userId)),
+        _buildActionCard(context, title: lang.t('POS Billing'), subtitle: lang.t('Fast checkout offline/online'),
+            icon: Icons.point_of_sale_rounded, color: Colors.blue,
+            onTap: () async {
+              await Navigator.pushNamed(context, '/b2b/pos', arguments: widget.userId);
+              _loadStats(); // refresh stats after billing
+            }),
+        _buildActionCard(context, title: lang.t('Inventory'), subtitle: lang.t('Add or manage stock'),
+            icon: Icons.inventory_2_rounded, color: Colors.green,
+            onTap: () async {
+              await Navigator.pushNamed(context, '/b2b/inventory', arguments: widget.userId);
+              _loadStats();
+            }),
+        _buildActionCard(context, title: lang.t('Order History'), subtitle: lang.t('View all past sales & invoices'),
+            icon: Icons.history_rounded, color: Colors.purple,
+            onTap: () => Navigator.pushNamed(context, '/b2b/history', arguments: widget.userId)),
+        _buildActionCard(context,
+            title: 'Fiinny AI',
+            subtitle: 'Ask about sales, stock & udhari',
+            icon: Icons.auto_awesome_rounded,
+            color: Colors.teal,
+            onTap: () => Navigator.pushNamed(context, '/b2b/ai', arguments: widget.userId)),
       ],
     );
   }
 
-  Widget _buildActionCard(
-    BuildContext context, {
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildActionCard(BuildContext context,
+      {required String title, required String subtitle, required IconData icon, required Color color, required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
@@ -202,13 +407,7 @@ class _B2BDashboardScreenState extends State<B2BDashboardScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.1),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          boxShadow: [BoxShadow(color: color.withOpacity(0.1), blurRadius: 12, offset: const Offset(0, 4))],
           border: Border.all(color: color.withOpacity(0.2)),
         ),
         padding: const EdgeInsets.all(16),
@@ -218,30 +417,67 @@ class _B2BDashboardScreenState extends State<B2BDashboardScreen> {
           children: [
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
               child: Icon(icon, color: color, size: 28),
             ),
             const Spacer(),
-            Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15), overflow: TextOverflow.ellipsis),
             const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 12,
-              ),
-            ),
+            Text(subtitle, style: TextStyle(color: Colors.grey.shade600, fontSize: 11), overflow: TextOverflow.ellipsis, maxLines: 2),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─── Insight Card Widget ─────────────────────────────────────────────────────
+class _InsightCard extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final Color bgColor;
+  final String label;
+  final String value;
+  final String sub;
+
+  const _InsightCard({
+    required this.icon,
+    required this.iconColor,
+    required this.bgColor,
+    required this.label,
+    required this.value,
+    required this.sub,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: bgColor),
+        boxShadow: [BoxShadow(color: iconColor.withOpacity(0.07), blurRadius: 8, offset: const Offset(0, 3))],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(9),
+            decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
+            child: Icon(icon, color: iconColor, size: 22),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: TextStyle(fontSize: 10, color: Colors.grey[600], fontWeight: FontWeight.w500)),
+                Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: iconColor)),
+                Text(sub, style: TextStyle(fontSize: 9, color: Colors.grey[500]), overflow: TextOverflow.ellipsis),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

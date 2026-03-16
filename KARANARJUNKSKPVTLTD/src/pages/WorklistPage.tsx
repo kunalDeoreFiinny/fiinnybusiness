@@ -67,7 +67,22 @@ export default function WorklistPage() {
                         );
                         const ordersSnap = await getDocs(ordersQ);
                         const orders = ordersSnap.docs.map(doc => doc.data());
-                        const hasPending = orders.length === 0 || orders.some(o => !o.isDelivered);
+                        
+                        // Fetch salesOrders (B2B Invoices) to see if there are any pending there
+                        const salesOrdersQ = query(
+                            getTenantCollection(db, tenantId, 'salesOrders'),
+                            where('retailerId', '==', r.id)
+                        );
+                        const salesOrdersSnap = await getDocs(salesOrdersQ);
+                        const salesOrders = salesOrdersSnap.docs.map(doc => doc.data());
+
+                        // Retailer has pending if any POS order is NOT delivered, or any B2B invoice is pending,
+                        // or if they just have 0 POS orders AND 0 B2B invoices (new retailer).
+                        const hasPendingPos = orders.some(o => !o.isDelivered);
+                        const hasPendingB2b = salesOrders.some(so => so.status === 'pending');
+                        const isBrandNew = orders.length === 0 && salesOrders.length === 0;
+
+                        const hasPending = isBrandNew || hasPendingPos || hasPendingB2b;
                         return { ...r, hasPendingOrders: hasPending };
                     })
                 );

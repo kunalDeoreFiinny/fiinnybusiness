@@ -18,12 +18,18 @@ import '../services/bank_account_service.dart';
 import '../services/credit_card_service.dart';
 import '../services/loan_service.dart';
 import '../services/asset_service.dart';
+import '../models/credit_card_model.dart';
+import '../models/goal_model.dart';
+import '../services/budget_service.dart';
 
 class FiinnyBrainChatScreen extends StatefulWidget {
   final String userPhone;
+  /// Optional: pre-fill and auto-send a message on first open
+  final String? initialMessage;
 
   const FiinnyBrainChatScreen({
     required this.userPhone,
+    this.initialMessage,
     super.key,
   });
 
@@ -48,7 +54,12 @@ class _FiinnyBrainChatScreenState extends State<FiinnyBrainChatScreen> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _loadData().then((_) {
+      if (widget.initialMessage != null && widget.initialMessage!.isNotEmpty) {
+        _controller.text = widget.initialMessage!;
+        _sendMessage();
+      }
+    });
     _initSpeech();
   }
 
@@ -142,13 +153,93 @@ class _FiinnyBrainChatScreenState extends State<FiinnyBrainChatScreen> {
       // Scroll to bottom
       _scrollToBottom();
 
-      // RAG Implementation
-      final snapshot = await _fetchSnapshot(widget.userPhone);
-      final history = await _chatService.getRecentMessages(
-          widget.userPhone, _currentSessionId!);
+      // RAG Implementation — load in parallel using typed futures
+      final snapshotFuture = _fetchSnapshot(widget.userPhone);
+      final cardsFuture = CreditCardService().getUserCards(widget.userPhone);
+      final goalsFuture = GoalService().getGoals(widget.userPhone);
+      final budgetsFuture = BudgetService().getBudgetsForMonth(
+          widget.userPhone, DateTime.now().month, DateTime.now().year);
+      final historyFuture = _chatService.getRecentMessages(widget.userPhone, _currentSessionId!);
+
+      final snapshot = await snapshotFuture;
+      final rawCards = await cardsFuture;
+      final rawGoals = await goalsFuture;
+      final rawBudgets = await budgetsFuture;
+      final history = await historyFuture;
+
+      // Build enriched credit card + goals context for AI
+      final cardContext = rawCards.isNotEmpty
+          ? rawCards.map((c) {
+              final days = c.dueDate.difference(DateTime.now()).inDays;
+              final status = c.isOverdue
+                  ? '⚠️ OVERDUE'
+                  : days <= 3
+                      ? '🔴 DUE IN ${days}d'
+                      : days <= 7
+                          ? '🟡 DUE IN ${days}d'
+                          : '🟢 DUE IN ${days}d';
+              return '${c.bankName} •${c.last4Digits}: '
+                  'totalDue=₹${c.totalDue.toStringAsFixed(0)}, '
+                  'minDue=₹${c.minDue.toStringAsFixed(0)}, '
+                  'dueDate=${c.dueDate.toIso8601String().substring(0, 10)}, '
+                  '${c.creditLimit != null ? "limit=₹${c.creditLimit!.toStringAsFixed(0)}, " : ""}'
+                  'status=$status, isPaid=${c.isPaid}';
+            }).join('\n')
+          : 'No credit cards found.';
+
+      final goalsContext = rawGoals.isNotEmpty
+          ? rawGoals.map((g) {
+              final pct = g.targetAmount > 0
+                  ? (g.savedAmount / g.targetAmount * 100).clamp(0, 100).toStringAsFixed(0)
+                  : '0';
+              final remaining = g.targetAmount - g.savedAmount;
+              return '${g.title}: saved=₹${g.savedAmount.toStringAsFixed(0)} / '
+                  'target=₹${g.targetAmount.toStringAsFixed(0)} ($pct% done, ₹${remaining.toStringAsFixed(0)} left)';
+            }).join('\n')
+          : 'No goals set yet.';
+
+      // Fetch expenses for budget enrichment
+      final allExpenses = await ExpenseService().getExpenses(widget.userPhone);
+      final now = DateTime.now();
+      final enrichedBudgets = BudgetService().enrichBudgetsWithExpenses(
+          rawBudgets, allExpenses, now.month, now.year);
+      final budgetContext = enrichedBudgets.isNotEmpty
+          ? enrichedBudgets.map((b) {
+              final pct = b.limitAmount > 0
+                  ? (b.spentAmount / b.limitAmount * 100).clamp(0, 200).toStringAsFixed(0)
+                  : '0';
+              final status = b.isExceeded ? '⛔ EXCEEDED' : b.progress >= 0.8 ? '⚠️ NEAR LIMIT' : '✅ ON TRACK';
+              return '${b.category}: spent=₹${b.spentAmount.toStringAsFixed(0)} / limit=₹${b.limitAmount.toStringAsFixed(0)} ($pct%, $status)';
+            }).join('\n')
+          : 'No budgets set for this month.';
+
+      final enrichedQuery = '''
+[Fiinny AI – Personal Finance Mode]
+
+CREDIT CARDS:
+$cardContext
+
+GOALS:
+$goalsContext
+
+BUDGETS (${now.month}/${now.year}):
+$budgetContext
+
+INSTRUCTIONS:
+- For credit card questions, give SPECIFIC pros/cons of full vs minimum payments.
+- For goals: give actionable step-by-step advice to reach the goal faster.
+- For budget questions: analyze which categories are over/near limit and suggest cuts.
+- Use Indian financial context (EMI, UPI, salary cycle, CIBIL, etc.).
+- MUST use the Indian Rupee symbol (₹) for ALL monetary amounts. DO NOT use the dollar sign (\$).
+- MUST respond in the EXACT same language as the user's query. If they write in Hindi, Marathi, Telugu, Tamil, or any other language (even in English script), reply in that EXACT same language.
+- MUST NOT use ANY markdown formatting (no asterisks *, no bold text). Keep all text completely plain.
+- End each answer with one 💡 tip
+
+USER ASKED: $text
+''';
 
       final response = await GptService.chatWithContext(
-          text, snapshot, history, widget.userPhone);
+          enrichedQuery, snapshot, history, widget.userPhone);
 
       if (!mounted) return;
 
@@ -215,10 +306,10 @@ class _FiinnyBrainChatScreenState extends State<FiinnyBrainChatScreen> {
 
       // 5. Send Analysis as AI Message
       if (_currentSessionId != null) {
-        final message = "**Monthly Financial Health Check**\n\n"
+        final message = "Monthly Financial Health Check\n\n"
             "${report.analysis ?? ''}\n\n"
-            "**Priority Action:** ${report.priorityAction}\n"
-            "**Quick Wins:**\n${report.quickWins.map((w) => '- $w').join('\n')}";
+            "Priority Action: ${report.priorityAction}\n"
+            "Quick Wins:\n${report.quickWins.map((w) => '- $w').join('\n')}";
 
         await _chatService.addAiResponse(
             widget.userPhone, _currentSessionId!, message);
@@ -373,7 +464,12 @@ class _FiinnyBrainChatScreenState extends State<FiinnyBrainChatScreen> {
             return Padding(
               padding: const EdgeInsets.only(right: 8),
               child: ActionChip(
-                label: Text(suggestion, style: const TextStyle(fontSize: 12)),
+                label: Text(suggestion,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Fx.mintDark,
+                      fontWeight: FontWeight.w500,
+                    )),
                 onPressed: () {
                   if (suggestion == 'Generate Monthly Report') {
                     _handleGenerateReport();
@@ -382,7 +478,8 @@ class _FiinnyBrainChatScreenState extends State<FiinnyBrainChatScreen> {
                     _sendMessage();
                   }
                 },
-                backgroundColor: Fx.mint.withValues(alpha: 0.1),
+                backgroundColor: Fx.mint.withValues(alpha: 0.12),
+                side: BorderSide(color: Fx.mintDark.withValues(alpha: 0.3)),
               ),
             );
           }).toList(),

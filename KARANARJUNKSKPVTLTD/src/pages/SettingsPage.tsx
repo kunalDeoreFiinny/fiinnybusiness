@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Settings, Shield, Globe, Download, Info, Save, Building2, User, Moon, Sun, LayoutTemplate, FileText, Loader2 } from 'lucide-react';
+import { Settings, Shield, Globe, Download, Info, Save, Building2, User, Moon, Sun, LayoutTemplate, FileText, Loader2, Plus, ChevronRight } from 'lucide-react';
 import { getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
@@ -62,6 +62,7 @@ export default function SettingsPage() {
                         { id: 'builder', icon: LayoutTemplate, label: 'UI Builder (Admins)', adminOnly: true },
                         { id: 'language', icon: Globe, label: 'Language & Region' },
                         { id: 'security', icon: Shield, label: 'Security & Access' },
+                        { id: 'companies', icon: Building2, label: 'Multi-Company' },
                         { id: 'install', icon: Download, label: 'Install App (PWA)' },
                         { id: 'about', icon: Info, label: 'About Platform' }
                     ].filter(item => !item.adminOnly || window.location.pathname.includes('/settings')).map(item => (
@@ -167,6 +168,49 @@ export default function SettingsPage() {
                     {activeTab === 'security' && (
                         <div className="animate-fade-in" style={{ margin: '-2rem' }}>
                             <ManageRolesPage />
+                        </div>
+                    )}
+
+                    {activeTab === 'companies' && (
+                        <div className="animate-fade-in">
+                            <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <Building2 size={22} /> Multi-Company Management
+                            </h2>
+                            <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem', fontSize: '0.9rem' }}>
+                                Manage multiple business entities (e.g., different GSTINs, companies) from one login.
+                            </p>
+
+                            {/* Current Company */}
+                            <div style={{ padding: '1.25rem', background: 'hsla(152,60%,40%,0.07)', border: '2px solid var(--primary)', borderRadius: '14px', marginBottom: '1.5rem' }}>
+                                <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--primary-light)', marginBottom: '0.5rem' }}>✓ Active Company</div>
+                                <div style={{ fontWeight: 800, fontSize: '1.1rem', marginBottom: '0.25rem' }}>{profile.businessName || 'Your Business'}</div>
+                                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{profile.industry || 'Industry not set'}</div>
+                            </div>
+
+                            {/* Other companies placeholder */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                                {['Company Branch 2', 'Company Branch 3'].map((name, i) => (
+                                    <div key={i} style={{ padding: '1rem 1.25rem', background: 'var(--surface-base)', border: '1px solid var(--surface-border)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: 0.4 }}>
+                                        <div>
+                                            <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{name}</div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Not configured</div>
+                                        </div>
+                                        <ChevronRight size={16} style={{ color: 'var(--text-tertiary)' }} />
+                                    </div>
+                                ))}
+                            </div>
+
+                            <button
+                                className="btn btn-secondary"
+                                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}
+                                onClick={() => alert('Multi-company onboarding coming in Phase 5! Each company gets its own GSTIN, invoices, inventory, and retailers, all under one login.')}
+                            >
+                                <Plus size={16} /> Add Another Company
+                            </button>
+
+                            <div style={{ padding: '0.75rem 1rem', background: 'hsla(45,93%,47%,0.07)', border: '1px solid hsla(45,93%,47%,0.2)', borderRadius: '10px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                                💡 <strong>Multi-company isolation</strong> gives each entity its own invoices, GST filings, inventory, retailers, and reports — switchable from this panel in one click.
+                            </div>
                         </div>
                     )}
 

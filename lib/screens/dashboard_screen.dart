@@ -45,8 +45,8 @@ import '../core/ui/snackbar_throttle.dart';
 import '../widgets/empty_state_card.dart';
 import '../widgets/gmail_backfill_banner.dart';
 import '../widgets/loan_suggestions_sheet.dart';
+import '../widgets/dashboard/credit_cards_summary_card.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 // NEW portfolio module imports (aliased so they don't clash with your old service/model)
 import '../fiinny_assets/modules/portfolio/services/asset_service.dart'
     as p_asset_service;
@@ -84,6 +84,10 @@ import '../widgets/assets_summary_card.dart';
 import '../widgets/goals_summary_card.dart';
 import '../widgets/net_worth_panel.dart';
 import '../widgets/dashboard/subscriptions_summary_card.dart';
+import '../widgets/dashboard/budget_summary_card.dart';
+import '../models/budget_model.dart';
+import '../services/budget_service.dart';
+import 'budgeting_screen.dart';
 
 // --- Helper getters for dynamic model ---
 DateTime getTxDate(dynamic tx) =>
@@ -145,6 +149,10 @@ class _DashboardScreenState extends State<DashboardScreen>
   final Map<String, List<double>> _amountBarsCache = {};
   final Map<String, List<int>> _countBarsCache = {};
   int _barsRevision = 0;
+
+  // Budget state
+  List<BudgetModel> _currentBudgets = [];
+  final _budgetService = BudgetService();
 
   final Map<String, Map<String, double>> _summaryCache = {};
   int _summaryRevision = 0;
@@ -404,11 +412,19 @@ class _DashboardScreenState extends State<DashboardScreen>
       if (!mounted) {
         return;
       }
+      // Fetch budgets for current month
+      final now = DateTime.now();
+      final budgets = await _budgetService.getBudgetsForMonth(
+          widget.userPhone, now.month, now.year);
+      final enrichedBudgets = _budgetService.enrichBudgetsWithExpenses(
+          budgets, allExpenses, now.month, now.year);
+
       setState(() {
         goals = goalsList;
         currentGoal = goalsList.isNotEmpty ? goalsList.first : null;
         loanCount = openLoans.length;
         totalLoan = openLoanTotal;
+        _currentBudgets = enrichedBudgets;
         // _subsCount = subs.length; // unused
         // _subsTotal = subTotal; // unused
 
@@ -2383,12 +2399,43 @@ class _DashboardScreenState extends State<DashboardScreen>
                             },
                           ),
                         ),
-                        /* // HIDDEN FOR RELEASE
+                        const SizedBox(height: 10),
+                        Padding(
+                          padding: horizontalPadding,
+                          child: CreditCardsSummaryCard(
+                            userId: widget.userPhone,
+                            onOpen: () => Navigator.pushNamed(
+                              context,
+                              '/cards-management',
+                              arguments: widget.userPhone,
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 10),
                         Padding(
                           padding: horizontalPadding,
                           child: _buildGoalsTile(),
                         ),
+                        const SizedBox(height: 10),
+                        Padding(
+                          padding: horizontalPadding,
+                          child: BudgetSummaryCard(
+                            userId: widget.userPhone,
+                            budgets: _currentBudgets,
+                            onTap: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => BudgetingScreen(
+                                      userId: widget.userPhone),
+                                ),
+                              );
+                              // Refresh budgets after returning
+                              unawaited(_refreshSecondaryBlocks());
+                            },
+                          ),
+                        ),
+                        /* // HIDDEN FOR RELEASE
                         const SizedBox(height: 10),
                         Padding(
                           padding: horizontalPadding,
@@ -2555,6 +2602,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       },
     );
   }
+
 
   Map<String, double> _getTxSummaryForPeriod(String period) {
     final cacheKey = '${_summaryRevision}_$period';

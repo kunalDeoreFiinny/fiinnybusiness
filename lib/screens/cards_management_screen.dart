@@ -1,693 +1,743 @@
+// lib/screens/cards_management_screen.dart
 import 'package:flutter/material.dart';
-import '../models/expense_item.dart';
-import '../models/income_item.dart';
-import '../services/expense_service.dart';
-import '../services/income_service.dart';
-import '../services/credit_card_service.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+
 import '../models/credit_card_model.dart';
+import '../services/credit_card_service.dart';
+import '../services/subscription_service.dart';
 import '../themes/tokens.dart';
-import '../widgets/dashboard/bank_card_item.dart';
-import '../widgets/dashboard/bank_overview_dialog.dart';
 import 'credit_cards/add_card_sheet.dart';
 import 'credit_cards/card_detail_screen.dart';
-import 'package:provider/provider.dart'; // Provider
-import '../../services/subscription_service.dart'; // SubscriptionService
 
 class CardsManagementScreen extends StatefulWidget {
   final String userId;
-
   const CardsManagementScreen({super.key, required this.userId});
 
   @override
   State<CardsManagementScreen> createState() => _CardsManagementScreenState();
 }
 
-class _CardsManagementScreenState extends State<CardsManagementScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  // ...
-
-  void _openUpgrade() {
-    Navigator.of(context).pushNamed('/premium');
-  }
-
+class _CardsManagementScreenState extends State<CardsManagementScreen> {
+  final _svc = CreditCardService();
   bool _loading = true;
-  List<ExpenseItem> _expenses = [];
-  List<IncomeItem> _incomes = [];
-  List<CreditCardModel> _creditCards = [];
-
-  // Filter state
-  String _filterPeriod = 'Month'; // Default to current month
-  DateTimeRange? _customDateRange;
+  List<CreditCardModel> _cards = [];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    _loadData();
+    _load();
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadData() async {
+  Future<void> _load() async {
+    if (!mounted) return;
     setState(() => _loading = true);
     try {
-      final expenses = await ExpenseService().getExpenses(widget.userId);
-      final incomes = await IncomeService().getIncomes(widget.userId);
-      final cards = await CreditCardService().getUserCards(widget.userId);
-
-      if (!mounted) return;
-      setState(() {
-        _expenses = expenses;
-        _incomes = incomes;
-        _creditCards = cards;
-        _loading = false;
-      });
+      _cards = await _svc.getUserCards(widget.userId);
     } catch (e) {
-      if (!mounted) return;
-      setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading data: $e')),
-      );
-    }
-  }
-
-  void _showBankOverview(String bankSlug, String bankName) {
-    // Filter expenses/incomes passed to dialog based on current filter?
-    // User probably expects to see transactions matching the dashboard filter.
-    final range = _getFilterRange();
-
-    final filteredEx = _expenses.where((e) {
-      if (e.issuerBank?.toLowerCase() != bankSlug.toLowerCase() &&
-          e.issuerBank?.toLowerCase() != bankName.toLowerCase()) {
-        return false;
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error loading cards: $e')));
       }
-      return e.date.isAfter(range.start.subtract(const Duration(seconds: 1))) &&
-          e.date.isBefore(range.end.add(const Duration(seconds: 1)));
-    }).toList();
-
-    final filteredIn = _incomes.where((i) {
-      if (i.issuerBank?.toLowerCase() != bankSlug.toLowerCase() &&
-          i.issuerBank?.toLowerCase() != bankName.toLowerCase()) {
-        return false;
-      }
-      return i.date.isAfter(range.start.subtract(const Duration(seconds: 1))) &&
-          i.date.isBefore(range.end.add(const Duration(seconds: 1)));
-    }).toList();
-
-    showDialog(
-      context: context,
-      builder: (_) => BankOverviewDialog(
-        bankSlug: bankSlug,
-        bankName: bankName,
-        allExpenses: filteredEx,
-        allIncomes: filteredIn,
-        userPhone: widget.userId,
-        userName: 'User',
-      ),
-    );
-  }
-
-  DateTimeRange _getFilterRange() {
-    final now = DateTime.now();
-    if (_customDateRange != null) {
-      return _customDateRange!;
     }
-    switch (_filterPeriod) {
-      case 'Day':
-        final d = DateTime(now.year, now.month, now.day);
-        return DateTimeRange(
-            start: d,
-            end: d
-                .add(const Duration(days: 1))
-                .subtract(const Duration(milliseconds: 1)));
-      case 'Week':
-        final start = now.subtract(Duration(days: now.weekday - 1));
-        final end = start.add(const Duration(days: 6));
-        return DateTimeRange(
-            start: DateTime(start.year, start.month, start.day),
-            end: DateTime(end.year, end.month, end.day, 23, 59, 59));
-      case 'Month':
-        final start = DateTime(now.year, now.month, 1);
-        final end = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
-        return DateTimeRange(start: start, end: end);
-      case 'Year':
-        final start = DateTime(now.year, 1, 1);
-        final end = DateTime(now.year, 12, 31, 23, 59, 59);
-        return DateTimeRange(start: start, end: end);
-      case 'All':
-      default:
-        return DateTimeRange(start: DateTime(2000), end: DateTime(2100));
-    }
-  }
-
-  List<ExpenseItem> _getFilteredExpenses() {
-    final range = _getFilterRange();
-    return _expenses
-        .where((e) =>
-            e.date.isAfter(range.start.subtract(const Duration(seconds: 1))) &&
-            e.date.isBefore(range.end.add(const Duration(seconds: 1))))
-        .toList();
-  }
-
-  List<IncomeItem> _getFilteredIncomes() {
-    final range = _getFilterRange();
-    return _incomes
-        .where((i) =>
-            i.date.isAfter(range.start.subtract(const Duration(seconds: 1))) &&
-            i.date.isBefore(range.end.add(const Duration(seconds: 1))))
-        .toList();
-  }
-
-  Future<void> _showFilterSheet() async {
-    await showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 12),
-            Container(
-                height: 4,
-                width: 40,
-                decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 12),
-            const Text('Select Period',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 12),
-            ...['Day', 'Week', 'Month', 'Year', 'All'].map((p) => ListTile(
-                  title: Text(p),
-                  trailing: _filterPeriod == p
-                      ? const Icon(Icons.check, color: Fx.mintDark)
-                      : null,
-                  onTap: () {
-                    setState(() {
-                      _filterPeriod = p;
-                      _customDateRange = null;
-                    });
-                    Navigator.pop(context);
-                  },
-                )),
-          ],
-        ),
-      ),
-    );
+    if (mounted) setState(() => _loading = false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final filteredExpenses = _getFilteredExpenses();
-    final filteredIncomes = _getFilteredIncomes();
+    // Sort: overdue first, then by nearest due date
+    final sorted = [..._cards]..sort((a, b) {
+        if (a.isOverdue && !b.isOverdue) return -1;
+        if (!a.isOverdue && b.isOverdue) return 1;
+        return a.dueDate.compareTo(b.dueDate);
+      });
+
+    final unpaid = sorted.where((c) => !c.isPaid).toList();
+    final totalDue = unpaid.fold(0.0, (s, c) => s + c.totalDue);
+    final totalMin = unpaid.fold(0.0, (s, c) => s + c.minDue);
+    final overdueCount = unpaid.where((c) => c.isOverdue).length;
+    final fmt = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('My Cards',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Credit Cards',
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
         backgroundColor: Colors.white,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        foregroundColor: Colors.black87,
         actions: [
-          TextButton.icon(
-            onPressed: _showFilterSheet,
-            icon: const Icon(Icons.calendar_today, size: 16),
-            label: Text(_filterPeriod),
-            style: TextButton.styleFrom(foregroundColor: Colors.black87),
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: _load,
           ),
           IconButton(
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.add_rounded),
             tooltip: 'Add Card',
-            onPressed: () async {
-              final sub =
-                  Provider.of<SubscriptionService>(context, listen: false);
-              // Free limit: 1 card
-              if (!sub.isPremium && _creditCards.isNotEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text(
-                        "Free plan limit reached (1 card). Upgrade to add more."),
-                    action: SnackBarAction(
-                        label: "Upgrade", onPressed: _openUpgrade),
-                  ),
-                );
-                return;
-              }
-
-              // Simple add card sheet for credit cards
-              final added = await showModalBottomSheet<bool>(
-                context: context,
-                isScrollControlled: true,
-                useSafeArea: true,
-                builder: (_) => AddCardSheet(userId: widget.userId),
-              );
-              if (added == true) _loadData();
-            },
+            onPressed: () => _showAddCard(context),
           ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: Fx.mintDark,
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: Fx.mintDark,
-          indicatorWeight: 3,
-          tabs: const [
-            Tab(text: 'All'),
-            Tab(text: 'Credit Cards'),
-            Tab(text: 'Debit Cards'),
-          ],
-        ),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                _AllCardsTab(
-                  expenses: filteredExpenses,
-                  incomes: filteredIncomes,
-                  onCardTap: _showBankOverview,
-                ),
-                _CreditCardsTab(
-                  cards: _creditCards,
-                  expenses: filteredExpenses, // Pass filtered expenses
-                  userId: widget.userId,
-                  onRefresh: _loadData,
-                  onCardTap: (card) {
-                    // Filter transactions for this card
-                    final cardTxs = filteredExpenses
-                        .where((e) =>
-                            e.issuerBank?.toLowerCase() ==
-                                card.bankName.toLowerCase() &&
-                            (e.cardLast4 == card.last4Digits))
-                        .toList();
+          : sorted.isEmpty
+              ? _buildEmpty(context)
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                    children: [
+                      // ── Summary Header ──────────────────────────
+                      if (totalDue > 0) ...[
+                        _buildSummaryBanner(
+                          totalDue: totalDue,
+                          totalMin: totalMin,
+                          overdueCount: overdueCount,
+                          fmt: fmt,
+                          cardCount: sorted.length,
+                        ),
+                        const SizedBox(height: 20),
+                      ],
 
-                    // Navigate to detail screen
-                    Navigator.of(context)
-                        .push(
-                          MaterialPageRoute(
-                            builder: (_) => CardDetailScreen(
-                              userId: widget.userId,
-                              card: card,
-                              recentTransactions: cardTxs,
-                            ),
+                      // ── Section label ───────────────────────────
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Text(
+                          '${sorted.length} Card${sorted.length != 1 ? 's' : ''}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                            color: Color(0xFF1A1A2E),
                           ),
-                        )
-                        .then((_) => _loadData());
-                  },
+                        ),
+                      ),
+
+                      // ── Card Tiles ──────────────────────────────
+                      ...sorted.map((card) => Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: _CreditCardTile(
+                              card: card,
+                              userId: widget.userId,
+                              svc: _svc,
+                              fmt: fmt,
+                              onTap: () => _openDetail(card),
+                              onMarkPaid: () async {
+                                await _svc.markCardBillPaid(
+                                    widget.userId, card.id, DateTime.now());
+                                await _load();
+                              },
+                            ),
+                          )),
+                    ],
+                  ),
                 ),
-                _DebitCardsTab(
-                  expenses: filteredExpenses,
-                  incomes: filteredIncomes,
-                  onCardTap: _showBankOverview,
+      floatingActionButton: sorted.isNotEmpty
+          ? FloatingActionButton.extended(
+              backgroundColor: Fx.mintDark,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Add Card',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              onPressed: () => _showAddCard(context),
+            )
+          : null,
+    );
+  }
+
+  Widget _buildSummaryBanner({
+    required double totalDue,
+    required double totalMin,
+    required int overdueCount,
+    required NumberFormat fmt,
+    required int cardCount,
+  }) {
+    final hasOverdue = overdueCount > 0;
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: hasOverdue
+              ? [const Color(0xFFFF416C), const Color(0xFFFF4B2B)]
+              : [Fx.mintDark, const Color(0xFF00B09B)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: (hasOverdue ? Colors.red : Fx.mintDark).withOpacity(0.3),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (hasOverdue)
+            Row(
+              children: [
+                const Icon(Icons.warning_amber_rounded,
+                    color: Colors.white, size: 16),
+                const SizedBox(width: 6),
+                Text(
+                  '$overdueCount card${overdueCount != 1 ? 's' : ''} overdue — act now!',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13),
                 ),
               ],
+            )
+          else
+            const Text(
+              'Outstanding Bills',
+              style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500),
             ),
-    );
-  }
-}
-
-// All Cards Tab
-class _AllCardsTab extends StatelessWidget {
-  final List<ExpenseItem> expenses;
-  final List<IncomeItem> incomes;
-  final Function(String slug, String name) onCardTap;
-
-  const _AllCardsTab({
-    required this.expenses,
-    required this.incomes,
-    required this.onCardTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final allCards = _groupByCard();
-
-    if (allCards.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.credit_card_off_outlined,
-                size: 64, color: Colors.grey[300]),
-            const SizedBox(height: 16),
-            const Text("No active cards found from transactions",
-                style: TextStyle(color: Colors.grey)),
-          ],
-        ),
-      );
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: allCards.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 16),
-      itemBuilder: (context, index) {
-        final card = allCards[index];
-        return Center(
-          // Center to handle width within list
-          child: BankCardItem(
-            bankName: card.bank,
-            cardType: card.type,
-            last4: card.last4,
-            holderName: 'USER', // Placeholder until profile data is linked
-            colorTheme: _getColorForBank(card.bank),
-            stats: BankStats(
-              totalDebit: card.debit,
-              totalCredit: card.credit,
-              txCount: card.txCount,
+          const SizedBox(height: 8),
+          Text(
+            fmt.format(totalDue),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 32,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -1,
             ),
-            onTap: () => onCardTap(card.bank, card.bank),
           ),
-        );
-      },
-    );
-  }
-
-  String _getColorForBank(String bankName) {
-    final b = bankName.toLowerCase();
-    if (b.contains('hdfc')) return 'blue';
-    if (b.contains('icici')) return 'red';
-    if (b.contains('sbi')) return 'blue';
-    if (b.contains('axis')) return 'purple';
-    if (b.contains('kotak')) return 'red';
-    if (b.contains('amex')) return 'blue';
-    return 'black'; // default
-  }
-
-  List<_CardGroup> _groupByCard() {
-    final map = <String, _CardGroup>{};
-
-    for (var e in expenses) {
-      if (e.issuerBank == null) continue;
-      final key = '${e.issuerBank}_${e.cardLast4 ?? "XXXX"}';
-      final group = map.putIfAbsent(
-        key,
-        () => _CardGroup(
-          bank: e.issuerBank!,
-          last4: e.cardLast4 ?? 'XXXX',
-          type: e.instrument ?? 'Card',
-        ),
-      );
-      group.debit += e.amount;
-      group.txCount++;
-    }
-
-    // Incomes usually don't have card last4, but we group by bank
-    for (var i in incomes) {
-      if (i.issuerBank == null) continue;
-      // We try to match existing group for this bank if possible,
-      // otherwise make a generic one.
-      // Simplification: match generic bank group if specific card not mapped?
-      // For now, let's just make a generic 'XXXX' entry if not exists
-      final key = '${i.issuerBank}_XXXX';
-      /* 
-       * Logic Adjustment: 
-       * If we have multiple cards for HDFC, income just says "HDFC".
-       * We can't easily attribute income to a specific card unless parsed.
-       * So we might create a separate "HDFC Generic" card view or just list it.
-       */
-      final group = map.putIfAbsent(
-        key,
-        () => _CardGroup(
-          bank: i.issuerBank!,
-          last4: 'XXXX',
-          type: i.instrument ?? 'Bank Account',
-        ),
-      );
-      group.credit += i.amount;
-      group.txCount++;
-    }
-
-    return map.values.toList()..sort((a, b) => b.txCount.compareTo(a.txCount));
-  }
-}
-
-// Credit Cards Tab
-class _CreditCardsTab extends StatelessWidget {
-  final List<CreditCardModel> cards;
-  final List<ExpenseItem> expenses;
-  final String userId;
-  final VoidCallback onRefresh;
-  final Function(CreditCardModel) onCardTap;
-
-  const _CreditCardsTab({
-    required this.cards,
-    required this.expenses,
-    required this.userId,
-    required this.onRefresh,
-    required this.onCardTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    // 1. Get manually added cards
-    final manualCards = cards;
-
-    // 2. Derive inferred cards from expenses
-    final inferredCards = _deriveInferredCards();
-
-    // 3. Merge: prefer manual card if last4 matches
-    final mergedCards = <CreditCardModel>[...manualCards];
-
-    for (var inferred in inferredCards) {
-      final exists = mergedCards.any((m) =>
-          m.last4Digits == inferred.last4Digits &&
-          m.bankName.toLowerCase() == inferred.bankName.toLowerCase());
-      if (!exists) {
-        mergedCards.add(inferred);
-      }
-    }
-
-    if (mergedCards.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.credit_card_outlined, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            const Text('No credit cards found'),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () async {
-                final added = await showModalBottomSheet<bool>(
-                  context: context,
-                  isScrollControlled: true,
-                  useSafeArea: true,
-                  builder: (_) => AddCardSheet(userId: userId),
-                );
-                if (added == true) onRefresh();
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Add Credit Card'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Fx.mintDark,
-                foregroundColor: Colors.white,
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              _summaryChip(
+                label: 'Min Due Total',
+                value: fmt.format(totalMin),
+                icon: Icons.payments_outlined,
               ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: mergedCards.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 16),
-      itemBuilder: (context, index) {
-        final card = mergedCards[index];
-        final stats = _calcStats(card);
-
-        // Check if it's a "real" manual card (has ID) or inferred (ID starts with 'inferred_')
-        // We can show a badge or "Add" button for inferred ones if we want, but for now just show them.
-
-        return Center(
-          child: BankCardItem(
-            bankName: card.bankName,
-            cardType: card.cardType.isNotEmpty ? card.cardType : 'Credit Card',
-            last4: card.last4Digits,
-            holderName:
-                card.cardholderName.isNotEmpty ? card.cardholderName : 'USER',
-            expiry: '12/28',
-            colorTheme: _getColorForBank(card.bankName),
-            stats: stats,
-            onTap: () => onCardTap(card),
+              const SizedBox(width: 12),
+              _summaryChip(
+                label: 'Cards',
+                value: '$cardCount',
+                icon: Icons.credit_card_rounded,
+              ),
+            ],
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
-  List<CreditCardModel> _deriveInferredCards() {
-    final Map<String, CreditCardModel> map = {};
-
-    for (var e in expenses) {
-      if (e.issuerBank == null) continue;
-      // Must be credit
-      final isCredit = e.instrument?.toLowerCase().contains('credit') ?? false;
-      if (!isCredit) continue;
-
-      final last4 = e.cardLast4 ?? 'XXXX';
-      final bank = e.issuerBank!;
-      final key = '${bank}_$last4';
-
-      if (!map.containsKey(key)) {
-        map[key] = CreditCardModel(
-          id: 'inferred_$key',
-          bankName: bank,
-          cardType: 'Credit Card',
-          last4Digits: last4,
-          cardholderName: 'USER',
-          dueDate: DateTime.now().add(const Duration(days: 30)), // Placeholder
-          totalDue: 0,
-          minDue: 0,
-        );
-      }
-    }
-    return map.values.toList();
+  Widget _summaryChip(
+      {required String label, required String value, required IconData icon}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.18),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: Colors.white),
+          const SizedBox(width: 6),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(label,
+                  style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500)),
+              Text(value,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800)),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
-  BankStats _calcStats(CreditCardModel card) {
-    double debit = 0;
-    int count = 0;
-    for (var e in expenses) {
-      // Loose matching
-      if (e.issuerBank?.toLowerCase() == card.bankName.toLowerCase() &&
-          e.cardLast4 == card.last4Digits) {
-        debit += e.amount;
-        count++;
-      }
-    }
-    return BankStats(totalDebit: debit, totalCredit: 0, txCount: count);
+  Widget _buildEmpty(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                color: Fx.mint.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Icon(Icons.credit_card_rounded,
+                  size: 44, color: Fx.mintDark),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'No Credit Cards Yet',
+              style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF1A1A2E)),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Add your cards to track bills,\ndue dates, and min payments',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[500], height: 1.6),
+            ),
+            const SizedBox(height: 32),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: Fx.mintDark,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 28, vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+              ),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Add Your First Card',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+              onPressed: () => _showAddCard(context),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-  String _getColorForBank(String bankName) {
-    final b = bankName.toLowerCase();
-    if (b.contains('axis')) return 'purple';
-    if (b.contains('hdfc')) return 'blue';
-    if (b.contains('icici')) return 'red';
-    if (b.contains('sbi')) return 'blue';
-    if (b.contains('kotak')) return 'red';
-    return 'black';
+  Future<void> _showAddCard(BuildContext context) async {
+    final sub = Provider.of<SubscriptionService>(context, listen: false);
+    if (!sub.isPremium && _cards.isNotEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Free plan: max 1 card. Upgrade for more.'),
+          action: SnackBarAction(
+              label: 'Upgrade',
+              onPressed: () => Navigator.pushNamed(context, '/premium')),
+        ),
+      );
+      return;
+    }
+    final added = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => AddCardSheet(userId: widget.userId),
+    );
+    if (added == true && mounted) await _load();
+  }
+
+  void _openDetail(CreditCardModel card) {
+    Navigator.of(context)
+        .push(MaterialPageRoute(
+          builder: (_) =>
+              CardDetailScreen(userId: widget.userId, card: card),
+        ))
+        .then((_) => _load());
   }
 }
 
-// Debit Cards Tab
-class _DebitCardsTab extends StatelessWidget {
-  final List<ExpenseItem> expenses;
-  final List<IncomeItem> incomes;
-  final Function(String slug, String name) onCardTap;
+// ─────────────────────────────────────────────────────────────
+// Premium Credit Card Tile
+// ─────────────────────────────────────────────────────────────
+class _CreditCardTile extends StatelessWidget {
+  final CreditCardModel card;
+  final String userId;
+  final CreditCardService svc;
+  final NumberFormat fmt;
+  final VoidCallback onTap;
+  final VoidCallback onMarkPaid;
 
-  const _DebitCardsTab({
-    required this.expenses,
-    required this.incomes,
-    required this.onCardTap,
+  const _CreditCardTile({
+    required this.card,
+    required this.userId,
+    required this.svc,
+    required this.fmt,
+    required this.onTap,
+    required this.onMarkPaid,
   });
 
   @override
   Widget build(BuildContext context) {
-    final debitCards = _groupByDebitCard();
+    final now = DateTime.now();
+    final days = card.dueDate.difference(now).inDays;
+    final isOverdue = card.isOverdue;
+    final isPaid = card.isPaid;
 
-    if (debitCards.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.credit_card_off_outlined,
-                size: 64, color: Colors.grey[300]),
-            const SizedBox(height: 16),
-            const Text("No debit card transactions found",
-                style: TextStyle(color: Colors.grey)),
-          ],
-        ),
-      );
-    }
+    // Gradient based on urgency
+    final List<Color> cardGradient = _cardGradient();
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: debitCards.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 16),
-      itemBuilder: (context, index) {
-        final card = debitCards[index];
-        return Center(
-          child: BankCardItem(
-            bankName: card.bank,
-            cardType: 'Debit Card',
-            last4: card.last4,
-            holderName: 'USER',
-            colorTheme: _getColorForBank(card.bank),
-            stats: BankStats(
-              totalDebit: card.debit,
-              totalCredit: 0,
-              txCount: card.txCount,
-            ),
-            onTap: () => onCardTap(card.bank, card.bank),
+    // Urgency text + color
+    final String urgencyText = isPaid
+        ? 'Bill Paid ✅'
+        : isOverdue
+            ? 'Overdue by ${now.difference(card.dueDate).inDays}d ⚠️'
+            : days == 0
+                ? 'Due Today!'
+                : days == 1
+                    ? 'Due Tomorrow'
+                    : 'Due in ${days}d';
+    final Color urgencyColor = isPaid
+        ? Colors.green
+        : isOverdue
+            ? Colors.red
+            : days <= 3
+                ? Colors.red
+                : days <= 7
+                    ? Colors.orange
+                    : Colors.green;
+
+    // Credit utilization %
+    final double utilPct = (card.creditLimit != null && card.creditLimit! > 0)
+        ? (card.totalDue / card.creditLimit! * 100).clamp(0.0, 100.0)
+        : 0.0;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        );
-      },
+          child: Column(
+            children: [
+              // ── Card Visual (the fake credit card top) ─────────
+              Container(
+                height: 130,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: cardGradient,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(20)),
+                ),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          card.cardAlias?.isNotEmpty == true
+                              ? card.cardAlias!
+                              : card.bankName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                        const Spacer(),
+                        // Chip icon
+                        Container(
+                          width: 32,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    // Card number
+                    Text(
+                      '•••• •••• •••• ${card.last4Digits}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Text(
+                          card.cardholderName.isNotEmpty
+                              ? card.cardholderName.toUpperCase()
+                              : 'CARD HOLDER',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.8),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          card.cardType.toUpperCase(),
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.7),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // ── Bill Details ────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: Column(
+                  children: [
+                    // Urgency row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: urgencyColor,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              urgencyText,
+                              style: TextStyle(
+                                color: urgencyColor,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          DateFormat('d MMM yyyy').format(card.dueDate),
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+                    // 3 stats in a row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _Stat(
+                            label: 'Total Due',
+                            value: fmt.format(card.totalDue),
+                            highlight: !isPaid && card.totalDue > 0,
+                          ),
+                        ),
+                        _vLine(),
+                        Expanded(
+                          child: _Stat(
+                            label: 'Min Due',
+                            value: fmt.format(card.minDue),
+                            valueColor:
+                                isPaid ? Colors.grey : Colors.orange[700]!,
+                          ),
+                        ),
+                        _vLine(),
+                        Expanded(
+                          child: _Stat(
+                            label: 'Statement',
+                            value: card.statementDate != null
+                                ? DateFormat('d MMM')
+                                    .format(card.statementDate!)
+                                : '—',
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Utilization bar
+                    if (card.creditLimit != null && card.creditLimit! > 0) ...[
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Credit Usage: ${utilPct.toStringAsFixed(0)}%',
+                            style: TextStyle(
+                                color: Colors.grey[600], fontSize: 12),
+                          ),
+                          Text(
+                            'Limit: ${fmt.format(card.creditLimit!)}',
+                            style: TextStyle(
+                                color: Colors.grey[500], fontSize: 12),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: utilPct / 100,
+                          minHeight: 7,
+                          backgroundColor: Colors.grey[200],
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            utilPct > 80
+                                ? Colors.red
+                                : utilPct > 50
+                                    ? Colors.orange
+                                    : Colors.green,
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    // Action buttons
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      child: Row(
+                        children: [
+                          if (!isPaid) ...[
+                            Expanded(
+                              child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.green[700],
+                                  side: BorderSide(
+                                      color: Colors.green[300]!),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(10)),
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 10),
+                                ),
+                                onPressed: onMarkPaid,
+                                child: const Text('Mark Paid',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13)),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                          ],
+                          Expanded(
+                            child: FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: Fx.mintDark,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(10)),
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 10),
+                              ),
+                              onPressed: onTap,
+                              child: const Text('View Details',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  String _getColorForBank(String bankName) {
-    final b = bankName.toLowerCase();
-    if (b.contains('sbi')) return 'blue';
-    if (b.contains('kotak')) return 'red';
-    if (b.contains('icici')) return 'red';
-    return 'green';
+  List<Color> _cardGradient() {
+    final b = card.bankName.toLowerCase();
+    if (b.contains('hdfc'))
+      return [const Color(0xFF1A237E), const Color(0xFF283593)];
+    if (b.contains('icici'))
+      return [const Color(0xFFB71C1C), const Color(0xFFC62828)];
+    if (b.contains('axis'))
+      return [const Color(0xFF4A148C), const Color(0xFF6A1B9A)];
+    if (b.contains('sbi'))
+      return [const Color(0xFF1565C0), const Color(0xFF1976D2)];
+    if (b.contains('kotak'))
+      return [const Color(0xFFE65100), const Color(0xFFF57C00)];
+    if (b.contains('amex') || b.contains('american'))
+      return [const Color(0xFF1B5E20), const Color(0xFF2E7D32)];
+    if (b.contains('idfc'))
+      return [const Color(0xFF006064), const Color(0xFF00838F)];
+    if (b.contains('onecard'))
+      return [const Color(0xFF0D0D0D), const Color(0xFF212121)];
+    // Default mint/teal
+    return [Fx.mintDark, const Color(0xFF00B09B)];
   }
 
-  List<_CardGroup> _groupByDebitCard() {
-    final map = <String, _CardGroup>{};
-
-    for (var e in expenses) {
-      // Must have bank
-      if (e.issuerBank == null) continue;
-      // Skip if explicitly Credit Card
-      if (e.instrument?.toLowerCase().contains('credit') ?? false) continue;
-
-      final key = '${e.issuerBank}_${e.cardLast4 ?? "XXXX"}';
-
-      /*
-       * Heuristic: If we don't know it's credit, and it has a bank, 
-       * we treat it as debit/account for now or just generic.
-       * The filter says "Debit Cards", so ideally we check for "Debit".
-       * If instrument is null, we might include it or exclude it. 
-       * Let's include for visibility but maybe label generic.
-       */
-
-      final group = map.putIfAbsent(
-        key,
-        () => _CardGroup(
-          bank: e.issuerBank!,
-          last4: e.cardLast4 ?? 'XXXX',
-          type: e.instrument ?? 'Debit Card',
-        ),
+  Widget _vLine() => Container(
+        width: 1,
+        height: 36,
+        color: Colors.grey[200],
+        margin: const EdgeInsets.symmetric(horizontal: 8),
       );
-      group.debit += e.amount;
-      group.txCount++;
-    }
-
-    return map.values.toList()..sort((a, b) => b.txCount.compareTo(a.txCount));
-  }
 }
 
-class _CardGroup {
-  final String bank;
-  final String last4;
-  final String type;
-  double debit = 0;
-  double credit = 0;
-  int txCount = 0;
+// ─────────────────────────────────────────────────────────────
+// Stat widget
+// ─────────────────────────────────────────────────────────────
+class _Stat extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool highlight;
+  final Color? valueColor;
 
-  _CardGroup({
-    required this.bank,
-    required this.last4,
-    required this.type,
+  const _Stat({
+    required this.label,
+    required this.value,
+    this.highlight = false,
+    this.valueColor,
   });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(label,
+            style: TextStyle(
+                color: Colors.grey[500],
+                fontSize: 11,
+                fontWeight: FontWeight.w500)),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: valueColor ??
+                (highlight
+                    ? const Color(0xFF1A1A2E)
+                    : Colors.grey[600]),
+            fontSize: 14,
+            fontWeight:
+                highlight ? FontWeight.w800 : FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
 }

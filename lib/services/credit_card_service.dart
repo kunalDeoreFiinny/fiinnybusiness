@@ -142,11 +142,27 @@ class CreditCardService {
     DateTime paidDate,
   ) async {
     final latest = await getLatestCycle(userId, cardId);
-    if (latest == null) return;
+
+    if (latest == null) {
+      // No cycle exists (card was manually added without a statement).
+      // Directly mark the card document as paid.
+      await _cardDoc(userId, cardId).set({
+        'isPaid': true,
+        'paidDate': paidDate.toIso8601String(),
+      }, SetOptions(merge: true));
+      return;
+    }
 
     final double remaining = (latest.totalDue - latest.paidAmount)
         .clamp(0.0, double.infinity);
-    if (remaining <= 0.01) return;
+    if (remaining <= 0.01) {
+      // Already fully paid at cycle level — still mark card doc as paid
+      await _cardDoc(userId, cardId).set({
+        'isPaid': true,
+        'paidDate': paidDate.toIso8601String(),
+      }, SetOptions(merge: true));
+      return;
+    }
 
     final p = CreditCardPayment(
       id: 'manual_${paidDate.millisecondsSinceEpoch}',
@@ -157,7 +173,14 @@ class CreditCardService {
     );
     await addPayment(userId, cardId, p);
     await recomputeCycleStatus(userId, cardId, latest.id);
+
+    // Also update the card-level isPaid flag for quick checks
+    await _cardDoc(userId, cardId).set({
+      'isPaid': true,
+      'paidDate': paidDate.toIso8601String(),
+    }, SetOptions(merge: true));
   }
+
 
   // ---- Metadata Updates (Limits, Rewards, Loans) ----
   Future<void> updateCardMetadata(

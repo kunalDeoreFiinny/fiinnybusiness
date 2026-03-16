@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { Home, Users, UserPlus, LogOut, ReceiptText, ShieldAlert, Calculator, Settings, Package, ChevronDown, Layers, Palette, Database, Factory, Truck, Store, ShoppingCart, BarChart3, Activity } from 'lucide-react';
+import { Home, Users, UserPlus, LogOut, ReceiptText, ShieldAlert, Calculator, Settings, Package, ChevronDown, Layers, Palette, Database, Factory, Truck, Store, ShoppingCart, BarChart3, Activity, FileText, Bell, ClipboardList, Star, Link2, Bot } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import OnboardingPage from './pages/OnboardingPage';
@@ -37,6 +37,22 @@ import { OnlineDashboardPage } from './pages/OnlineDashboardPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import OrderHistoryPage from './pages/OrderHistoryPage';
 import ManageRolesPage from './pages/ManageRolesPage';
+import B2BInvoicePage from './pages/B2BInvoicePage';
+import GSTReportsPage from './pages/GSTReportsPage';
+import QuotationsPage from './pages/QuotationsPage';
+import PaymentRemindersPage from './pages/PaymentRemindersPage';
+import PurchaseOrdersPage from './pages/PurchaseOrdersPage';
+import DeliveryChallansPage from './pages/DeliveryChallansPage';
+import FinancialReportsPage from './pages/FinancialReportsPage';
+import WarehousePage from './pages/WarehousePage';
+import InventoryBatchPage from './pages/InventoryBatchPage';
+import BarcodePage from './pages/BarcodePage';
+import PricingPage from './pages/PricingPage';
+import PaymentLinkPage from './pages/PaymentLinkPage';
+import PaymentLandingPage from './pages/PaymentLandingPage';
+import OfflineBanner from './components/OfflineBanner';
+import AIAdvisorPage from './pages/AIAdvisorPage';
+import ErrorBoundary from './components/ErrorBoundary';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import type { AppScreen } from './contexts/AuthContext';
 import { SchemaProvider } from './contexts/SchemaContext';
@@ -87,6 +103,19 @@ function Layout({ children }: { children: React.ReactNode, currentTheme: 'light'
     { path: '/worklist', icon: <ReceiptText size={19} />, label: t('common.worklist'), screenKey: 'worklist' },
     { path: '/dispatch', icon: <Truck size={19} />, label: 'Dispatch Board', screenKey: 'dispatch' },
     { path: '/pos', icon: <Calculator size={19} />, label: t('common.pos_billing'), screenKey: 'pos' },
+    { path: '/b2b-invoice', icon: <ReceiptText size={19} />, label: 'B2B GST Invoice', screenKey: 'worklist' },
+    { path: '/quotations', icon: <ClipboardList size={19} />, label: 'Quotations', screenKey: 'worklist' },
+    { path: '/payment-reminders', icon: <Bell size={19} />, label: 'Payment Reminders', screenKey: 'worklist' },
+    { path: '/purchase-orders', icon: <ShoppingCart size={19} />, label: 'Purchase Orders', screenKey: 'worklist' },
+    { path: '/delivery-challans', icon: <Truck size={19} />, label: 'Delivery Challans', screenKey: 'worklist' },
+    { path: '/gst-reports', icon: <FileText size={19} />, label: 'GST Reports', screenKey: 'analytics' },
+    { path: '/financial-reports', icon: <BarChart3 size={19} />, label: 'Financial Reports', screenKey: 'analytics' },
+    { path: '/warehouses', icon: <Layers size={19} />, label: 'Warehouses / Godowns', screenKey: 'inventory' },
+    { path: '/inventory-batches', icon: <Package size={19} />, label: 'Inventory Batches', screenKey: 'inventory' },
+    { path: '/barcode', icon: <Activity size={19} />, label: 'Barcode Labels', screenKey: 'inventory' },
+    { path: '/pricing', icon: <Star size={19} />, label: '⭐ Upgrade Plan', screenKey: 'analytics' },
+    { path: '/payment-links', icon: <Link2 size={19} />, label: '💳 Payment Links', screenKey: 'worklist' },
+    { path: '/ai-advisor', icon: <Bot size={19} />, label: '🤖 AI Advisor', screenKey: 'analytics' },
     { path: '/rates', icon: <Package size={19} />, label: t('common.inventory'), screenKey: 'inventory' },
     { path: '/order-history', icon: <ReceiptText size={19} />, label: 'Order History', screenKey: 'order_history' },
     { path: '/online-orders', icon: <ShoppingCart size={19} />, label: 'Online Orders', screenKey: 'online_orders' },
@@ -233,19 +262,24 @@ function App() {
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <SchemaProvider>
-          <ToastProvider>
-            <Layout currentTheme={theme} toggleTheme={toggleTheme}>
-              <AppRoutes />
-            </Layout>
-            <ToastContainer />
-          </ToastProvider>
-        </SchemaProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <SchemaProvider>
+            <ToastProvider>
+              <Layout currentTheme={theme} toggleTheme={toggleTheme}>
+                <AppRoutes />
+              </Layout>
+              <ToastContainer />
+              <OfflineBanner />
+
+            </ToastProvider>
+          </SchemaProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   )
+
 }
 
 function AppRoutes() {
@@ -312,6 +346,21 @@ function AppRoutes() {
       <Route path="/sales-order/:id" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="worklist"><SalesOrderPage /></ProtectedRoute>} />
       <Route path="/dispatch" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="dispatch"><DispatchBoardPage /></ProtectedRoute>} />
       <Route path="/pos" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="pos"><POSPage /></ProtectedRoute>} />
+      <Route path="/b2b-invoice" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="worklist"><B2BInvoicePage /></ProtectedRoute>} />
+      <Route path="/quotations" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="worklist"><QuotationsPage /></ProtectedRoute>} />
+      <Route path="/payment-reminders" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="worklist"><PaymentRemindersPage /></ProtectedRoute>} />
+      <Route path="/purchase-orders" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="worklist"><PurchaseOrdersPage /></ProtectedRoute>} />
+      <Route path="/delivery-challans" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="worklist"><DeliveryChallansPage /></ProtectedRoute>} />
+      <Route path="/gst-reports" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="analytics"><GSTReportsPage /></ProtectedRoute>} />
+      <Route path="/financial-reports" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="analytics"><FinancialReportsPage /></ProtectedRoute>} />
+      <Route path="/warehouses" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="inventory"><WarehousePage /></ProtectedRoute>} />
+      <Route path="/inventory-batches" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="inventory"><InventoryBatchPage /></ProtectedRoute>} />
+      <Route path="/barcode" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="inventory"><BarcodePage /></ProtectedRoute>} />
+      <Route path="/pricing" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="analytics"><PricingPage /></ProtectedRoute>} />
+      <Route path="/payment-links" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="worklist"><PaymentLinkPage /></ProtectedRoute>} />
+      <Route path="/ai-advisor" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="analytics"><AIAdvisorPage /></ProtectedRoute>} />
+      {/* Public payment page */}
+      <Route path="/pay/:token" element={<PaymentLandingPage />} />
       <Route path="/rates" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="inventory"><RateSheetPage /></ProtectedRoute>} />
       <Route path="/order-history" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="order_history"><OrderHistoryPage /></ProtectedRoute>} />
       <Route path="/online-orders" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="online_orders"><OnlineOrdersPage /></ProtectedRoute>} />

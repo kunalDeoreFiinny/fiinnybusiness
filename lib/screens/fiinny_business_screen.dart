@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 
 class FiinnyBusinessScreen extends StatefulWidget {
   const FiinnyBusinessScreen({super.key});
@@ -37,6 +38,17 @@ class _FiinnyBusinessScreenState extends State<FiinnyBusinessScreen> {
       ..loadRequest(Uri.parse('https://karanarjun-pvt-ltd.web.app/'));
   }
 
+  void _shareAppLinks() {
+    const String shareText = '''
+Check out Fiinny! Manage expenses, split money, and more.
+
+🌐 Website: https://fiinny.com/
+📱 Android: https://play.google.com/store/apps/details?id=com.KaranArjunTechnologies.lifemap
+🍎 iOS: https://apps.apple.com/in/app/fiinny-expense-split-money/id6751309482
+''';
+    Share.share(shareText);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -53,6 +65,14 @@ class _FiinnyBusinessScreenState extends State<FiinnyBusinessScreen> {
           onPressed: () => Navigator.of(context).pop(),
           tooltip: 'Back to Personal',
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share_rounded),
+            color: Colors.blueAccent,
+            tooltip: 'Share Fiinny',
+            onPressed: _shareAppLinks,
+          ),
+        ],
       ),
       body: Stack(
         children: [

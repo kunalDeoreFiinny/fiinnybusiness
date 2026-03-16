@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/ads/ads_banner_card.dart';
 import '../../services/b2b_language_service.dart';
 
 class B2BProfileScreen extends StatefulWidget {
@@ -13,103 +14,14 @@ class B2BProfileScreen extends StatefulWidget {
 
 class _B2BProfileScreenState extends State<B2BProfileScreen> {
   final B2BLanguageService lang = B2BLanguageService();
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _staffPhoneController = TextEditingController();
   bool _isLoading = true;
-  bool _isSaving = false;
-  List<Map<String, dynamic>> _staffMembers = [];
+  String? _businessName;
+  String? _phone;
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
-    _loadStaff();
-  }
-
-  Future<void> _loadStaff() async {
-    try {
-      final snap = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(widget.userId)
-          .collection('staff')
-          .get();
-      
-      if (mounted) {
-        setState(() {
-          _staffMembers = snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
-        });
-      }
-    } catch (_) {}
-  }
-
-  Future<void> _addStaff() async {
-    final rawPhone = _staffPhoneController.text.trim();
-    if (rawPhone.isEmpty) return;
-
-    final cleanPhone = rawPhone.replaceAll(RegExp(r'\D'), '');
-    final formattedPhone = cleanPhone.length >= 10 ? '+91${cleanPhone.substring(cleanPhone.length - 10)}' : '+91$cleanPhone';
-
-    setState(() => _isLoading = true);
-
-    try {
-      final batch = FirebaseFirestore.instance.batch();
-      
-      // 1. Add to owner's staff subcollection
-      final staffRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(widget.userId)
-          .collection('staff')
-          .doc(formattedPhone);
-          
-      batch.set(staffRef, {
-        'addedAt': DateTime.now().toIso8601String(),
-        'role': 'associate',
-        'phone': formattedPhone,
-      });
-
-      // 2. Add to staff's employers array (assuming they have logged in at least once or will in the future, we can just merge setting the employers array)
-      // Since doc ID for users in Fiinny is often their phone number (if phone auth) or uid.
-      // We will query to see if a user has this phone number to get their UID, OR we just set a document with phone number as ID if using Phone Auth.
-      // Assuming phone number is the doc ID for phone-auth users:
-      final employeeDocRef = FirebaseFirestore.instance.collection('users').doc(formattedPhone);
-      batch.set(employeeDocRef, {
-        'employers': FieldValue.arrayUnion([widget.userId])
-      }, SetOptions(merge: true));
-
-      await batch.commit();
-
-      _staffPhoneController.clear();
-      await _loadStaff();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(lang.t('Staff added successfully.'))));
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(lang.t('Failed to add staff.'))));
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _removeStaff(String phoneId) async {
-    setState(() => _isLoading = true);
-    try {
-      final batch = FirebaseFirestore.instance.batch();
-      
-      final staffRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(widget.userId)
-          .collection('staff')
-          .doc(phoneId);
-      batch.delete(staffRef);
-
-      final employeeDocRef = FirebaseFirestore.instance.collection('users').doc(phoneId);
-      batch.set(employeeDocRef, {
-        'employers': FieldValue.arrayRemove([widget.userId])
-      }, SetOptions(merge: true));
-
-      await batch.commit();
-      await _loadStaff();
-    } catch (_) {} finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
   }
 
   Future<void> _loadProfile() async {
@@ -117,62 +29,65 @@ class _B2BProfileScreenState extends State<B2BProfileScreen> {
     final localName = prefs.getString('b2b_business_name_${widget.userId}');
     
     if (localName != null && localName.isNotEmpty) {
-      _nameController.text = localName;
-    } else {
-      // Try fetching from firestore if not in prefs
-      try {
-        final doc = await FirebaseFirestore.instance.collection('users').doc(widget.userId).get();
-        if (doc.exists && doc.data() != null) {
-          final name = doc.data()!['businessName'] as String?;
-          if (name != null) {
-            _nameController.text = name;
-            await prefs.setString('b2b_business_name_${widget.userId}', name);
+      _businessName = localName;
+    }
+    
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(widget.userId).get();
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        _phone = data['phone'] as String?;
+        if (_businessName == null) {
+          _businessName = data['businessName'] as String?;
+          if (_businessName != null) {
+            await prefs.setString('b2b_business_name_${widget.userId}', _businessName!);
           }
         }
-      } catch (_) {}
-    }
+      }
+    } catch (_) {}
     
     if (mounted) {
       setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _saveProfile() async {
-    final name = _nameController.text.trim();
-    if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(lang.t('Please enter a business name.'))));
-      return;
-    }
-
-    setState(() => _isSaving = true);
-
-    // Save to SharedPreferences
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('b2b_business_name_${widget.userId}', name);
-
-    // Save to Firestore
-    try {
-      await FirebaseFirestore.instance.collection('users').doc(widget.userId).set({
-        'businessName': name,
-      }, SetOptions(merge: true));
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(lang.t('Profile updated successfully.'))));
-        Navigator.pop(context, true); // true indicates a change was made
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(lang.t('Failed to update cloud profile.'))));
-        setState(() => _isSaving = false);
-      }
-    }
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: Colors.grey.shade800,
+        ),
+      ),
+    );
   }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _staffPhoneController.dispose();
-    super.dispose();
+  Widget _buildInfoTile({
+    required IconData icon,
+    required String title,
+    required String value,
+    bool showEdit = false,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+      ),
+      child: ListTile(
+        leading: Icon(icon, color: Colors.green.shade700),
+        title: Text(value, style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.blueGrey)),
+        subtitle: Text(title, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+        trailing: showEdit 
+            ? Icon(Icons.edit, color: Colors.black87)
+            : const Icon(Icons.chevron_right, color: Colors.black87),
+        onTap: () {
+          // Placeholder for tap action
+        },
+      ),
+    );
   }
 
   @override
@@ -182,101 +97,147 @@ class _B2BProfileScreenState extends State<B2BProfileScreen> {
       builder: (context, currentLang, child) {
         return Scaffold(
           backgroundColor: Colors.white,
+          bottomNavigationBar: const AdsBannerCard(
+            placement: 'b2b_profile_bottom',
+            inline: false,
+            inlineMaxHeight: 60,
+            margin: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            padding: EdgeInsets.zero,
+            backgroundColor: Colors.transparent,
+            boxShadow: [],
+            minHeight: 52,
+          ),
           appBar: AppBar(
             backgroundColor: Colors.white,
-            elevation: 1,
-            title: Text(lang.t('Business Profile'), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo)),
+            elevation: 0,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_rounded, color: Colors.black87),
+              icon: const Icon(Icons.arrow_back, color: Colors.black87),
               onPressed: () => Navigator.pop(context),
             ),
+            title: Text(lang.t('Profile'), style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
           ),
           body: _isLoading 
             ? const Center(child: CircularProgressIndicator())
-            : Padding(
-                padding: const EdgeInsets.all(24.0),
+            : SingleChildScrollView(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.storefront_rounded, size: 60, color: Colors.indigo),
                     const SizedBox(height: 24),
-                    TextField(
-                      controller: _nameController,
-                      decoration: InputDecoration(
-                        labelText: lang.t('Business Name'),
-                        prefixIcon: const Icon(Icons.business_rounded),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                        filled: true,
-                        fillColor: Colors.grey[50],
+                    // Avatar Section
+                    Center(
+                      child: Stack(
+                        children: [
+                          CircleAvatar(
+                            radius: 48,
+                            backgroundColor: Colors.grey.shade300,
+                            child: const Icon(Icons.person, size: 60, color: Colors.white),
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade700,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2)
+                              ),
+                              child: const Icon(Icons.edit, color: Colors.white, size: 16),
+                            ),
+                          )
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _isSaving ? null : _saveProfile,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.indigo,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))
+                    const SizedBox(height: 24),
+                    
+                    _buildSectionHeader(lang.t('Business Information')),
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade200)
                       ),
-                      child: _isSaving 
-                        ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : Text(lang.t('Save Business Name'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24),
-                      child: Divider(),
-                    ),
-                    Row(
-                      children: [
-                        const Icon(Icons.people_alt_rounded, color: Colors.indigo),
-                        const SizedBox(width: 8),
-                        Text(lang.t('Manage Staff / Associates'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _staffPhoneController,
-                            keyboardType: TextInputType.phone,
-                            decoration: InputDecoration(
-                              labelText: lang.t('Staff Phone No.'),
-                              prefixText: '+91 ',
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Column(
+                        children: [
+                          _buildInfoTile(
+                            icon: Icons.store,
+                            title: lang.t('Switch to other business'),
+                            value: lang.t('Switch Business'),
+                          ),
+                          _buildInfoTile(
+                            icon: Icons.storefront_outlined,
+                            title: lang.t('Profile name will be visible to your customers'),
+                            value: _businessName ?? lang.t('Not set'),
+                          ),
+                          _buildInfoTile(
+                            icon: Icons.phone_android,
+                            title: lang.t('Mobile Number'),
+                            value: _phone ?? widget.userId,
+                            showEdit: true,
+                          ),
+                          _buildInfoTile(
+                            icon: Icons.domain,
+                            title: lang.t('Business Type'),
+                            value: lang.t('Select your business type'),
+                          ),
+                          _buildInfoTile(
+                            icon: Icons.category_outlined,
+                            title: lang.t('Category'),
+                            value: lang.t('Select your category'),
+                          ),
+                          Container(
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.vertical(bottom: Radius.circular(12))
+                            ),
+                            child: ListTile(
+                              leading: Icon(Icons.location_on_outlined, color: Colors.green.shade700),
+                              title: Text(lang.t('Enter your Address'), style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.blueGrey)),
+                              subtitle: Text(lang.t('Address'), style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                              trailing: const Icon(Icons.chevron_right, color: Colors.black87),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        IconButton.filled(
-                          onPressed: _isLoading ? null : _addStaff,
-                          icon: const Icon(Icons.person_add_rounded),
-                          style: IconButton.styleFrom(backgroundColor: Colors.indigo, padding: const EdgeInsets.all(14)),
-                        )
-                      ],
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 16),
-                    Expanded(
-                      child: _staffMembers.isEmpty 
-                        ? Center(child: Text(lang.t('No staff added yet.'), style: const TextStyle(color: Colors.grey)))
-                        : ListView.separated(
-                            itemCount: _staffMembers.length,
-                            separatorBuilder: (_, __) => const Divider(height: 1),
-                            itemBuilder: (context, index) {
-                              final staff = _staffMembers[index];
-                              return ListTile(
-                                leading: const CircleAvatar(backgroundColor: Colors.indigo, child: Icon(Icons.person, color: Colors.white)),
-                                title: Text(staff['phone'] ?? staff['id']),
-                                subtitle: Text(lang.t('Role: Associate')),
-                                trailing: IconButton(
-                                  icon: const Icon(Icons.remove_circle_outline_rounded, color: Colors.red),
-                                  onPressed: () => _removeStaff(staff['id']),
-                                ),
-                              );
-                            },
+
+                    _buildSectionHeader(lang.t('Other Information')),
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade200)
+                      ),
+                      child: Column(
+                        children: [
+                          _buildInfoTile(
+                            icon: Icons.mail_outline,
+                            title: lang.t('Email'),
+                            value: lang.t('Enter your Email'),
                           ),
+                          _buildInfoTile(
+                            icon: Icons.info_outline,
+                            title: lang.t('About Us'),
+                            value: lang.t('Enter about your business'),
+                          ),
+                          Container(
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.vertical(bottom: Radius.circular(12))
+                            ),
+                            child: ListTile(
+                              leading: Icon(Icons.person_outline, color: Colors.green.shade700),
+                              title: Text(lang.t('Enter Contact Person Name'), style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.blueGrey)),
+                              subtitle: Text(lang.t('Contact Person Name'), style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                              trailing: const Icon(Icons.chevron_right, color: Colors.black87),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(height: 40),
                   ],
                 ),
               ),
@@ -285,3 +246,4 @@ class _B2BProfileScreenState extends State<B2BProfileScreen> {
     );
   }
 }
+
