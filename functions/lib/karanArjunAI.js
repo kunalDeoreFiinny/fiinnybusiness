@@ -17,6 +17,7 @@ export const karanArjunAIChat = onRequest({
     secrets: [openAiKey],
     timeoutSeconds: 30,
     memory: "256MiB",
+    region: "asia-south1",
 }, async (req, res) => {
     if (req.method !== "POST") {
         res.status(405).send("Method Not Allowed");

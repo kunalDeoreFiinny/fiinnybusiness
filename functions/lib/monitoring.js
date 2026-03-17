@@ -10,6 +10,7 @@ export const dailyFirestoreBackup = onSchedule({
     timeZone: "Asia/Kolkata",
     memory: "256MiB",
     timeoutSeconds: 120,
+    region: "asia-south1",
 }, async (event) => {
     const db = getFirestore();
     const today = new Date().toISOString().slice(0, 10);
@@ -69,6 +70,7 @@ export const dailyMetrics = onSchedule({
     schedule: "29 18 * * *", // 11:59 PM IST
     timeZone: "Asia/Kolkata",
     memory: "256MiB",
+    region: "asia-south1",
 }, async () => {
     const db = getFirestore();
     const today = new Date().toISOString().slice(0, 10);
