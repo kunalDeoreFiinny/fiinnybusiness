@@ -98,6 +98,52 @@ service cloud.firestore {
       allow read, write: if isUserOwner(uid);
     }
     
+    // ╔══════════════════════════════════════════════════════════╗
+    // ║       KARAN ARJUN SaaS — Tenant-Isolated B2B Rules       ║
+    // ╚══════════════════════════════════════════════════════════╝
+
+    // Helper: is the caller a verified member of this tenant?
+    function isTenantMember(tenantId) {
+      return authed() &&
+        exists(/databases/$(database)/documents/tenants/$(tenantId)/members/$(request.auth.uid));
+    }
+
+    // Tenant root document (business profile)
+    match /tenants/{tenantId} {
+      allow read: if isTenantMember(tenantId);
+      allow write: if isTenantMember(tenantId);
+
+      // Members sub-collection (role management)
+      match /members/{memberId} {
+        allow read: if isTenantMember(tenantId);
+        // Only existing admins can add/remove members
+        allow write: if isTenantMember(tenantId) &&
+          get(/databases/$(database)/documents/tenants/$(tenantId)/members/$(request.auth.uid)).data.role == 'admin';
+      }
+    }
+
+    // All tenant-scoped B2B collections (invoices, retailers, inventory, orders…)
+    match /tenants/{tenantId}/{collection}/{docId} {
+      allow read, write: if isTenantMember(tenantId);
+
+      // Allow sub-collections (e.g. invoice line items)
+      match /{subCollection}/{subDocId} {
+        allow read, write: if isTenantMember(tenantId);
+      }
+    }
+
+    // Public payment links — readable without auth (customer pays without logging in)
+    match /paymentLinks_public/{token} {
+      allow read: if true;                             // public: anyone with the token can pay
+      allow create: if authed();                       // only logged-in staff can generate
+      allow update: if authed();                       // only logged-in staff can mark paid
+      allow delete: if false;                          // never delete — audit trail
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // Existing Fiinny personal-finance rules (unchanged below)
+    // ──────────────────────────────────────────────────────────
+
     // Groups & Shared (Authenticated users only, more complex logic can be added later)
     match /groups/{groupId} {
       allow read, write: if authed(); 

@@ -1,18 +1,24 @@
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import * as https from "https";
 
-// Store OpenAI key as a Firebase Secret (never exposed to client)
 const openAiKey = defineSecret("OPENAI_API_KEY");
 
-/**
- * KaranArjun AI Business Advisor
- * Proxies OpenAI gpt-4o-mini with business context.
- * Key lives in Firebase Secrets — never exposed to browser.
- */
+// Production domain — only this origin can call the function
+const ALLOWED_ORIGINS = [
+  "https://karanarjun-pvt-ltd.web.app",
+  "https://karanarjun-pvt-ltd.firebaseapp.com",
+  "https://karanarjun.in",
+  "https://www.karanarjun.in",
+];
+
+// Rate limit: max AI calls per user per day
+const MAX_DAILY_CALLS = 50;
+
 export const karanArjunAIChat = onRequest(
   {
-    cors: true,
+    cors: ALLOWED_ORIGINS,
     secrets: [openAiKey],
     timeoutSeconds: 30,
     memory: "256MiB",
@@ -23,13 +29,37 @@ export const karanArjunAIChat = onRequest(
       return;
     }
 
-    const { messages, businessContext } = req.body || {};
+    const { messages, businessContext, uid } = req.body || {};
 
     if (!messages || !Array.isArray(messages)) {
       res.status(400).json({ error: "messages array required" });
       return;
     }
 
+    // ── Rate limiting ──────────────────────────────────────────
+    if (uid) {
+      const db = getFirestore();
+      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      const usageRef = db.doc(`aiUsage/${uid}/daily/${today}`);
+
+      const snap = await usageRef.get();
+      const currentCount: number = snap.exists ? (snap.data()?.calls || 0) : 0;
+
+      if (currentCount >= MAX_DAILY_CALLS) {
+        res.status(429).json({
+          error: `Daily AI limit reached (${MAX_DAILY_CALLS} calls/day). Try again tomorrow.`,
+        });
+        return;
+      }
+
+      // Increment counter (create if first call today)
+      await usageRef.set(
+        { calls: FieldValue.increment(1), uid, date: today },
+        { merge: true }
+      );
+    }
+
+    // ── OpenAI Call ────────────────────────────────────────────
     const apiKey = openAiKey.value();
     if (!apiKey) {
       res.status(500).json({ error: "AI service not configured" });
@@ -47,7 +77,7 @@ Answer questions based on this live data. Be specific with numbers. Use ₹ for 
       model: "gpt-4o-mini",
       messages: [
         { role: "system", content: systemPrompt },
-        ...messages.slice(-10), // last 10 messages for context
+        ...messages.slice(-10),
       ],
       temperature: 0.5,
       max_tokens: 512,
@@ -80,12 +110,12 @@ Answer questions based on this live data. Be specific with numbers. Use ₹ for 
     );
 
     if (response.status !== 200) {
-      res.status(response.status).json({ error: "OpenAI error", raw: response.data });
+      res.status(response.status).json({ error: "OpenAI error" });
       return;
     }
 
     const parsed = JSON.parse(response.data);
     const reply = parsed.choices?.[0]?.message?.content || "No response";
-    res.json({ reply });
+    res.json({ reply, callsRemaining: uid ? MAX_DAILY_CALLS - 1 : null });
   }
 );

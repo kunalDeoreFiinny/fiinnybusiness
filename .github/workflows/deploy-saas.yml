@@ -1,0 +1,48 @@
+name: Deploy KaranArjun SaaS
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: KARANARJUNKSKPVTLTD/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: KARANARJUNKSKPVTLTD
+
+      - name: Build
+        run: npm run build
+        working-directory: KARANARJUNKSKPVTLTD
+        env:
+          VITE_RECAPTCHA_KEY: ${{ secrets.VITE_RECAPTCHA_KEY }}
+
+      - name: Deploy to Firebase Hosting
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KARANARJUN }}
+          channelId: live
+          projectId: karanarjun-pvt-ltd
+
+      - name: Deploy Firebase Rules & Functions
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only firestore:rules,functions
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KARANARJUN }}

@@ -169,6 +169,14 @@ export default function LoginPage() {
                         </button>
                     </div>
                 </form>
+
+                {/* Legal links — required for compliance */}
+                <div style={{ textAlign: 'center', marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid var(--surface-border)', fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>
+                    By signing in, you agree to our{' '}
+                    <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-light)', textDecoration: 'none', fontWeight: 600 }}>Terms of Service</a>
+                    {' '}and{' '}
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-light)', textDecoration: 'none', fontWeight: 600 }}>Privacy Policy</a>
+                </div>
             </div>
         </div>
     );
