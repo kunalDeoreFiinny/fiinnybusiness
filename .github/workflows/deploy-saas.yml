@@ -30,19 +30,12 @@ jobs:
         env:
           VITE_RECAPTCHA_KEY: ${{ secrets.VITE_RECAPTCHA_KEY }}
 
-      - name: Deploy to Firebase Hosting
+      - name: Install Firebase CLI
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KARANARJUN }}
-          channelId: live
-          projectId: karanarjun-pvt-ltd
+        run: npm install -g firebase-tools
 
-      - name: Deploy Firebase Rules & Functions
+      - name: Deploy to Firebase (Hosting + Rules + Functions)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: w9jds/firebase-action@master
-        with:
-          args: deploy --only firestore:rules,functions
+        run: firebase deploy --only hosting,firestore:rules,functions --token "$FIREBASE_TOKEN" --project karanarjun-pvt-ltd
         env:
-          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KARANARJUN }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
