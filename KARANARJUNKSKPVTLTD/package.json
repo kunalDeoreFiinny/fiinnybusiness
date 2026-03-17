@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@sentry/react": "^10.43.0",
     "firebase": "^12.10.0",
     "framer-motion": "^12.35.0",
     "i18next": "^25.8.14",

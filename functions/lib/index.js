@@ -9,6 +9,10 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 if (getApps().length === 0)
     initializeApp();
 const db = getFirestore();
+// ✅ KaranArjun AI Business Advisor (secure OpenAI proxy)
+export { karanArjunAIChat } from "./karanArjunAI.js";
+// ✅ Week 6 Monitoring: nightly backup + daily metrics
+export { dailyFirestoreBackup, dailyMetrics } from "./monitoring.js";
 /* ----------------------------- Shared helpers ----------------------------- */
 async function getPrefs(uid) {
     const doc = await db.doc(`users/${uid}/prefs/notifications`).get();
@@ -196,6 +200,7 @@ export * from "./streaks.js";
 export * from "./watchdog.js";
 export * from "./social_notifications.js";
 export { createPaymentOrder, verifyPaymentSignature, cancelSubscription, razorpayWebhook } from "./subscriptions.js";
+export { createSaaSOrder, verifySaaSPayment, getSaaSSubscription, } from "./saasSubscriptions.js";
 export { fiinnyBrainQuery } from "./fiinnyBrainQuery.js";
 /* ----------------------- New: Cloud reminder pipeline ---------------------- */
 /**

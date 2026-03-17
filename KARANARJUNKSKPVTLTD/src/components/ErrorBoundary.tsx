@@ -1,4 +1,5 @@
 import React from 'react';
+import * as Sentry from '@sentry/react';
 
 interface State { hasError: boolean; error: Error | null; }
 
@@ -17,7 +18,10 @@ export default class ErrorBoundary extends React.Component<
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error('[ErrorBoundary]', error, info);
+    // ✅ Report to Sentry — no-op if Sentry wasn't initialised (e.g. missing DSN in dev)
+    Sentry.captureException(error, { extra: { componentStack: info.componentStack } });
   }
+
 
   render() {
     if (this.state.hasError) {

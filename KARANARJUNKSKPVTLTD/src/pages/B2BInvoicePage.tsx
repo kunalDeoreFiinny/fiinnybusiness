@@ -8,6 +8,7 @@ import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { getTenantCollection, getTenantDoc } from '../utils/tenantPath';
 import { fetchInvoiceBranding } from '../services/invoiceTemplateService';
+import { validateGSTIN } from '../utils/gstinValidator';
 
 // ─────────────────────────────────────────────
 // Types
@@ -453,7 +454,28 @@ export default function B2BInvoicePage() {
                         <textarea className="b2b-input" style={{ display: 'block', marginTop: '3px', resize: 'none', minHeight: '44px' }} placeholder="Address" value={header.buyerAddress} onChange={e => setHeader(h => ({ ...h, buyerAddress: e.target.value }))} />
                         <div style={{ display: 'flex', gap: '8px', marginTop: '3px', flexWrap: 'wrap' }}>
                             <span className="b2b-label">GST No.:</span>
-                            <input className="b2b-input" style={{ flexGrow: 1, minWidth: '120px' }} placeholder="Buyer GSTIN (optional)" value={header.buyerGstin} onChange={e => setHeader(h => ({ ...h, buyerGstin: e.target.value }))} />
+                            <div style={{ flexGrow: 1, minWidth: '120px' }}>
+                                <input
+                                    className="b2b-input"
+                                    style={{
+                                        width: '100%',
+                                        textTransform: 'uppercase',
+                                        borderColor: header.buyerGstin
+                                            ? (validateGSTIN(header.buyerGstin.toUpperCase()).valid ? '#10b981' : '#ef4444')
+                                            : undefined,
+                                    }}
+                                    placeholder="Buyer GSTIN (e.g. 27AAPFU0939F1ZV)"
+                                    value={header.buyerGstin}
+                                    onChange={e => setHeader(h => ({ ...h, buyerGstin: e.target.value.toUpperCase() }))}
+                                    maxLength={15}
+                                />
+                                {header.buyerGstin && (() => {
+                                    const result = validateGSTIN(header.buyerGstin);
+                                    return result.valid
+                                        ? <div style={{ fontSize: '0.72rem', color: '#10b981', marginTop: '2px' }}>✓ {result.state}</div>
+                                        : <div style={{ fontSize: '0.72rem', color: '#ef4444', marginTop: '2px' }}>⚠ {result.error}</div>;
+                                })()}
+                            </div>
                         </div>
                         <div style={{ display: 'flex', gap: '8px', marginTop: '3px' }}>
                             <span className="b2b-label">Contact No.:</span>

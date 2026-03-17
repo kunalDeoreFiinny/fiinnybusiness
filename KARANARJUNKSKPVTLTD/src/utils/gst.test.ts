@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calcLineGST, calcInvoiceGST } from '../utils/gstCalculator';
+import { calcLineGST } from '../utils/gstCalculator';
 import { validateGSTIN, isInterState, getStateFromGSTIN } from '../utils/gstinValidator';
 
 // ─── GST Calculator Tests ──────────────────────────────────────────────────
