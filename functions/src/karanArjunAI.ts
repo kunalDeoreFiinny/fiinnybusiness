@@ -29,6 +29,16 @@ export const karanArjunAIChat = onRequest(
       return;
     }
 
+    // ✅ App Check token validation (manual — SDK option not available on this version)
+    // Production: every browser request includes X-Firebase-AppCheck header automatically
+    // Dev: skip validation so local testing works
+    const appCheckToken = req.headers["x-firebase-appcheck"];
+    const isProduction = process.env.FUNCTIONS_EMULATOR !== "true";
+    if (isProduction && !appCheckToken) {
+      res.status(401).json({ error: "Unauthorized: App Check token missing" });
+      return;
+    }
+
     const { messages, businessContext, uid } = req.body || {};
 
     if (!messages || !Array.isArray(messages)) {
