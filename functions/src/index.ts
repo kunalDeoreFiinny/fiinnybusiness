@@ -12,8 +12,10 @@ if (getApps().length === 0) initializeApp();
 const db = getFirestore();
 
 // ✅ KaranArjun AI Business Advisor (secure OpenAI proxy)
-export { karanArjunAIChat } from "./karanArjunAI";
+export { karanArjunAIChat } from "./karanArjunAI.js";
 
+// ✅ Week 6 Monitoring: nightly backup + daily metrics
+export { dailyFirestoreBackup, dailyMetrics } from "./monitoring.js";
 
 /* ----------------------------- Shared helpers ----------------------------- */
 
