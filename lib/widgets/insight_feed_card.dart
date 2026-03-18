@@ -117,6 +117,284 @@ class InsightFeedCard extends StatelessWidget {
     return 'Just now';
   }
 
+  /// Human-readable explanation of why Fiinny generated this insight
+  String _detectionExplanation(InsightModel insight) {
+    final cat = insight.category ?? '';
+    final type = insight.type;
+
+    if (cat == 'loan' || insight.relatedLoanId != null) {
+      return 'Fiinny tracked your outstanding loan EMIs and repayment history. '
+          'This insight was generated because a pattern was detected in your loan activity '
+          'that may need your attention.';
+    }
+    if (cat == 'goal' || insight.relatedGoalId != null) {
+      return 'Fiinny analysed your savings rate versus your goal target and deadline. '
+          'The progress calculation is based on your monthly income and savings contributions.';
+    }
+    if (cat == 'asset' || insight.relatedAssetId != null) {
+      return 'Fiinny monitored your asset portfolio and detected a change in valuation '
+          'or a new opportunity based on your current net worth composition.';
+    }
+    if (cat == 'netWorth') {
+      return 'Fiinny calculated your net worth by combining total assets minus total liabilities. '
+          'This insight reflects a notable change or milestone in that number.';
+    }
+    if (cat == 'crisis') {
+      return 'Fiinny\'s crisis detection engine compared your monthly expenses against income '
+          'and savings thresholds. High spending or low savings triggered this warning.';
+    }
+    if (cat == 'expense') {
+      return 'Fiinny analysed your recent spending patterns and compared them to your '
+          'historical averages. An unusual spike or category shift triggered this insight.';
+    }
+    if (type == InsightType.positive) {
+      return 'Fiinny detected a positive trend in your financial data — '
+          'such as improved savings, reduced debt, or goal progress.';
+    }
+    if (type == InsightType.warning || type == InsightType.critical) {
+      return 'Fiinny\'s Brain engine flagged this as a concern by analysing your '
+          'transactions, balances, and recurring patterns over the past 30–90 days.';
+    }
+    return 'Fiinny\'s AI engine analysed your transaction history, income, and spending '
+        'patterns to generate this personalised insight for you.';
+  }
+
+  void _showInsightDetails(BuildContext context, InsightModel insight) {
+    final color = _color(insight.type, insight.severity);
+    final icon = _icon(insight.type, insight.category);
+    final dateFormat = DateFormat('dd MMM yyyy, hh:mm a');
+    final fallback = InsightMicrocopy.fallback();
+    final description =
+        insight.description.isEmpty ? fallback : insight.description;
+
+    // Build severity label
+    String severityLabel(int? s) {
+      return switch (s) {
+        1 => 'Low',
+        2 => 'Medium',
+        3 => 'High — Needs Attention',
+        _ => 'Info',
+      };
+    }
+
+    // Related entity row helper
+    final List<Widget> relatedRows = [];
+    if (insight.relatedLoanId != null) {
+      relatedRows.add(_DetailRow(label: 'Related Loan', value: insight.relatedLoanId!));
+    }
+    if (insight.relatedGoalId != null) {
+      relatedRows.add(_DetailRow(label: 'Related Goal', value: insight.relatedGoalId!));
+    }
+    if (insight.relatedAssetId != null) {
+      relatedRows.add(_DetailRow(label: 'Related Asset', value: insight.relatedAssetId!));
+    }
+    if (insight.relatedCreditCardId != null) {
+      relatedRows.add(_DetailRow(label: 'Credit Card', value: insight.relatedCreditCardId!));
+    }
+    if (insight.relatedBillId != null) {
+      relatedRows.add(_DetailRow(label: 'Related Bill', value: insight.relatedBillId!));
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.62,
+          minChildSize: 0.4,
+          maxChildSize: 0.92,
+          expand: false,
+          builder: (ctx, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius:
+                    BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                children: [
+                  // ── Drag handle ──
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12, bottom: 4),
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+
+                  // ── Header ──
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.12),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(icon, color: color, size: 22),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                insight.title.isEmpty
+                                    ? 'Insight'
+                                    : insight.title,
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w800,
+                                  height: 1.2,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _timeAgo(insight.timestamp),
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade500),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if ((insight.category ?? '').isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border:
+                                  Border.all(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              _categoryLabel(insight.category),
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.orange.shade800),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  const Divider(height: 1),
+
+                  // ── Scrollable body ──
+                  Expanded(
+                    child: ListView(
+                      controller: scrollController,
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+                      children: [
+                        // Full description
+                        Text(
+                          description,
+                          style: const TextStyle(
+                              fontSize: 15,
+                              color: Colors.black87,
+                              height: 1.5),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // ── Metadata grid ──
+                        _SectionLabel(label: 'Details'),
+                        const SizedBox(height: 8),
+                        _DetailRow(
+                          label: 'Severity',
+                          value: severityLabel(insight.severity),
+                          valueColor: color,
+                        ),
+                        _DetailRow(
+                          label: 'Detected',
+                          value: dateFormat.format(insight.timestamp),
+                        ),
+                        if ((insight.category ?? '').isNotEmpty)
+                          _DetailRow(
+                            label: 'Category',
+                            value: _categoryLabel(insight.category),
+                          ),
+                        ...relatedRows,
+                        const SizedBox(height: 20),
+
+                        // ── How Fiinny detected this ──
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Fx.mintDark.withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                                color: Fx.mintDark.withValues(alpha: 0.2)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.psychology_alt_rounded,
+                                      color: Fx.mintDark, size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'How Fiinny came up with this',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: Fx.mintDark,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _detectionExplanation(insight),
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade800,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // ── Close button ──
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(12)),
+                            ),
+                            child: const Text('Close'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final prepared = _prepare(insights);
@@ -168,31 +446,7 @@ class InsightFeedCard extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(Fx.r12),
-                    onTap: () {
-                      // Keep tap logic for detail if needed, or remove if just display
-                      showDialog(
-                        context: context,
-                        builder: (_) => AlertDialog(
-                          title: Row(children: [
-                            Icon(icon, color: color),
-                            const SizedBox(width: Fx.s8),
-                            Expanded(
-                                child: Text(insight.title.isEmpty
-                                    ? "Insight"
-                                    : insight.title)),
-                          ]),
-                          content: Text(insight.description.isEmpty
-                              ? fallback
-                              : insight.description),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Close'),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                    onTap: () => _showInsightDetails(context, insight),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -311,6 +565,66 @@ class InsightFeedCard extends StatelessWidget {
         final display = prepared.take(limit).toList();
         return buildCard(display);
       },
+    );
+  }
+}
+
+// ─── Private helper widgets for the detail sheet ─────────────────────────────
+
+class _SectionLabel extends StatelessWidget {
+  final String label;
+  const _SectionLabel({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label.toUpperCase(),
+      style: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        color: Colors.grey.shade500,
+        letterSpacing: 0.8,
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? valueColor;
+  const _DetailRow({required this.label, required this.value, this.valueColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: valueColor ?? Colors.black87,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

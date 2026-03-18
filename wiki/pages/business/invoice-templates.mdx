@@ -1,0 +1,105 @@
+# Invoice Templates
+
+The Invoice Template Builder lets businesses customize how their PDF invoices look — they can add/remove fields, change the logo, and configure branding.
+
+**Files:** `src/pages/InvoiceTemplateBuilderPage.tsx` (30KB), `src/pages/InvoiceSettingsPage.tsx` (14KB), `src/services/invoiceTemplateService.ts`, `src/utils/invoiceEngine.ts`
+
+## What You Can Customize
+
+- Business name, logo, address on invoice header
+- GSTIN, license numbers on invoice
+- Which fields to show/hide (buyer phone, email, PAN, etc.)
+- Field order (drag to reorder)
+- Signature line and footer text
+- Template name (e.g., "Standard GST Invoice", "Cold Storage Invoice")
+- Color scheme (primary color for header)
+- Paper size (A4 or A5)
+
+## Template Structure
+
+```typescript
+// From types/invoiceTemplate.ts
+interface InvoiceTemplate {
+  id: string;
+  name: string;
+  fields: InvoiceField[];
+  isDefault: boolean;
+  createdAt: Timestamp;
+}
+
+interface InvoiceField {
+  id: string;
+  label: string;       // "Buyer Phone"
+  sourceKey: string;   // "retailer.phone"
+  show: boolean;       // Toggle visibility
+  order: number;       // Drag-drop position
+  isCurrency: boolean; // Format as ₹X,XX,XXX
+}
+
+interface InvoiceTemplateBranding {
+  businessName: string;
+  address: string;
+  gstin: string;
+  licenseNumbers: string;
+  logoUrl: string;
+  signatureUrl: string;
+  footerText: string;
+  primaryColor: string;
+}
+```
+
+## PDF Generation — invoiceEngine.ts
+
+The `generateInvoicePDF()` function builds a jsPDF document:
+
+```
+Page Layout (A4 = 210mm × 297mm)
+┌────────────────────────────────────────────┐
+│  BUSINESS NAME          [LOGO]             │ ← Header
+│  Address, GSTIN, License                  │
+├─────────────────────────┬──────────────────┤
+│ TAX INVOICE             │ Billed To:       │
+│ Invoice No: INV-001     │ Sharma Traders   │
+│ Date: 17 Mar 2025       │ GSTIN: 27AAB...  │
+├─────────────────────────┴──────────────────┤
+│ #  Description    HSN  Qty  Rate   Amount  │ ← Items table
+│ 1  Basmati Rice  1006  100  ₹450  ₹45,000  │
+│ 2  Tata Salt     2501   50  ₹22   ₹1,100   │
+├────────────────────────────────────────────┤
+│                    Subtotal: ₹46,100       │ ← Totals
+│                       CGST: ₹1,153        │
+│                       SGST: ₹1,153        │
+│                  Grand Total: ₹48,406      │
+├────────────────────────────────────────────┤
+│ Amount in words: Forty-eight thousand...   │ ← Footer
+│ Signature:________________                 │
+└────────────────────────────────────────────┘
+```
+
+## Multiple Templates
+
+A business can have multiple templates (e.g., one for regular goods, one for cold-chain products with different fields). Templates are stored and can be switched per invoice:
+
+```
+tenants/{tenantId}/invoiceTemplates/{templateId}
+```
+
+## Template Gallery
+
+`InvoiceTemplateBuilderPage.tsx` shows a **gallery of pre-built templates** to start from:
+
+- Classic (black & white, minimal)
+- Modern (colored header, logo prominent)
+- Retailer (includes delivery address, vehicle number)
+- Export (includes shipping details, country fields)
+
+Once selected, the user can customize further in the drag-and-drop field editor.
+
+## Logo Upload
+
+Business logos are uploaded to **Firebase Storage**:
+```
+tenants/{tenantId}/logo.png
+```
+
+The logo URL is stored in `tenantData.logoUrl` and injected into PDFs via `doc.addImage()`.

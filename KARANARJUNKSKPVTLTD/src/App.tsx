@@ -320,9 +320,22 @@ function AppRoutes() {
     if (userRole === 'manufacturer' && !locationHook.pathname.startsWith('/manufacturer-portal')) {
       return <Navigate to="/manufacturer-portal" replace />;
     }
+    // If Admin/Analyst visits landing page but is already logged in, go to dashboard
+    if ((userRole === 'admin' || userRole === 'analyst') && (locationHook.pathname === '/' || locationHook.pathname === '/login')) {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
-  if (currentUser && !tenantId && locationHook.pathname !== '/client-onboarding') {
+  // Force incomplete setups to finish onboarding (unless they are on landing page maybe? No, let them finish)
+  // Wait, if they are on / or /login, and logged in, force onboarding. Let's allow public paths if they really want, but usually it's better to force onboarding.
+  // Actually, we'll force onboarding for all protected routes, and let public routes be visible.
+  const publicPaths = ['/', '/about', '/privacy', '/terms', '/blog', '/changelog', '/download'];
+  if (currentUser && !tenantId && !publicPaths.includes(locationHook.pathname) && locationHook.pathname !== '/client-onboarding') {
+    return <Navigate to="/client-onboarding" replace />;
+  }
+  
+  // If they are logged in without tenantId and visit /login, redirect to onboarding
+  if (currentUser && !tenantId && locationHook.pathname === '/login') {
     return <Navigate to="/client-onboarding" replace />;
   }
 

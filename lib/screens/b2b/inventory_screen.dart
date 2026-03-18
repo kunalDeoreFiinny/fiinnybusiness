@@ -15,6 +15,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   List<Map<String, dynamic>> _allProducts = [];
   List<Map<String, dynamic>> _filteredProducts = [];
   bool _isLoading = true;
+  String? _errorMessage; // NEW: shown instead of infinite spinner on failure
   String _searchQuery = '';
 
   @override
@@ -24,10 +25,35 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   Future<void> _loadInventory() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
       final db = await LocalDatabaseHelper.instance.database;
-      final List<Map<String, dynamic>> results = await db.query('inventory', orderBy: 'name ASC');
+
+      // Safety guard: ensure inventory table exists even if migration missed it
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS inventory (
+          _id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          price REAL NOT NULL,
+          stockCount INTEGER NOT NULL,
+          synced INTEGER NOT NULL,
+          updatedAt TEXT NOT NULL,
+          barcode TEXT,
+          mrp REAL,
+          ptr REAL,
+          rate REAL,
+          offer REAL,
+          boxPrice REAL,
+          piecesPerBox INTEGER,
+          loosePieces INTEGER
+        )
+      ''');
+
+      final List<Map<String, dynamic>> results =
+          await db.query('inventory', orderBy: 'name ASC');
       if (mounted) {
         setState(() {
           _allProducts = results;
@@ -37,7 +63,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
       }
     } catch (e) {
       debugPrint('[Inventory] _loadInventory error: $e');
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage =
+              'Could not load inventory. Please tap Retry.';
+        });
+      }
     }
   }
 
@@ -96,16 +128,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
         backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
       ),
-      bottomNavigationBar: const AdsBannerCard(
-        placement: 'b2b_inventory_bottom',
-        inline: false,
-        inlineMaxHeight: 60,
-        margin: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        padding: EdgeInsets.zero,
-        backgroundColor: Colors.transparent,
-        boxShadow: [],
-        minHeight: 52,
-      ),
       body: Column(
         children: [
           // Search Bar
@@ -132,7 +154,39 @@ class _InventoryScreenState extends State<InventoryScreen> {
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : _filteredProducts.isEmpty
+                : _errorMessage != null
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.error_outline_rounded,
+                                  size: 56, color: Colors.red.shade300),
+                              const SizedBox(height: 16),
+                              Text(
+                                _errorMessage!,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                    color: Colors.grey[700], fontSize: 15),
+                              ),
+                              const SizedBox(height: 20),
+                              ElevatedButton.icon(
+                                onPressed: _loadInventory,
+                                icon: const Icon(Icons.refresh_rounded),
+                                label: const Text('Retry'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.orange,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : _filteredProducts.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,

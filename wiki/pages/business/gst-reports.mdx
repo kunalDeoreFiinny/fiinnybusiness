@@ -1,0 +1,90 @@
+# GST Reports
+
+The GST Reports module generates **GSTR-1 and GSTR-3B style** GST reports from the invoices stored in Firestore. These reports help accountants file monthly/quarterly GST returns.
+
+**File:** `src/pages/GSTReportsPage.tsx` (19KB)
+
+import { Callout } from 'nextra/components'
+
+<Callout type="info">
+KaranArjun does not directly file GST returns — it generates the computed data that an accountant can use to manually file on the GST portal.
+</Callout>
+
+## Reports Generated
+
+### GSTR-1 (Outward Supplies)
+Shows all B2B invoices grouped by GST slab for a selected month:
+
+| Column | Description |
+|---|---|
+| Invoice Number | INV-2025-001 |
+| Date | 15 Mar 2025 |
+| Buyer GSTIN | 27AABCT1332L1ZX |
+| Taxable Value | ₹45,000 |
+| CGST | ₹1,125 |
+| SGST | ₹1,125 |
+| IGST | ₹0 |
+| Total GST | ₹2,250 |
+
+### GSTR-3B Summary
+Aggregated GST liability for the period:
+
+```
+Total Taxable Supply:   ₹5,45,000
+Total CGST Collected:   ₹12,500
+Total SGST Collected:   ₹12,500
+Total IGST Collected:   ₹8,200
+NET GST PAYABLE:        ₹33,200
+```
+
+## Report Filters
+
+- **Period**: Month + Year picker, or custom date range
+- **Supply Type**: B2B only / B2C only / All
+- **State**: Filter intra-state vs inter-state supplies
+- **Status**: Include only Paid invoices / All invoices
+
+## GST Slab Breakdown
+
+The report groups invoices by GST slab:
+
+```
+5%  slab:  ₹2,00,000 taxable → ₹10,000 GST
+12% slab:  ₹1,50,000 taxable → ₹18,000 GST
+18% slab:  ₹1,95,000 taxable → ₹35,100 GST
+28% slab:  ₹0 taxable        → ₹0 GST
+```
+
+## Export Options
+
+- **Screen view** — scrollable table with totals
+- **CSV Export** — downloadable spreadsheet for accountant
+- **PDF Export** — formatted report with business header
+
+## How It Works
+
+```typescript
+// GSTReportsPage.tsx — aggregation logic
+const gstSummary = invoices.reduce((acc, inv) => {
+  inv.items.forEach(item => {
+    const key = `gst_${item.gstRate}`;
+    acc[key] = acc[key] || { taxable: 0, cgst: 0, sgst: 0, igst: 0 };
+    acc[key].taxable += item.taxableValue;
+    acc[key].cgst    += item.cgst;
+    acc[key].sgst    += item.sgst;
+    acc[key].igst    += item.igst;
+  });
+  return acc;
+}, {});
+```
+
+No server-side aggregation — all computation happens client-side from the Firestore query results.
+
+## HSN Summary (GSTR-1 Section 12)
+
+For businesses with turnover above ₹5 Cr, HSN-wise summary is required in GSTR-1:
+
+| HSN Code | Description | Qty | Taxable Value | GST Rate | Total Tax |
+|---|---|---|---|---|---|
+| 1006 | Rice | 5,000 kg | ₹2,00,000 | 5% | ₹10,000 |
+| 0401 | Milk | 1,000 L | ₹50,000 | 0% | ₹0 |

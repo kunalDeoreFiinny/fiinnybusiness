@@ -346,16 +346,6 @@ class _B2BAccountStatementScreenState extends State<B2BAccountStatementScreen> {
       builder: (context, currentLang, child) {
         return Scaffold(
           backgroundColor: Colors.grey.shade50,
-          bottomNavigationBar: const AdsBannerCard(
-            placement: 'b2b_account_statement_bottom',
-            inline: false,
-            inlineMaxHeight: 60,
-            margin: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            padding: EdgeInsets.zero,
-            backgroundColor: Colors.transparent,
-            boxShadow: [],
-            minHeight: 52,
-          ),
           appBar: AppBar(
             backgroundColor: Colors.white,
             foregroundColor: Colors.black87,

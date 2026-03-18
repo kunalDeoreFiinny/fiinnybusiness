@@ -1,0 +1,189 @@
+# Firestore Schema
+
+KaranArjun uses Firebase Firestore as its primary database. All data is scoped under `tenants/{tenantId}/` to ensure strict multi-tenant isolation.
+
+## Top-Level Collections
+
+```
+Firestore
+├── users/               ← All user accounts (cross-tenant)
+├── tenants/             ← One doc per business
+├── aiUsage/             ← AI rate limiting (cross-tenant)
+└── paymentLinks_public/ ← Public payment page data
+```
+
+## users/\{uid\}
+
+```typescript
+{
+  email: "arjun@karanarjun.in",
+  name: "Arjun Tanpure",
+  role: "admin",              // 'admin' | 'analyst' | 'retailer' | 'manufacturer'
+  tenantId: "karanarjun-001", // which business they belong to
+  linkedId: null,             // retailer/manufacturer doc ID for portal users
+  createdAt: Timestamp,
+  updatedAt: Timestamp
+}
+```
+
+## tenants/\{tenantId\}
+
+```typescript
+{
+  businessName: "KaranArjun Distribution",
+  logoUrl: "https://storage.googleapis.com/...",
+  location: "Pune, Maharashtra",
+  gstin: "27AABCT1332L1ZX",
+  address: "123 Market Road, Pune",
+  phone: "9876543210",
+  plan: "professional",   // 'free' | 'starter' | 'professional'
+  planExpiry: Timestamp,
+  createdAt: Timestamp
+}
+```
+
+## tenants/\{tenantId\}/settings/
+
+```
+settings/
+├── rolePermissions         ← Per-role screen access map
+├── invoiceSettings         ← GST number, prefix, starting number
+└── businessProfile         ← Logo, branding, bank details
+```
+
+## tenants/\{tenantId\}/retailers/\{retailerId\}
+
+```typescript
+{
+  businessName: "Sharma Traders",
+  ownerName: "Rajesh Sharma",
+  phone: "+919876543210",
+  email: "sharma@example.com",
+  gstin: "27AABCT1332L1ZX",
+  state: "Maharashtra",
+  address: "Shop 5, Market Road, Pune",
+  creditLimit: 100000,
+  paymentTermsDays: 30,
+  linkedUid: "firebase-uid",    // null if no portal login
+  totalOutstanding: 47250,
+  isActive: true,
+  createdAt: Timestamp
+}
+```
+
+## tenants/\{tenantId\}/invoices/\{invoiceId\}
+
+```typescript
+{
+  invoiceNumber: "INV-2025-001",
+  invoiceType: "b2b",
+  buyerId: "retailer-doc-id",
+  buyerName: "Sharma Traders",
+  buyerGSTIN: "27AABCT1332L1ZX",
+  buyerState: "Maharashtra",
+  items: InvoiceItem[],
+  subtotal: 45000,
+  totalCGST: 1125, totalSGST: 1125, totalIGST: 0,
+  grandTotal: 47250,
+  status: "pending",   // 'pending' | 'dispatched' | 'paid' | 'cancelled'
+  templateId: "template-doc-id",
+  dispatchedAt: Timestamp | null,
+  paidAt: Timestamp | null,
+  paymentMode: "upi" | "cash" | "neft" | null,
+  createdBy: "staff-uid",
+  createdAt: Timestamp
+}
+```
+
+## tenants/\{tenantId\}/pos_orders/\{orderId\}
+
+```typescript
+{
+  items: CartItem[],
+  subtotal: number,
+  gstAmount: number,
+  discount: number,
+  grandTotal: number,
+  paymentMode: "cash" | "upi" | "credit" | "split",
+  cashReceived: number | null,
+  changeGiven: number | null,
+  retailerId: "retailer-id" | null,
+  staffUid: "uid",
+  createdAt: Timestamp
+}
+```
+
+## tenants/\{tenantId\}/products/\{productId\}
+
+```typescript
+{
+  name: "Basmati Rice 5kg",
+  sku: "BRCE-5KG",
+  hsn: "1006",
+  unit: "Bag",
+  sellingRate: 500,
+  purchaseRate: 420,
+  mrp: 560,
+  gstRate: 5,
+  currentStock: 450,
+  reorderLevel: 50,
+  isActive: true,
+  categoryId: "grocery",
+  createdAt: Timestamp
+}
+```
+
+## tenants/\{tenantId\}/inventory/\{productId\}/batches/\{batchId\}
+
+```typescript
+{
+  batchNumber: "BATCH-2025-03",
+  manufacturingDate: Timestamp,
+  expiryDate: Timestamp,
+  costPrice: 420,
+  mrp: 560,
+  currentStock: 150,
+  warehouseId: "main-godown"
+}
+```
+
+## tenants/\{tenantId\}/payment_links/\{linkId\}
+
+```typescript
+{
+  razorpayLinkId: "plink_xyz",
+  shortUrl: "https://rzp.io/l/abcd",
+  amount: 47250,
+  description: "Invoice INV-001 payment",
+  retailerId: "sharma-id",
+  status: "pending",
+  expiresAt: Timestamp,
+  paidAt: Timestamp | null,
+  createdAt: Timestamp
+}
+```
+
+## aiUsage/\{uid\}/daily/\{YYYY-MM-DD\}
+
+```typescript
+{
+  calls: 12,
+  uid: "firebase-auth-uid",
+  date: "2025-03-17"
+}
+```
+
+## Firestore Security Rules
+
+All authenticated reads/writes require:
+1. `request.auth != null` — user is logged in
+2. Tenant scoping — user's `tenantId` must match the path's `tenantId`
+
+Example rule:
+```javascript
+match /tenants/{tenantId}/{document=**} {
+  allow read, write: if request.auth != null &&
+    get(/databases/$(database)/documents/users/$(request.auth.uid))
+      .data.tenantId == tenantId;
+}
+```

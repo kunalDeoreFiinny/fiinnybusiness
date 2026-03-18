@@ -73,6 +73,14 @@ service cloud.firestore {
     
     // Tenant specific collections
     match /tenants/{tenantId} {
+      // Allow users to read their own tenant, or master
+      allow read: if request.auth != null && (tenantId == 'master' || (getUserData() != null && getUserData().tenantId == tenantId));
+      
+      // Allow users to create their own tenant during onboarding
+      allow write: if request.auth != null && (
+        tenantId == 'tenant_' + request.auth.uid || 
+        (getUserData() != null && getUserData().tenantId == tenantId && isAdminOrAnalyst())
+      );
       match /retailers/{rId} {
         allow read: if request.auth != null && (isAdminOrAnalyst() || (hasRole('retailer') && getLinkedId() == rId));
         allow write: if request.auth != null && isAdminOrAnalyst();

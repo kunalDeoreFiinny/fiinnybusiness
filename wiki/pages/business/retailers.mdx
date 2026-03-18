@@ -1,0 +1,98 @@
+# Retailers
+
+The Retailers module is the **Buyer CRM** — it manages all the shops and businesses that buy from you on credit or wholesale terms.
+
+**Files:** `src/pages/ManageRetailersPage.tsx` (16KB), `src/pages/OnboardingPage.tsx` (10KB), `src/pages/RetailerPortalPage.tsx` (11KB)
+
+## What Retailers Are
+
+A Retailer in KaranArjun is:
+- A business that buys wholesale stock from you
+- Has a GST number, credit limit, and payment terms
+- Gets their own login portal (optional) to view their outstanding dues
+- Appears in the dropdown when creating B2B invoices
+
+## Retailer Onboarding
+
+`OnboardingPage.tsx` (at `/onboarding`) is the retailer signup form:
+
+| Field | Description |
+|---|---|
+| Business Name | Shop or firm name |
+| Owner Name | Contact person |
+| Phone | WhatsApp-compatible number |
+| GSTIN | Live-validated 15-char GST number |
+| Address | Billing address |
+| Credit Limit | Maximum outstanding balance allowed (₹) |
+| Payment Terms | 7 days / 15 days / 30 days |
+
+On save, a Firestore document is created AND optionally a Firebase Auth user is created for the Retailer Portal login.
+
+## Retailer Portal
+
+Retailers with a login can access `/retailer-portal` — a read-only view showing:
+- Their pending invoices (amount, due date)
+- Payment history
+- Outstanding total
+
+This is completely isolated from the admin sidebar. Retailers **cannot** see other retailers' data or any admin features.
+
+## Retailers CRM List
+
+`ManageRetailersPage.tsx` shows:
+
+```
+┌─────────────────────────────────────────────────────┐
+│ Sharma Traders           ₹47,250 outstanding        │
+│ 27AABCT1332L1ZX          Due: 5 days                │
+│ [Invoice] [Reminder] [Edit] [Portal Login]          │
+├─────────────────────────────────────────────────────┤
+│ Patel Wholesale          ₹0 outstanding             │
+│ 24XXXXX1234X1ZX          No dues                    │
+└─────────────────────────────────────────────────────┘
+```
+
+## Firestore Schema
+
+```typescript
+// tenants/{tenantId}/retailers/{retailerId}
+{
+  businessName: "Sharma Traders",
+  ownerName: "Rajesh Sharma",
+  phone: "+919876543210",
+  email: "sharma@example.com",
+  gstin: "27AABCT1332L1ZX",
+  state: "Maharashtra",
+  address: "123 Market Road, Pune",
+  creditLimit: 100000,
+  paymentTermsDays: 30,
+  linkedUid: "firebase-auth-uid",   // if they have portal login
+  totalOutstanding: 47250,           // computed field
+  createdAt: Timestamp,
+  isActive: true
+}
+```
+
+## Credit Limit Enforcement
+
+When adding a B2B invoice for a retailer, the system warns:
+
+```typescript
+const newOutstanding = retailer.totalOutstanding + invoiceTotal;
+if (newOutstanding > retailer.creditLimit) {
+  showWarning(`Credit limit exceeded: ₹${newOutstanding} > ₹${retailer.creditLimit}`);
+}
+```
+
+This is a warning, not a hard block — admin can override.
+
+## WhatsApp Integration
+
+From the Retailers list, clicking the WhatsApp icon sends a payment reminder:
+
+```
+https://wa.me/91{phone}?text=
+Hi {ownerName}, you have ₹{outstanding} outstanding.
+Please clear dues by {dueDate}.
+- {businessName}
+```

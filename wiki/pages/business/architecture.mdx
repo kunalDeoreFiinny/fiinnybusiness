@@ -1,0 +1,119 @@
+# Architecture
+
+KaranArjun SaaS uses a **multi-tenant, Firebase-first** architecture. Each business (tenant) gets isolated data. The React frontend is fully code-split for fast initial load.
+
+## System Architecture
+
+```mermaid
+graph TB
+    subgraph "Client (Browser)"
+        A[React + Vite SPA] --> B[React Router v6]
+        B --> C[AuthContext]
+        C --> D[Pages - lazy loaded]
+    end
+
+    subgraph "Firebase Backend"
+        E[Firebase Auth] --> F[Firestore DB]
+        F --> G[Multi-tenant collections]
+        H[Cloud Storage] --> I[Logos, PDFs]
+        J[App Check] --> K[reCAPTCHA v3]
+    end
+
+    subgraph "Cloud Functions"
+        L[karanArjunAIChat] --> M[OpenAI GPT-4o-mini]
+        N[dailyFirestoreBackup] --> O[Cloud Storage Backup]
+        P[dailyMetrics] --> Q[Metrics Firestore Docs]
+    end
+
+    subgraph "External Services"
+        R[Razorpay] --> S[Payment Links + Webhooks]
+        T[Sentry] --> U[Error Tracking]
+    end
+
+    D --> F
+    D --> L
+    D --> R
+    A --> T
+```
+
+## Multi-tenant Data Isolation
+
+Every business is a **tenant**. All data lives under `tenants/{tenantId}/...` in Firestore. No tenant can ever see another tenant's data.
+
+```
+Firestore
+├── users/                     ← User profiles & role assignments
+│   └── {uid}/
+├── tenants/                   ← One document per business
+│   └── {tenantId}/
+│       ├── settings/          ← Business config, roles, invoice settings
+│       ├── retailers/         ← Buyer CRM records
+│       ├── products/          ← Product catalog
+│       ├── invoices/          ← All B2B invoices
+│       ├── pos_orders/        ← Counter POS transactions
+│       ├── inventory/         ← Stock with batch tracking
+│       ├── warehouses/        ← Multi-location stock
+│       ├── payment_links/     ← Razorpay payment links
+│       └── ai_usage/          ← AI rate limiting
+└── aiUsage/                   ← Cross-tenant AI rate counters
+```
+
+## Code Splitting Strategy
+
+The app reduces its initial JS bundle from ~2.4MB → ~400KB by lazy-loading every page:
+
+```typescript
+// App.tsx — every page is a separate async chunk
+const POSPage    = lazy(() => import('./pages/POSPage'));
+const WorklistPage = lazy(() => import('./pages/WorklistPage'));
+// ... 46 more pages
+```
+
+A `<Suspense>` boundary wrapped in `<PageLoader>` (spinner) shows while chunks load.
+
+## Design System
+
+All styling uses **CSS custom properties** (design tokens) defined in `index.css`:
+
+```css
+:root {
+  --primary: #00b894;        /* brand green */
+  --primary-light: #55efc4;
+  --surface-base: #0a0e1a;   /* dark background */
+  --surface-raised: #111827;
+  --surface-border: #1f2937;
+  --text-primary: #f9fafb;
+  --text-secondary: #9ca3af;
+}
+```
+
+Components use these variables — switching themes means changing just the root variables.
+
+## Request Lifecycle — Invoice Creation
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant React
+    participant Firestore
+    participant PDF
+
+    User->>React: Fill invoice form (buyer, items, GST)
+    React->>React: gstCalculator.ts computes CGST/SGST/IGST
+    React->>React: gstinValidator.ts validates buyer GSTIN
+    React->>Firestore: Save invoice to tenants/{id}/invoices/
+    Firestore-->>React: Document reference
+    React->>PDF: invoiceEngine.ts → jsPDF generates PDF
+    PDF-->>User: Download / Print invoice
+    React->>React: Navigate to /worklist
+```
+
+## Performance Optimizations
+
+| Optimization | Detail |
+|---|---|
+| Code splitting | 48 lazy-loaded page chunks |
+| Firestore listeners | `onSnapshot` only where real-time needed |
+| Offline support | `OfflineBanner.tsx` detects connection loss |
+| Error boundaries | `ErrorBoundary.tsx` prevents full-app crashes |
+| App Check | reCAPTCHA v3 protects Cloud Functions from abuse |

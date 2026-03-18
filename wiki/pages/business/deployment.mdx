@@ -1,0 +1,161 @@
+# Deployment
+
+KaranArjun SaaS deploys to **Firebase Hosting** via a GitHub Actions CI/CD pipeline. Every push to the `main` branch automatically deploys to production.
+
+## Environments
+
+| Environment | URL | Firebase Project |
+|---|---|---|
+| Production | [karanarjun.in](https://karanarjun.in) | `karanarjun-pvt-ltd` |
+| Firebase Default | [karanarjun-pvt-ltd.web.app](https://karanarjun-pvt-ltd.web.app) | `karanarjun-pvt-ltd` |
+
+## CI/CD Pipeline
+
+`.github/workflows/deploy.yml` triggers on push to `main`:
+
+```yaml
+name: Deploy KaranArjun SaaS
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with: { node-version: '20' }
+      - name: Install & Build
+        working-directory: KARANARJUNKSKPVTLTD
+        run: npm ci && npm run build
+      - name: Deploy to Firebase
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          firebaseServiceAccount: ${{ secrets.FIREBASE_TOKEN }}
+          projectId: karanarjun-pvt-ltd
+          channelId: live
+```
+
+## Manual Deployment
+
+```powershell
+# From KARANARJUNKSKPVTLTD folder
+cd C:\lifemap\KARANARJUNKSKPVTLTD
+
+# Build
+npm run build
+
+# Deploy hosting only
+firebase deploy --only hosting --project karanarjun-pvt-ltd
+
+# Deploy cloud functions only
+firebase deploy --only functions --project karanarjun-pvt-ltd
+
+# Deploy everything
+firebase deploy --project karanarjun-pvt-ltd
+```
+
+## Cloud Functions Deployment
+
+Functions are in `KARANARJUNKSKPVTLTD/functions/`. They deploy separately from the hosting:
+
+```powershell
+cd C:\lifemap\KARANARJUNKSKPVTLTD
+
+# Deploy only specific function
+firebase deploy --only "functions:karanArjunAIChat" --project karanarjun-pvt-ltd
+
+# Deploy all functions
+firebase deploy --only functions --project karanarjun-pvt-ltd
+```
+
+import { Callout } from 'nextra/components'
+
+<Callout type="warning">
+The `fiinny.com` organization has restrictive IAM org policies. The following IAM roles MUST be granted to `832154675525-compute@developer.gserviceaccount.com` before Cloud Functions can deploy:
+- `roles/logging.logWriter`
+- `roles/storage.objectAdmin`
+- `roles/artifactregistry.reader`
+- `roles/artifactregistry.writer`
+
+Grant these via Cloud Shell in the GCP Console.
+</Callout>
+
+## Environment Variables
+
+Create `KARANARJUNKSKPVTLTD/.env`:
+
+```env
+# Firebase
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=karanarjun-pvt-ltd.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=karanarjun-pvt-ltd
+VITE_FIREBASE_STORAGE_BUCKET=karanarjun-pvt-ltd.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=832154675525
+VITE_FIREBASE_APP_ID=...
+
+# Security
+VITE_RECAPTCHA_KEY=...         ← Firebase App Check (reCAPTCHA v3)
+VITE_SENTRY_DSN=...            ← Error tracking
+
+# Payments
+VITE_RAZORPAY_KEY_ID=rzp_live_...
+```
+
+Cloud Function secrets (managed via Firebase Secret Manager):
+```bash
+firebase functions:secrets:set OPENAI_API_KEY --project karanarjun-pvt-ltd
+```
+
+## GitHub Secrets Required
+
+| Secret | Description |
+|---|---|
+| `FIREBASE_TOKEN` | CI/CD Firebase auth token (run `firebase login:ci`) |
+| `VITE_RECAPTCHA_KEY` | App Check site key |
+| `VITE_SENTRY_DSN` | Sentry project DSN |
+| `VITE_RAZORPAY_KEY_ID` | Razorpay live key |
+
+## Build Output
+
+```
+KARANARJUNKSKPVTLTD/
+└── dist/
+    ├── index.html           ← Single HTML entry point
+    ├── assets/
+    │   ├── index-[hash].js  ← Vendor bundle (~400KB gzipped)
+    │   ├── POSPage-[hash].js ← Lazy chunk
+    │   ├── WorklistPage-[hash].js
+    │   └── ...48 lazy chunks
+    └── favicon.ico
+```
+
+## Firebase Configuration
+
+`firebase.json` (in `KARANARJUNKSKPVTLTD/`):
+
+```json
+{
+  "hosting": {
+    "public": "dist",
+    "ignore": ["firebase.json", "**/.*"],
+    "rewrites": [{ "source": "**", "destination": "/index.html" }]
+  },
+  "functions": {
+    "source": "functions",
+    "codebase": "default",
+    "runtime": "nodejs20"
+  }
+}
+```
+
+The `**` rewrite sends all unmatched routes to `index.html` — enabling React Router client-side navigation.
+
+## Monitoring
+
+| Tool | What It Monitors |
+|---|---|
+| Sentry | JS errors and crashes in production |
+| UptimeRobot | Site uptime + AI function endpoint uptime |
+| Firebase Console | Auth users, Firestore reads/writes, Storage |
+| Cloud Functions | Invocation count, error rate, latency |

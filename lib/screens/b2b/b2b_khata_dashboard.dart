@@ -22,6 +22,7 @@ class _B2BKhataDashboardScreenState extends State<B2BKhataDashboardScreen> with 
   List<Map<String, dynamic>> _customers = [];
   List<Map<String, dynamic>> _suppliers = [];
   bool _isLoading = true;
+  String? _errorMessage; // shows retry if DB fails
   late TabController _tabController;
   int _sortBy = 0; // 0 = Latest, 1 = Amount Due, 2 = Name
 
@@ -76,7 +77,10 @@ class _B2BKhataDashboardScreenState extends State<B2BKhataDashboardScreen> with 
   }
 
   Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
       final db = await LocalDatabaseHelper.instance.database;
 
@@ -91,11 +95,25 @@ class _B2BKhataDashboardScreenState extends State<B2BKhataDashboardScreen> with 
         )
       ''');
 
+      // Ensure khata table exists
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS khata (
+          _id TEXT PRIMARY KEY,
+          customerId TEXT NOT NULL,
+          customerName TEXT NOT NULL,
+          amount REAL NOT NULL,
+          type TEXT NOT NULL,
+          note TEXT,
+          synced INTEGER NOT NULL,
+          createdAt TEXT NOT NULL
+        )
+      ''');
+
       // Get contacts and join with khata for their balances
       final result = await db.rawQuery('''
         SELECT c.contactId as customerId, c.name as customerName, c.type as roleType,
-          IFNULL(SUM(CASE WHEN k.type = \'given\' THEN k.amount ELSE 0 END), 0) as totalGiven,
-          IFNULL(SUM(CASE WHEN k.type = \'received\' THEN k.amount ELSE 0 END), 0) as totalReceived
+          IFNULL(SUM(CASE WHEN k.type = 'given' THEN k.amount ELSE 0 END), 0) as totalGiven,
+          IFNULL(SUM(CASE WHEN k.type = 'received' THEN k.amount ELSE 0 END), 0) as totalReceived
         FROM b2b_contacts c
         LEFT JOIN khata k ON c.contactId = k.customerId
         GROUP BY c.contactId
@@ -139,7 +157,12 @@ class _B2BKhataDashboardScreenState extends State<B2BKhataDashboardScreen> with 
       }
     } catch (e) {
       debugPrint('[KhataDashboard] _loadData error: $e');
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Could not load data. Tap to retry.';
+        });
+      }
     }
   }
 
@@ -163,6 +186,7 @@ class _B2BKhataDashboardScreenState extends State<B2BKhataDashboardScreen> with 
       'userId': widget.userId,
       'isCustomer': isCustomer,
     });
+    debugPrint('[DEBUG] _navigateToAddScreen result: $result');
 
     if (result != null && result is Map<String, dynamic> && mounted) {
       final name = result['name'] as String;
@@ -719,15 +743,44 @@ class _B2BKhataDashboardScreenState extends State<B2BKhataDashboardScreen> with 
                 ),
                 // Tab Views
                 Expanded(
-                  child: _isLoading 
+                  child: _isLoading
                     ? const Center(child: CircularProgressIndicator())
-                    : TabBarView(
-                        controller: _tabController,
-                        children: [
-                          _buildList(_customers, true),
-                          _buildList(_suppliers, false),
-                        ],
-                      ),
+                    : _errorMessage != null
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.cloud_off_rounded, size: 56, color: Colors.grey.shade300),
+                                const SizedBox(height: 16),
+                                Text(
+                                  _errorMessage!,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                                ),
+                                const SizedBox(height: 20),
+                                ElevatedButton.icon(
+                                  onPressed: _loadData,
+                                  icon: const Icon(Icons.refresh_rounded),
+                                  label: const Text('Retry'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green.shade700,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : TabBarView(
+                          controller: _tabController,
+                          children: [
+                            _buildList(_customers, true),
+                            _buildList(_suppliers, false),
+                          ],
+                        ),
                 ),
               ],
             ),
@@ -738,7 +791,6 @@ class _B2BKhataDashboardScreenState extends State<B2BKhataDashboardScreen> with 
                 'userId': widget.userId,
                 'isCustomer': _tabController.index == 0,
               });
-              
               if (result is Map<String, dynamic>) {
                 final isCustomer = result['isCustomer'] == true;
                 await _saveContactToDb(result['phone'], result['name'], isCustomer ? 'CUSTOMER' : 'SUPPLIER');

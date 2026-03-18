@@ -1,0 +1,101 @@
+# Fiinny for Business — Overview
+
+KaranArjun SaaS (or **Fiinny for Business**) is a comprehensive retailer management platform built for Indian wholesale and distribution businesses. It handles everything from POS billing and GST invoicing to inventory, payment links, and AI-powered business insights.
+
+import { Callout, Cards, Card } from 'nextra/components'
+
+<Callout type="info">
+**Product hierarchy:**
+- **Fiinny** — Parent brand
+- **Fiinny Personal** — Consumer expense tracking app (Flutter/Android)
+- **Fiinny for Business (KaranArjun)** — B2B SaaS for retailers & distributors (React/Web)
+</Callout>
+
+## What It Does
+
+| Feature | Description |
+|---|---|
+| POS Billing | Quick cash/UPI billing at the counter with receipt printing |
+| B2B Invoicing | Full GST tax invoice generation with GSTIN validation |
+| Worklist | Saved invoices pending dispatch, approval, or payment |
+| Inventory & Batches | Stock management with batch tracking and barcode labels |
+| Retailers CRM | Manage retail buyers with credit limits and outstanding dues |
+| GST Reports | GSTR-1 / GSTR-3B style tax computation and export |
+| Financial Reports | P&L, outstanding receivables, cash flow by date range |
+| Payment Links | Razorpay-powered UPI/card payment links with QR codes |
+| AI Advisor | GPT-4o-mini business intelligence Q&A with live Firestore data |
+| Invoice Templates | Drag-and-drop invoice field customization + PDF branding |
+| Multi-company | Switch between multiple business entities from one login |
+
+## Live URLs
+
+| Environment | URL |
+|---|---|
+| Production | [karanarjun.in](https://karanarjun.in) |
+| Firebase Hosting | [karanarjun-pvt-ltd.web.app](https://karanarjun-pvt-ltd.web.app) |
+| AI Cloud Function | `https://us-central1-karanarjun-pvt-ltd.cloudfunctions.net/karanArjunAIChat` |
+
+## Tech Stack
+
+```
+Frontend:   React 18 + TypeScript + Vite
+Styling:    Vanilla CSS (custom design system, CSS variables)
+Routing:    React Router v6 (code-split lazy imports)
+Backend:    Firebase Auth + Firestore + Cloud Storage
+Functions:  Firebase Cloud Functions Gen 2 (Node 20)
+AI:         OpenAI GPT-4o-mini via Cloud Function
+Payments:   Razorpay (payment links + webhook)
+PDF:        jsPDF + jspdf-autotable
+i18n:       react-i18next (English + Hindi)
+Monitoring: Sentry (error tracking) + UptimeRobot (uptime)
+CI/CD:      GitHub Actions → Firebase Hosting
+```
+
+## Repository Structure
+
+```
+KARANARJUNKSKPVTLTD/
+├── src/
+│   ├── App.tsx              # Router, sidebar layout, auth gate
+│   ├── firebase.ts          # Firebase SDK init + App Check
+│   ├── main.tsx             # Entry point + Sentry init
+│   ├── index.css            # Global design tokens (CSS vars)
+│   ├── pages/               # 48 feature pages (lazy-loaded)
+│   ├── components/          # Shared UI components
+│   ├── contexts/            # React context providers
+│   │   ├── AuthContext.tsx  # Auth + RBAC + tenant resolution
+│   │   ├── SchemaContext.tsx # Custom field schema
+│   │   └── ToastContext.tsx  # Global toast notifications
+│   ├── services/            # Firestore service abstractions
+│   ├── utils/               # Core business logic
+│   │   ├── invoiceEngine.ts # PDF generation (jsPDF)
+│   │   ├── gstCalculator.ts # GST tax computation engine
+│   │   ├── gstinValidator.ts# GSTIN live validation
+│   │   └── tenantPath.ts    # Tenant-scoped Firestore paths
+│   └── types/               # TypeScript interfaces
+├── functions/
+│   ├── src/
+│   │   ├── karanArjunAI.ts  # AI Advisor Cloud Function
+│   │   ├── monitoring.ts    # Backup + metrics Cloud Functions
+│   │   └── index.ts         # Function exports
+│   └── package.json
+├── firebase.json            # Firebase project config
+└── .firebaserc              # Project alias (karanarjun-pvt-ltd)
+```
+
+## Navigation
+
+- [Architecture](/business/architecture) — System design, data flow, module map
+- [Auth & RBAC](/business/auth-and-roles) — Login, roles, tenant isolation
+- [POS & Billing](/business/pos-billing) — Point of Sale counter billing
+- [B2B Invoicing](/business/b2b-invoicing) — GST invoice creation
+- [Worklist](/business/worklist) — Invoice pipeline management
+- [Inventory & Batches](/business/inventory) — Stock and batch tracking
+- [Retailers](/business/retailers) — Buyer CRM
+- [GST Reports](/business/gst-reports) — GSTR-1/3B computation
+- [Financial Reports](/business/financial-reports) — P&L and receivables
+- [Payment Links](/business/payment-links) — Razorpay UPI links
+- [AI Advisor](/business/ai-advisor) — GPT-4o-mini business Q&A
+- [Invoice Templates](/business/invoice-templates) — PDF template builder
+- [Firestore Schema](/business/firestore-schema) — Database structure
+- [Deployment](/business/deployment) — CI/CD and hosting

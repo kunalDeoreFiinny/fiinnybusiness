@@ -88,9 +88,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     const userDoc = await getDoc(userDocRef);
                     const emailLC = user.email?.toLowerCase() || '';
                     const isMasterAdmin = emailLC.includes('arjuntanpure') || emailLC.includes('arjutanpure');
+                    
+                    let existingRole = userDoc.exists() ? (userDoc.data().role as UserRole) : null;
+                    let existingTenantId = userDoc.exists() ? userDoc.data().tenantId : null;
 
-                    let role: UserRole = isMasterAdmin ? 'admin' : (userDoc.exists() ? (userDoc.data().role as UserRole) : 'analyst');
-                    let tId = isMasterAdmin ? 'master' : (userDoc.exists() ? userDoc.data().tenantId : null);
+                    // Restore access for legacy users (before multi-tenant)
+                    // If they are an admin or analyst without a tenantId, they belong to the master tenant
+                    if (userDoc.exists() && !existingTenantId) {
+                        // Any user created before multi-tenancy had no tenantId
+                        existingTenantId = 'master';
+                    }
+
+                    let role: UserRole = isMasterAdmin ? 'admin' : (existingRole || 'analyst');
+                    let tId = isMasterAdmin ? 'master' : existingTenantId;
                     let lId: string | null = userDoc.exists() ? (userDoc.data().linkedId || null) : null;
 
                     if (!userDoc.exists() || isMasterAdmin) {

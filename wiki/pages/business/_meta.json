@@ -1,0 +1,17 @@
+{
+    "index": "Overview",
+    "architecture": "Architecture",
+    "auth-and-roles": "Auth & RBAC",
+    "pos-billing": "POS & Billing",
+    "b2b-invoicing": "B2B Invoicing",
+    "worklist": "Worklist",
+    "inventory": "Inventory & Batches",
+    "retailers": "Retailers",
+    "gst-reports": "GST Reports",
+    "financial-reports": "Financial Reports",
+    "payment-links": "Payment Links",
+    "ai-advisor": "AI Advisor",
+    "invoice-templates": "Invoice Templates",
+    "firestore-schema": "Firestore Schema",
+    "deployment": "Deployment"
+}

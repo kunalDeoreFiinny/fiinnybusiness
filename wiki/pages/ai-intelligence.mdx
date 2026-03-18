@@ -1,14 +1,102 @@
-# Fiinny AI & Intelligence
+# AI & Intelligence
 
-Fiinny's AI-powered features provide intelligent expense tracking, natural language queries, and smart categorization. This section documents all AI components and their data flows.
+This section documents all AI systems across Fiinny products.
 
-## Overview
+import { Callout } from 'nextra/components'
 
-Fiinny Brain is the AI assistant that powers:
+<Callout type="info">
+**Two separate AI systems:**
+- **KaranArjun AI Advisor** → Retailer SaaS (`karanarjun-pvt-ltd` project)
+- **Fiinny Brain** → Personal finance app (`lifemap-72b21` project)
+</Callout>
+
+---
+
+## 🏪 KaranArjun AI Advisor
+
+A GPT-4o-mini powered business intelligence assistant built into the KaranArjun Retailer SaaS. It answers **live questions** about sales, inventory, and business performance using real Firestore data.
+
+### Key Features
+- **Business Q&A**: "What's my top-selling product?" / "Who were my best customers this week?"
+- **Live data context**: Reads real-time tenant data from Firestore before every query
+- **Rate limiting**: 50 calls/user/day, enforced server-side via Firestore counter
+- **Security**: App Check + CORS restricted to production domains
+- **Gated by plan**: Only available on Starter/Professional subscription tiers
+
+### Architecture
+
+```mermaid
+graph TB
+    subgraph "KaranArjun SaaS (React)"
+        A[AI Advisor Page] --> B[useAIAdvisor hook]
+        B --> C[Business Context Builder]
+    end
+    subgraph "Cloud Function"
+        C --> D[karanArjunAIChat]
+        D --> E{Rate Limit Check}
+        E --> F[OpenAI GPT-4o-mini]
+    end
+    subgraph "Firestore"
+        G[(tenants/invoices)] --> C
+        H[(aiUsage/daily)] --> E
+    end
+    F --> B
+```
+
+### Cloud Function Details
+**File**: `KARANARJUNKSKPVTLTD/functions/src/karanArjunAI.ts`
+**Firebase project**: `karanarjun-pvt-ltd`
+**Live endpoint**: `https://us-central1-karanarjun-pvt-ltd.cloudfunctions.net/karanArjunAIChat`
+**AI model**: `gpt-4o-mini` (temperature 0.5, max 512 tokens)
+
+**Request format**:
+```json
+{
+  "messages": [{"role": "user", "content": "What are my top products?"}],
+  "businessContext": "Revenue this month: ₹1,25,000. Top product: Basmati Rice.",
+  "uid": "user-firebase-uid"
+}
+```
+
+**Response format**:
+```json
+{
+  "reply": "Your top product is **Basmati Rice**...\n\n💡 **Tip**: Consider...",
+  "callsRemaining": 48
+}
+```
+
+### Security Implementation
+```typescript
+// App Check validation (production only)
+const appCheckToken = req.headers["x-firebase-appcheck"];
+if (isProduction && !appCheckToken) {
+  res.status(401).json({ error: "Unauthorized: App Check token missing" });
+}
+
+// Rate limiting via Firestore
+const MAX_DAILY_CALLS = 50;
+// Path: aiUsage/{uid}/daily/{YYYY-MM-DD}
+```
+
+### Test the Live Endpoint
+```bash
+# Local dev (App Check skipped when FUNCTIONS_EMULATOR=true)
+curl -X POST https://us-central1-karanarjun-pvt-ltd.cloudfunctions.net/karanArjunAIChat \
+  -H "Content-Type: application/json" \
+  -d '{"messages":[{"role":"user","content":"Hello, what can you help with?"}],"uid":"test-123"}'
+```
+
+---
+
+## 📱 Fiinny Brain (Personal Finance AI)
+
+Fiinny Brain is the AI assistant for the personal finance app. It powers:
 - **Natural Language Chat**: Ask questions about your finances in plain English
 - **Smart Categorization**: Automatic expense categorization using 100+ brand mappings
 - **Expense Creation**: Add expenses via chat with natural language parsing
 - **Query Processing**: Complex financial queries with time-based filtering
+
 
 ---
 
@@ -79,6 +167,7 @@ const [messages, setMessages] = useState<Message[]>([]);
 
 ### 2. Cloud Function: fiinnyBrainQuery
 **Location**: `functions/src/fiinnyBrainQuery.ts`
+**Firebase project**: `lifemap-72b21`
 
 **Endpoint**: `https://us-central1-lifemap-72b21.cloudfunctions.net/fiinnyBrainQuery`
 
@@ -393,7 +482,7 @@ try {
 
 ## Testing
 
-### Manual Testing
+### Manual Testing (Fiinny Brain)
 ```bash
 # Test greeting
 curl -X POST https://us-central1-lifemap-72b21.cloudfunctions.net/fiinnyBrainQuery \

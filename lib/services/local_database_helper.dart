@@ -1,6 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 
 class LocalDatabaseHelper {
@@ -36,7 +36,7 @@ class LocalDatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 5, // bumped: v5 adds indexes
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -101,6 +101,9 @@ CREATE TABLE b2b_contacts (
   createdAt $textType
 )
 ''');
+
+    // ── Indexes (v5) — speeds up all common queries ──────────────────────
+    await _createIndexes(db);
   }
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -155,6 +158,38 @@ CREATE TABLE b2b_contacts (
   createdAt $textType
 )
 ''');
+    }
+
+    if (oldVersion < 5) {
+      // Add indexes for all existing installations
+      await _createIndexes(db);
+    }
+  }
+
+  /// Creates all performance indexes. Safe to call on new or upgraded DBs.
+  Future<void> _createIndexes(Database db) async {
+    final indexes = [
+      // invoices — filter by synced flag + sort/filter by date
+      'CREATE INDEX IF NOT EXISTS idx_inv_synced   ON invoices   (synced)',
+      'CREATE INDEX IF NOT EXISTS idx_inv_created  ON invoices   (createdAt)',
+      // inventory — filter by synced flag
+      'CREATE INDEX IF NOT EXISTS idx_stk_synced   ON inventory  (synced)',
+      'CREATE INDEX IF NOT EXISTS idx_stk_name     ON inventory  (name)',
+      // khata — filter by type (given/received) for udhari sums
+      'CREATE INDEX IF NOT EXISTS idx_kht_type     ON khata      (type)',
+      'CREATE INDEX IF NOT EXISTS idx_kht_synced   ON khata      (synced)',
+      'CREATE INDEX IF NOT EXISTS idx_kht_customer ON khata      (customerId)',
+      // b2b_contacts — lookups by phone and type
+      'CREATE INDEX IF NOT EXISTS idx_con_phone    ON b2b_contacts (phone)',
+      'CREATE INDEX IF NOT EXISTS idx_con_type     ON b2b_contacts (type)',
+    ];
+    for (final sql in indexes) {
+      try {
+        await db.execute(sql);
+      } catch (e) {
+        // Ignore if index already exists or table doesn't exist yet
+        debugPrint('[DB] Index skipped: $e');
+      }
     }
   }
 
