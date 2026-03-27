@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Save, Loader2, Printer, Plus, Trash2 } from 'lucide-react';
+import { Save, Loader2, Printer, Plus, Trash2, UserPlus, ArrowLeft } from 'lucide-react';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import UpiQrCode from '../components/UpiQrCode';
 import {
     addDoc, getDoc, getDocs, runTransaction, serverTimestamp, updateDoc,
     query, where, limit, onSnapshot
@@ -38,11 +40,7 @@ interface B2BRow {
 
 const PAYMENT_MODES = ['Cash', '15 Days', '30 Days', '45 Days', 'Credit'];
 
-const DEFAULT_BANK_DETAILS = `A/c Holder's Name : KARANARJUN KRUSHI SEVA KENDRA
-Bank Name          : Bank of Maharashtra
-A/c No.            : 60377054187
-IFSC Code          : MAHB0001571
-Branch             : Karjat - 414402`;
+const DEFAULT_BANK_DETAILS = '';
 const EMPTY_ROW = (): B2BRow => ({
     productId: '',
     itemDescription: '',
@@ -84,7 +82,10 @@ function numberToWords(num: number): string {
 // Component
 // ─────────────────────────────────────────────
 export default function B2BInvoicePage() {
-    const { tenantId } = useAuth();
+    const { tenantId, tenantData } = useAuth();
+    const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
+    const prefilledRetailerId = searchParams.get('retailerId') || '';
 
     const [branding, setBranding] = useState<any>(null);
     const [products, setProducts] = useState<Product[]>([]);
@@ -153,6 +154,68 @@ export default function B2BInvoicePage() {
             unsubRetailers();
         };
     }, [tenantId]);
+
+    // ─── Pre-fill buyer from retailerId query param ───
+    useEffect(() => {
+        if (!prefilledRetailerId || retailers.length === 0) return;
+        const r = retailers.find((x: any) => x.id === prefilledRetailerId);
+        if (!r) return;
+        setHeader(prev => ({
+            ...prev,
+            retailerId: r.id,
+            buyerName: r.name || prev.buyerName,
+            buyerContact: r.number || prev.buyerContact,
+            buyerAddress: `${r.atPost || ''}, Tal. ${r.taluka || ''}, Dist. ${r.district || ''}`.trim(),
+            buyerGstin: r.gstin || prev.buyerGstin,
+            buyerState: r.state || prev.buyerState,
+        }));
+    }, [prefilledRetailerId, retailers]);
+
+    // ─── Load existing order by orderId query param ───
+    const prefilledOrderId = searchParams.get('orderId') || '';
+    useEffect(() => {
+        if (!prefilledOrderId || !tenantId) return;
+        getDoc(getTenantDoc(db, tenantId, 'salesOrders', prefilledOrderId)).then(snap => {
+            if (!snap.exists()) return;
+            const d = snap.data();
+            // Restore header fields
+            setHeader(prev => ({
+                ...prev,
+                invoiceNo: d.orderNumber || prev.invoiceNo,
+                invoiceDate: d.invoiceDate || prev.invoiceDate,
+                modeOfPayment: d.modeOfPayment || prev.modeOfPayment,
+                salesmanName: d.salesmanName || prev.salesmanName,
+                termsOfDelivery: d.termsOfDelivery || prev.termsOfDelivery,
+                buyerName: d.retailerName || d.buyerName || prev.buyerName,
+                buyerAddress: d.buyerAddress || prev.buyerAddress,
+                buyerGstin: d.buyerGstin || prev.buyerGstin,
+                buyerContact: d.buyerContact || prev.buyerContact,
+                buyerState: d.buyerState || prev.buyerState,
+                retailerId: d.retailerId || prev.retailerId,
+            }));
+            // Restore discount / previous balance
+            if (d.discountAmount !== undefined) setDiscount(String(d.discountAmount));
+            if (d.previousBalance !== undefined) setPreviousBalance(String(d.previousBalance));
+            // Restore line items — pad to at least 10 rows
+            if (d.lineItems && d.lineItems.length > 0) {
+                const restored: B2BRow[] = d.lineItems.map((li: any) => ({
+                    productId: li.productId || '',
+                    itemDescription: li.itemDescription || '',
+                    batchNo: li.batchNo || '',
+                    expDate: li.expDate || '',
+                    gstPct: String(li.gstPct ?? '5'),
+                    midOff: li.midOff || 'Nos',
+                    per: li.per || 'Nos',
+                    quantity: String(li.quantity ?? ''),
+                    rate: String(li.rate ?? ''),
+                    grossAmount: li.grossAmount || 0,
+                }));
+                // Pad with empty rows to fill grid
+                while (restored.length < 10) restored.push(EMPTY_ROW());
+                setRows(restored);
+            }
+        }).catch(e => console.error('Failed to load existing order:', e));
+    }, [prefilledOrderId, tenantId]);
 
     // ─── Auto-fill buyer by phone ───
     const handleBuyerPhoneBlur = async () => {
@@ -285,10 +348,12 @@ export default function B2BInvoicePage() {
                 discountAmount: discountAmt,
                 roundOff,
                 netAmount,
+                grandTotal: netAmount,   // alias so OrderHistoryPage & PaymentReminders can read it
                 previousBalance: prevBal,
                 netBalance,
                 invoiceDate: header.invoiceDate,
                 status: header.modeOfPayment === 'Cash' ? 'paid' : 'pending',
+                paymentStatus: header.modeOfPayment === 'Cash' ? 'Paid' : 'Pending',
                 createdAt: serverTimestamp(),
             });
 
@@ -320,7 +385,44 @@ export default function B2BInvoicePage() {
                 resetForm();
             } else {
                 setIsProcessing(false);
-                setTimeout(() => { window.print(); resetForm(); }, 150);
+                // Snapshot DOM -> new window to fix iOS Safari blank print
+                // (window.print() on same page would race with resetForm() clearing state)
+                setTimeout(() => {
+                    const container = document.querySelector('.b2b-card') as HTMLElement | null;
+                    const html = container ? container.outerHTML : document.body.innerHTML;
+                    const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+                        .map(el => el.outerHTML).join('\n');
+                    const win = window.open('', '_blank');
+                    if (!win) {
+                        window.print();
+                        resetForm();
+                        return;
+                    }
+                    win.document.write(`<!DOCTYPE html><html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B2B Invoice ${invNo}</title>
+${styles}
+<style>
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-scheme: light !important; }
+  html, body { background: #fff !important; color: #000 !important; margin: 0; padding: 0; }
+  .b2b-wrapper { background: #fff !important; padding: 0 !important; }
+  .no-print { display: none !important; }
+  .b2b-card { box-shadow: none !important; border: none !important; border-radius: 0 !important; margin: 0 !important; padding: 10px !important; background: #fff !important; color: #000 !important; }
+  input, select, textarea { display: none !important; }
+  .print-val { display: inline !important; font-family: 'Times New Roman', serif; color: #000; }
+  .b2b-table { border-collapse: collapse; width: 100%; }
+  .b2b-table th, .b2b-table td { border: 1px solid #222 !important; padding: 2px 3px !important; font-size: 0.78rem !important; }
+  @media print { .no-print { display: none !important; } }
+</style>
+</head><body>${html}</body></html>`);
+                    win.document.close();
+                    win.focus();
+                    setTimeout(() => { win.print(); }, 700);
+                    // Safe to reset now — new window has a static clone
+                    resetForm();
+                    return;
+                }, 200);
                 return;
             }
         } catch (e) {
@@ -347,10 +449,16 @@ export default function B2BInvoicePage() {
 
     if (loading) return <div style={{ textAlign: 'center', padding: '4rem' }}><Loader2 className="animate-spin" style={{ margin: '0 auto' }} /></div>;
 
-    const sellerName = branding?.businessName || 'KaranArjun Krushi Seva Kendra';
+    const sellerName = branding?.businessName || tenantData?.businessName || 'Your Business Name';
 
     return (
         <div style={{ background: 'var(--surface-base)', padding: '2rem', minHeight: '100vh' }} className="b2b-wrapper">
+            {prefilledRetailerId && (
+                <button className="btn btn-secondary no-print" onClick={() => navigate(`/worklist/${prefilledRetailerId}`)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', fontSize: '0.875rem', padding: '0.5rem 1rem' }}>
+                    <ArrowLeft size={16} /> Back to Partner
+                </button>
+            )}
             <style>{`
                 @media print {
                     .b2b-wrapper { padding: 0 !important; background: transparent !important; }
@@ -358,9 +466,18 @@ export default function B2BInvoicePage() {
                     .no-print { display: none !important; }
                     .b2b-table th, .b2b-table td { padding: 2px 3px !important; font-size: 0.78rem !important; }
                     h1 { font-size: 1.2rem !important; }
-                    input, select, textarea { border: none !important; background: transparent !important; appearance: none !important; padding: 0 !important; font-family: inherit; color: #000; }
+                    input, select, textarea {
+                        display: none !important;
+                    }
+                    .print-val {
+                        display: inline !important;
+                        font-family: 'Times New Roman', serif;
+                        font-size: inherit;
+                        color: #000;
+                    }
                     select { background-image: none !important; }
                 }
+                .print-val { display: none; }
                 .b2b-table { border-collapse: collapse; width: 100%; }
                 .b2b-table th, .b2b-table td { border: 1px solid #222; padding: 4px 5px; font-size: 0.82rem; }
                 .b2b-table th { background: #f2f2f2; font-weight: 700; text-align: center; }
@@ -371,6 +488,16 @@ export default function B2BInvoicePage() {
                 .b2b-dropdown-item { padding: 6px 10px; cursor: pointer; font-size: 0.85rem; border-bottom: 1px solid #eee; text-align: left; }
                 .b2b-dropdown-item:hover { background: #e8f5e9; }
             `}</style>
+
+            {/* ── Onboard Retailer shortcut (no-print) ── */}
+            <div className="no-print" style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.75rem', maxWidth: '1050px', marginLeft: 'auto', marginRight: 'auto' }}>
+                <Link
+                    to="/onboarding"
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1.1rem', background: 'var(--primary-light)', color: '#fff', borderRadius: '10px', textDecoration: 'none', fontWeight: 700, fontSize: '0.88rem', fontFamily: 'inherit' }}
+                >
+                    <UserPlus size={16} /> Onboard New Retailer
+                </Link>
+            </div>
 
             <div style={{ maxWidth: '1050px', margin: '0 auto', background: '#fff', color: '#000', fontFamily: "'Times New Roman', serif", boxShadow: '0 10px 40px rgba(0,0,0,0.1)', borderRadius: '12px', border: '1px solid #ddd', padding: '20px 24px' }} className="b2b-card">
 
@@ -384,7 +511,7 @@ export default function B2BInvoicePage() {
                         <div>
                             <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 900, letterSpacing: '-0.01em' }}>{sellerName}</h1>
                             <div style={{ fontSize: '0.78rem', color: '#444', marginTop: '2px' }}>
-                                {branding?.address || 'Village/Taluka/District, Maharashtra'}<br />
+                                {branding?.address || tenantData?.location || 'Address'}<br />
                                 {branding?.gstin && <><strong>GSTIN:</strong> {branding.gstin} &nbsp;</>}
                                 {branding?.contact && <>Contact No.: {branding.contact}</>}
                                 {branding?.email && <>&nbsp; Email: {branding.email}</>}
@@ -422,6 +549,7 @@ export default function B2BInvoicePage() {
                                 onFocus={() => header.buyerName.length > 0 && setShowRetailerDropdown(true)}
                                 onBlur={() => setTimeout(() => setShowRetailerDropdown(false), 200)}
                             />
+                            <span className="print-val" style={{ fontWeight: 700, fontSize: '0.88rem' }}>{header.buyerName}</span>
                             {showRetailerDropdown && (
                                 <div className="b2b-dropdown no-print" style={{ top: '100%', left: 0, width: '100%' }}>
                                     {retailers
@@ -451,24 +579,22 @@ export default function B2BInvoicePage() {
                             )}
                         </div>
 
-                        <textarea className="b2b-input" style={{ display: 'block', marginTop: '3px', resize: 'none', minHeight: '44px' }} placeholder="Address" value={header.buyerAddress} onChange={e => setHeader(h => ({ ...h, buyerAddress: e.target.value }))} />
+                        <div style={{ position: 'relative' }}>
+                            <textarea className="b2b-input" style={{ display: 'block', marginTop: '3px', resize: 'none', minHeight: '44px' }} placeholder="Address" value={header.buyerAddress} onChange={e => setHeader(h => ({ ...h, buyerAddress: e.target.value }))} />
+                            <span className="print-val" style={{ display: 'none', whiteSpace: 'pre-wrap', marginTop: '3px', fontSize: '0.82rem' }}>{header.buyerAddress}</span>
+                        </div>
                         <div style={{ display: 'flex', gap: '8px', marginTop: '3px', flexWrap: 'wrap' }}>
                             <span className="b2b-label">GST No.:</span>
                             <div style={{ flexGrow: 1, minWidth: '120px' }}>
                                 <input
                                     className="b2b-input"
-                                    style={{
-                                        width: '100%',
-                                        textTransform: 'uppercase',
-                                        borderColor: header.buyerGstin
-                                            ? (validateGSTIN(header.buyerGstin.toUpperCase()).valid ? '#10b981' : '#ef4444')
-                                            : undefined,
-                                    }}
-                                    placeholder="Buyer GSTIN (e.g. 27AAPFU0939F1ZV)"
+                                    style={{ width: '100%', textTransform: 'uppercase' }}
+                                    placeholder="Buyer GSTIN"
                                     value={header.buyerGstin}
                                     onChange={e => setHeader(h => ({ ...h, buyerGstin: e.target.value.toUpperCase() }))}
                                     maxLength={15}
                                 />
+                                <span className="print-val" style={{ textTransform: 'uppercase' }}>{header.buyerGstin}</span>
                                 {header.buyerGstin && (() => {
                                     const result = validateGSTIN(header.buyerGstin);
                                     return result.valid
@@ -480,40 +606,46 @@ export default function B2BInvoicePage() {
                         <div style={{ display: 'flex', gap: '8px', marginTop: '3px' }}>
                             <span className="b2b-label">Contact No.:</span>
                             <input className="b2b-input" style={{ flexGrow: 1 }} placeholder="Phone No" value={header.buyerContact} onChange={e => setHeader(h => ({ ...h, buyerContact: e.target.value }))} onBlur={handleBuyerPhoneBlur} />
+                            <span className="print-val">{header.buyerContact}</span>
                         </div>
                         <div style={{ display: 'flex', gap: '8px', marginTop: '3px' }}>
                             <span className="b2b-label">State :</span>
                             <input className="b2b-input" style={{ flexGrow: 1 }} value={header.buyerState} onChange={e => setHeader(h => ({ ...h, buyerState: e.target.value }))} />
+                            <span className="print-val">{header.buyerState}</span>
                         </div>
                     </div>
 
                     {/* Invoice meta */}
                     <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        {[
-                            { label: 'Invoice No', value: nextInvoiceNo, readOnly: true },
-                        ].map(f => (
-                            <div key={f.label} style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '4px', alignItems: 'center' }}>
-                                <span className="b2b-label">{f.label} :</span>
-                                <input className="b2b-input" value={f.value} readOnly={f.readOnly} style={{ fontWeight: 700 }} />
-                            </div>
-                        ))}
+                        <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '4px', alignItems: 'center' }}>
+                            <span className="b2b-label">Invoice No :</span>
+                            <span style={{ fontWeight: 700 }}>{nextInvoiceNo}</span>
+                        </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '4px', alignItems: 'center' }}>
                             <span className="b2b-label">Invoice Date :</span>
                             <input type="date" className="b2b-input" value={header.invoiceDate} onChange={e => setHeader(h => ({ ...h, invoiceDate: e.target.value }))} />
+                            <span className="print-val"></span>
+                            <span className="print-val">{header.invoiceDate}</span>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '4px', alignItems: 'center' }}>
                             <span className="b2b-label">Terms of Delivery :</span>
                             <input className="b2b-input" placeholder="e.g. By Vehicle" value={header.termsOfDelivery} onChange={e => setHeader(h => ({ ...h, termsOfDelivery: e.target.value }))} />
+                            <span className="print-val"></span>
+                            <span className="print-val">{header.termsOfDelivery}</span>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '4px', alignItems: 'center' }}>
                             <span className="b2b-label">Mode of Payment :</span>
                             <select className="b2b-input" value={header.modeOfPayment} onChange={e => setHeader(h => ({ ...h, modeOfPayment: e.target.value }))}>
                                 {PAYMENT_MODES.map(m => <option key={m} value={m}>{m}</option>)}
                             </select>
+                            <span className="print-val"></span>
+                            <span className="print-val">{header.modeOfPayment}</span>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '4px', alignItems: 'center' }}>
                             <span className="b2b-label">Salesman Name :</span>
                             <input className="b2b-input" placeholder="Salesman / Agent" value={header.salesmanName} onChange={e => setHeader(h => ({ ...h, salesmanName: e.target.value }))} />
+                            <span className="print-val"></span>
+                            <span className="print-val">{header.salesmanName}</span>
                         </div>
                     </div>
                 </div>
@@ -537,57 +669,58 @@ export default function B2BInvoicePage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {rows.map((row, idx) => (
-                                <tr key={idx}>
-                                    <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>{idx + 1}</td>
+                                {rows.map((row, idx) => (
+                                    <tr key={idx}>
+                                        <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>{idx + 1}</td>
 
-                                    {/* Item Description with product search dropdown */}
-                                    <td style={{ position: 'relative' }}>
-                                        <input
-                                            className="b2b-input"
-                                            placeholder="Search product..."
-                                            value={row.itemDescription}
-                                            onChange={e => {
-                                                handleRowChange(idx, 'itemDescription', e.target.value);
-                                                if (e.target.value.length > 0) setActiveRowIndex(idx);
-                                                else setActiveRowIndex(null);
-                                            }}
-                                            onFocus={() => row.itemDescription.length > 0 && setActiveRowIndex(idx)}
-                                            onBlur={() => setTimeout(() => setActiveRowIndex(null), 200)}
-                                        />
-                                        {activeRowIndex === idx && (
-                                            <div className="b2b-dropdown no-print">
-                                                {products
-                                                    .filter(p => p.name.toLowerCase().includes(row.itemDescription.toLowerCase()))
-                                                    .slice(0, 50)
-                                                    .map(p => (
-                                                        <div
-                                                            key={p.id}
-                                                            className="b2b-dropdown-item"
-                                                            onMouseDown={() => { handleRowChange(idx, 'productId', p.id); setActiveRowIndex(null); }}
-                                                        >
-                                                            {p.name}
-                                                        </div>
-                                                    ))}
-                                            </div>
-                                        )}
-                                    </td>
+                                        {/* Item Description */}
+                                        <td style={{ position: 'relative' }}>
+                                            <input
+                                                className="b2b-input"
+                                                placeholder="Search product..."
+                                                value={row.itemDescription}
+                                                onChange={e => {
+                                                    handleRowChange(idx, 'itemDescription', e.target.value);
+                                                    if (e.target.value.length > 0) setActiveRowIndex(idx);
+                                                    else setActiveRowIndex(null);
+                                                }}
+                                                onFocus={() => row.itemDescription.length > 0 && setActiveRowIndex(idx)}
+                                                onBlur={() => setTimeout(() => setActiveRowIndex(null), 200)}
+                                            />
+                                            <span className="print-val">{row.itemDescription}</span>
+                                            {activeRowIndex === idx && (
+                                                <div className="b2b-dropdown no-print">
+                                                    {products
+                                                        .filter(p => p.name.toLowerCase().includes(row.itemDescription.toLowerCase()))
+                                                        .slice(0, 50)
+                                                        .map(p => (
+                                                            <div
+                                                                key={p.id}
+                                                                className="b2b-dropdown-item"
+                                                                onMouseDown={() => { handleRowChange(idx, 'productId', p.id); setActiveRowIndex(null); }}
+                                                            >
+                                                                {p.name}
+                                                            </div>
+                                                        ))}
+                                                </div>
+                                            )}
+                                        </td>
 
-                                    <td><input className="b2b-input" style={{ textAlign: 'center' }} value={row.batchNo} onChange={e => handleRowChange(idx, 'batchNo', e.target.value)} /></td>
-                                    <td><input type="month" className="b2b-input" style={{ textAlign: 'center', fontSize: '0.76rem' }} value={row.expDate} onChange={e => handleRowChange(idx, 'expDate', e.target.value)} /></td>
-                                    <td><input type="number" className="b2b-input" style={{ textAlign: 'center' }} value={row.gstPct} onChange={e => handleRowChange(idx, 'gstPct', e.target.value)} /></td>
-                                    <td><input className="b2b-input" style={{ textAlign: 'center' }} value={row.midOff} onChange={e => handleRowChange(idx, 'midOff', e.target.value)} /></td>
-                                    <td><input className="b2b-input" style={{ textAlign: 'center' }} value={row.per} onChange={e => handleRowChange(idx, 'per', e.target.value)} /></td>
-                                    <td><input type="number" min="0" className="b2b-input" style={{ textAlign: 'center', fontWeight: 600 }} placeholder="0" value={row.quantity} onChange={e => handleRowChange(idx, 'quantity', e.target.value)} /></td>
-                                    <td><input type="number" className="b2b-input" style={{ textAlign: 'center' }} value={row.rate} onChange={e => handleRowChange(idx, 'rate', e.target.value)} /></td>
-                                    <td style={{ textAlign: 'center', fontWeight: row.grossAmount ? 600 : 400 }}>{row.grossAmount ? fmt(row.grossAmount) : ''}</td>
-                                    <td className="no-print" style={{ textAlign: 'center', padding: '2px' }}>
-                                        <button onClick={() => removeRow(idx)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#e53935', padding: '2px' }}>
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
+                                        <td><input className="b2b-input" style={{ textAlign: 'center' }} value={row.batchNo} onChange={e => handleRowChange(idx, 'batchNo', e.target.value)} /><span className="print-val">{row.batchNo}</span></td>
+                                        <td><input type="month" className="b2b-input" style={{ textAlign: 'center', fontSize: '0.76rem' }} value={row.expDate} onChange={e => handleRowChange(idx, 'expDate', e.target.value)} /><span className="print-val">{row.expDate}</span></td>
+                                        <td style={{ textAlign: 'center' }}><input type="number" className="b2b-input" style={{ textAlign: 'center' }} value={row.gstPct} onChange={e => handleRowChange(idx, 'gstPct', e.target.value)} /><span className="print-val">{row.gstPct}</span></td>
+                                        <td style={{ textAlign: 'center' }}><input className="b2b-input" style={{ textAlign: 'center' }} value={row.midOff} onChange={e => handleRowChange(idx, 'midOff', e.target.value)} /><span className="print-val">{row.midOff}</span></td>
+                                        <td style={{ textAlign: 'center' }}><input className="b2b-input" style={{ textAlign: 'center' }} value={row.per} onChange={e => handleRowChange(idx, 'per', e.target.value)} /><span className="print-val">{row.per}</span></td>
+                                        <td style={{ textAlign: 'center', fontWeight: 600 }}><input type="number" min="0" className="b2b-input" style={{ textAlign: 'center', fontWeight: 600 }} placeholder="0" value={row.quantity} onChange={e => handleRowChange(idx, 'quantity', e.target.value)} /><span className="print-val">{row.quantity}</span></td>
+                                        <td style={{ textAlign: 'center' }}><input type="number" className="b2b-input" style={{ textAlign: 'center' }} value={row.rate} onChange={e => handleRowChange(idx, 'rate', e.target.value)} /><span className="print-val">{row.rate}</span></td>
+                                        <td style={{ textAlign: 'center', fontWeight: row.grossAmount ? 600 : 400 }}>{row.grossAmount ? fmt(row.grossAmount) : ''}</td>
+                                        <td className="no-print" style={{ textAlign: 'center', padding: '2px' }}>
+                                            <button onClick={() => removeRow(idx)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#e53935', padding: '2px' }}>
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
                             {/* TOTAL row */}
                             <tr style={{ fontWeight: 700, background: '#f9f9f9' }}>
                                 <td colSpan={9} style={{ textAlign: 'right', paddingRight: '8px' }}>TOTAL</td>
@@ -710,6 +843,18 @@ export default function B2BInvoicePage() {
                         <div style={{ whiteSpace: 'pre-line', color: '#333', marginBottom: '8px', lineHeight: '1.6' }}>
                             {branding?.bankDetails || DEFAULT_BANK_DETAILS}
                         </div>
+                        {/* UPI QR — shown only on print */}
+                        {branding?.upiId && (
+                            <div style={{ marginTop: '8px', borderTop: '1px solid #ccc', paddingTop: '6px' }}>
+                                <UpiQrCode
+                                    upiId={branding.upiId}
+                                    payeeName={sellerName}
+                                    amount={netAmount}
+                                    transactionNote={nextInvoiceNo}
+                                    size={90}
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
 

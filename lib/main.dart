@@ -182,9 +182,8 @@ void main() {
     // System ATT prompt only — no custom pre-prompt.
     AdConfig.authorized = await ConsentService.requestATTIfNeeded();
 
-    if (!kIsWeb) {
-      await MobileAds.instance.initialize();
-    }
+    // Initialization is deferred to AdService._initializeInternal()
+    // to ensure UMP consent is gathered before MobileAds initializes.
     AdService.updateConsent(authorized: AdConfig.authorized);
 
     FlutterError.onError = (details) {

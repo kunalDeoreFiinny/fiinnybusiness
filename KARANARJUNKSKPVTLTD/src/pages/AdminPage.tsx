@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, doc, updateDoc, setDoc, deleteDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, setDoc, deleteDoc, serverTimestamp, query, orderBy, where } from 'firebase/firestore';
 import { initializeApp, deleteApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { firebaseConfig, db } from '../firebase';
@@ -48,7 +48,13 @@ export default function AdminPage() {
     useEffect(() => {
         const fetchUsers = async () => {
             try {
-                const querySnapshot = await getDocs(collection(db, 'users'));
+                let q;
+                if (tenantId === 'master') {
+                    q = collection(db, 'users');
+                } else {
+                    q = query(collection(db, 'users'), where('tenantId', '==', tenantId));
+                }
+                const querySnapshot = await getDocs(q);
                 const usersData = querySnapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()

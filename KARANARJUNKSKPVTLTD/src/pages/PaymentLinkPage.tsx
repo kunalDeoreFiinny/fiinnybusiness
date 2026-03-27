@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getDocs, query, orderBy, addDoc, serverTimestamp, doc, setDoc, collection } from 'firebase/firestore';
+import { getDocs, query, orderBy, addDoc, serverTimestamp, doc, setDoc, collection, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { getTenantCollection } from '../utils/tenantPath';
@@ -71,6 +71,18 @@ export default function PaymentLinkPage() {
     try {
       const token = generateToken();
       const amount = customAmount ? Number(customAmount) : (inv.totalAmount || inv.grandTotal || inv.total || 0);
+
+      // Read Razorpay public key from tenant branding/settings
+      let razorpayKeyId = '';
+      try {
+        const brandingSnap = await getDoc(doc(collection(db, `tenants/${tenantId}/settings`), 'razorpay'));
+        if (brandingSnap.exists()) razorpayKeyId = brandingSnap.data().publicKey || '';
+        if (!razorpayKeyId) {
+          const brdSnap = await getDoc(doc(collection(db, `tenants/${tenantId}/settings`), 'invoiceBranding'));
+          if (brdSnap.exists()) razorpayKeyId = brdSnap.data().razorpayKeyId || '';
+        }
+      } catch (_) { /* no key configured */ }
+
       await addDoc(getTenantCollection(db, tenantId, 'paymentLinks'), {
         invoiceId: inv.id,
         invoiceNumber: inv.invoiceNumber || inv.invoiceNo || 'INV',
@@ -79,6 +91,7 @@ export default function PaymentLinkPage() {
         description: description || `Payment for ${inv.invoiceNumber || inv.invoiceNo || 'Invoice'}`,
         status: 'active',
         token,
+        keyId: razorpayKeyId,
         tenantId,
         createdAt: serverTimestamp(),
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -92,6 +105,7 @@ export default function PaymentLinkPage() {
         description: description || `Payment for ${inv.invoiceNumber || inv.invoiceNo || 'Invoice'}`,
         status: 'active',
         token,
+        keyId: razorpayKeyId,
         tenantId,
         createdAt: serverTimestamp(),
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),

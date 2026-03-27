@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { Home, Users, UserPlus, LogOut, ReceiptText, ShieldAlert, Calculator, Settings, Package, ChevronDown, Layers, Palette, Database, Factory, Truck, Store, ShoppingCart, BarChart3, Activity, FileText, Bell, ClipboardList, Star, Link2, Bot, Loader2 } from 'lucide-react';
+import { Home, Users, UserPlus, LogOut, ReceiptText, ShieldAlert, Calculator, Settings, Package, ChevronDown, Layers, Palette, Database, Factory, Truck, Store, ShoppingCart, BarChart3, Activity, FileText, Bell, ClipboardList, Star, Link2, Bot, Loader2, Menu, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import OfflineBanner from './components/OfflineBanner';
@@ -62,6 +62,8 @@ const PricingPage            = lazy(() => import('./pages/PricingPage'));
 const PaymentLinkPage        = lazy(() => import('./pages/PaymentLinkPage'));
 const PaymentLandingPage     = lazy(() => import('./pages/PaymentLandingPage'));
 const AIAdvisorPage          = lazy(() => import('./pages/AIAdvisorPage'));
+const DigitalReceiptPage     = lazy(() => import('./pages/DigitalReceiptPage'));
+const DigitalKhataPage       = lazy(() => import('./pages/DigitalKhataPage'));
 
 // Full-page spinner shown while a lazy chunk is loading
 function PageLoader() {
@@ -79,6 +81,7 @@ function Layout({ children }: { children: React.ReactNode, currentTheme: 'light'
   const { t } = useTranslation();
   const { currentUser, userRole, tenantData, permissions, logout } = useAuth();
   const [adminExpanded, setAdminExpanded] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const publicPaths = ['/', '/login', '/about', '/privacy', '/terms', '/blog', '/changelog', '/download'];
   if (publicPaths.includes(location.pathname)) return <>{children}</>;
@@ -90,7 +93,7 @@ function Layout({ children }: { children: React.ReactNode, currentTheme: 'light'
       <div style={{ minHeight: '100vh', background: 'var(--surface-base)' }}>
         <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--surface-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--surface-raised)' }}>
           <h2 className="primary-gradient-text" style={{ fontSize: '1.2rem', margin: 0 }}>
-            {tenantData?.businessName || 'KaranArjun'}
+            {tenantData?.businessName || 'Your Business Name'}
           </h2>
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
             <LanguageSwitcher />
@@ -179,20 +182,58 @@ function Layout({ children }: { children: React.ReactNode, currentTheme: 'light'
   };
 
   return (
-    <div className="app-container">
-      {/* Sidebar */}
-      <nav style={{ width: '265px', minWidth: '265px', background: 'var(--surface-base)', borderRight: '1px solid var(--surface-border)', padding: '1.5rem 1.1rem', display: 'flex', flexDirection: 'column', backdropFilter: 'blur(16px)', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
-        {/* Brand */}
-        <div style={{ padding: '0 0.5rem 1.25rem', borderBottom: '1px solid var(--surface-border)', marginBottom: '1rem' }}>
-          <h2 className="primary-gradient-text" style={{ fontSize: '1.35rem', marginBottom: '0.15rem', letterSpacing: '-0.03em' }}>
-            {tenantData?.businessName || 'KaranArjun'}
+    <div className="app-container" style={{ flexDirection: 'column' }}>
+      {/* Top Header */}
+      <header style={{ 
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
+        padding: '1rem 1.5rem', background: 'var(--surface-base)', 
+        borderBottom: '1px solid var(--surface-border)', zIndex: 10
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <h2 className="primary-gradient-text" style={{ fontSize: '1.35rem', margin: 0, letterSpacing: '-0.03em' }}>
+            {tenantData?.businessName || 'Your Business Name'}
           </h2>
-          <p style={{ color: 'var(--text-tertiary)', fontSize: '0.78rem' }}>
-            {tenantData?.location || 'Retailer Management'}
-          </p>
-          <div style={{ marginTop: '0.75rem' }}>
-            <LanguageSwitcher />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+          <LanguageSwitcher />
+          {/* Hamburger Menu Toggle */}
+          <button onClick={() => setDrawerOpen(true)} style={{ background: 'hsla(152, 60%, 40%, 0.1)', border: '1px solid hsla(152, 60%, 40%, 0.2)', padding: '0.4rem', borderRadius: '8px', cursor: 'pointer', color: 'var(--primary-light)', display: 'flex', alignItems: 'center' }}>
+            <Menu size={24} />
+          </button>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="main-content">{children}</main>
+
+      {/* Drawer Overlay */}
+      {drawerOpen && (
+        <div 
+          onClick={() => setDrawerOpen(false)}
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 999, backdropFilter: 'blur(3px)' }} 
+        />
+      )}
+
+      {/* Right Drawer */}
+      <nav style={{
+          position: 'fixed', top: 0, right: drawerOpen ? 0 : '-320px', bottom: 0,
+          width: '300px', background: 'var(--surface-base)', boxShadow: '-4px 0 24px rgba(0,0,0,0.15)',
+          zIndex: 1000, transition: 'right 0.3s cubic-bezier(0.4, 0, 0.2, 1)', display: 'flex', flexDirection: 'column',
+          padding: '1.5rem 1.1rem', overflowY: 'auto'
+      }}>
+        {/* Drawer Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', borderBottom: '1px solid var(--surface-border)', paddingBottom: '1rem' }}>
+          <div>
+            <h2 className="primary-gradient-text" style={{ fontSize: '1.35rem', marginBottom: '0.15rem', letterSpacing: '-0.03em' }}>
+              Menu
+            </h2>
+            <p style={{ color: 'var(--text-tertiary)', fontSize: '0.78rem' }}>
+              {tenantData?.location || 'Retailer Management'}
+            </p>
           </div>
+          <button onClick={() => setDrawerOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+            <X size={24} />
+          </button>
         </div>
 
         {/* Main Nav (owner only) */}
@@ -200,7 +241,7 @@ function Layout({ children }: { children: React.ReactNode, currentTheme: 'light'
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', marginBottom: '0.5rem' }}>
             <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '0.25rem 1rem', marginBottom: '0.2rem' }}>Main</div>
             {navItems.map(item => (
-              <Link key={(item as any).path} to={(item as any).path} style={navLinkStyle((item as any).path)}>
+              <Link key={(item as any).path} to={(item as any).path} style={navLinkStyle((item as any).path)} onClick={() => setDrawerOpen(false)}>
                 <span style={{ opacity: 0.8 }}>{item.icon}</span>
                 {item.label}
               </Link>
@@ -223,7 +264,7 @@ function Layout({ children }: { children: React.ReactNode, currentTheme: 'light'
             {adminExpanded && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', paddingLeft: '0.4rem' }}>
                 {adminItems.map(item => (
-                  <Link key={item.path} to={item.path} style={navLinkStyle(item.path, 'secondary')}>
+                  <Link key={item.path} to={item.path} style={navLinkStyle(item.path, 'secondary')} onClick={() => setDrawerOpen(false)}>
                     <span style={{ opacity: 0.8 }}>{item.icon}</span>
                     {item.label}
                   </Link>
@@ -237,7 +278,7 @@ function Layout({ children }: { children: React.ReactNode, currentTheme: 'light'
         {userRole === 'retailer' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
             <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '0.25rem 1rem', marginBottom: '0.2rem' }}>My Portal</div>
-            <Link to="/retailer-portal" style={navLinkStyle('/retailer-portal')}><Store size={19} /> My Account</Link>
+            <Link to="/retailer-portal" style={navLinkStyle('/retailer-portal')} onClick={() => setDrawerOpen(false)}><Store size={19} /> My Account</Link>
           </div>
         )}
 
@@ -245,7 +286,7 @@ function Layout({ children }: { children: React.ReactNode, currentTheme: 'light'
         {currentUser && (
           <div style={{ marginTop: 'auto', borderTop: '1px solid var(--surface-border)', paddingTop: '1rem' }}>
             <button
-              onClick={logout}
+              onClick={() => { setDrawerOpen(false); logout(); }}
               style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', padding: '0.75rem 1rem', width: '100%', borderRadius: '10px', color: 'var(--text-tertiary)', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 400, font: 'inherit', fontSize: '0.9rem', transition: 'all var(--transition-fast)' }}
               onMouseOver={e => { e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.background = 'hsla(0,84%,60%,0.08)'; }}
               onMouseOut={e => { e.currentTarget.style.color = 'var(--text-tertiary)'; e.currentTarget.style.background = 'transparent'; }}
@@ -255,9 +296,6 @@ function Layout({ children }: { children: React.ReactNode, currentTheme: 'light'
           </div>
         )}
       </nav>
-
-      {/* Main Content */}
-      <main className="main-content">{children}</main>
     </div>
   );
 }
@@ -326,16 +364,11 @@ function AppRoutes() {
     }
   }
 
-  // Force incomplete setups to finish onboarding (unless they are on landing page maybe? No, let them finish)
-  // Wait, if they are on / or /login, and logged in, force onboarding. Let's allow public paths if they really want, but usually it's better to force onboarding.
-  // Actually, we'll force onboarding for all protected routes, and let public routes be visible.
-  const publicPaths = ['/', '/about', '/privacy', '/terms', '/blog', '/changelog', '/download'];
+  // Force incomplete setups to finish onboarding — but ONLY for protected routes
+  // Public paths like '/', '/about' etc. are always visible to everyone, even logged-in users without tenantId
+  // This prevents the "stuck in onboarding" loop when Firestore read fails or user just wants to browse
+  const publicPaths = ['/', '/about', '/privacy', '/terms', '/blog', '/changelog', '/download', '/login'];
   if (currentUser && !tenantId && !publicPaths.includes(locationHook.pathname) && locationHook.pathname !== '/client-onboarding') {
-    return <Navigate to="/client-onboarding" replace />;
-  }
-  
-  // If they are logged in without tenantId and visit /login, redirect to onboarding
-  if (currentUser && !tenantId && locationHook.pathname === '/login') {
     return <Navigate to="/client-onboarding" replace />;
   }
 
@@ -371,6 +404,7 @@ function AppRoutes() {
       <Route path="/onboarding" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="retailers"><OnboardingPage /></ProtectedRoute>} />
       <Route path="/worklist" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="worklist"><WorklistPage /></ProtectedRoute>} />
       <Route path="/worklist/:id" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="worklist"><WorklistDetailsPage /></ProtectedRoute>} />
+      <Route path="/digital-khata" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="worklist"><DigitalKhataPage /></ProtectedRoute>} />
       <Route path="/sales-order/new" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="worklist"><SalesOrderPage /></ProtectedRoute>} />
       <Route path="/sales-order/:id" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="worklist"><SalesOrderPage /></ProtectedRoute>} />
       <Route path="/dispatch" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="dispatch"><DispatchBoardPage /></ProtectedRoute>} />
@@ -388,8 +422,10 @@ function AppRoutes() {
       <Route path="/pricing" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="analytics"><PricingPage /></ProtectedRoute>} />
       <Route path="/payment-links" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="worklist"><PaymentLinkPage /></ProtectedRoute>} />
       <Route path="/ai-advisor" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="analytics"><AIAdvisorPage /></ProtectedRoute>} />
-      {/* Public payment page */}
+      {/* Public pages */}
       <Route path="/pay/:token" element={<PaymentLandingPage />} />
+      <Route path="/receipt/:tenantId/:receiptId" element={<DigitalReceiptPage />} />
+      
       <Route path="/rates" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="inventory"><RateSheetPage /></ProtectedRoute>} />
       <Route path="/order-history" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="order_history"><OrderHistoryPage /></ProtectedRoute>} />
       <Route path="/online-orders" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="online_orders"><OnlineOrdersPage /></ProtectedRoute>} />

@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "karanarjun-pvt-ltd",
     "public": "dist",
     "ignore": [
       "firebase.json",

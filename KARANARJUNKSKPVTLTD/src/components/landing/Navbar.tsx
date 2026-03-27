@@ -9,7 +9,7 @@ export default function Navbar() {
         <motion.nav
             initial={{ y: -100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 100, damping: 20, delay: 0.1 }}
+            transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.1 }}
             style={{
                 position: 'fixed',
                 top: '1.5rem',
@@ -19,28 +19,29 @@ export default function Navbar() {
                 display: 'flex',
                 justifyContent: 'space-between',
                 padding: '0 2rem',
-                pointerEvents: 'none'
+                pointerEvents: 'none',
             }}
         >
             {/* Left Island: Brand */}
-            <div style={{
-                pointerEvents: 'auto',
-                background: 'hsla(0, 0%, 100%, 0.8)',
-                backdropFilter: 'blur(12px)',
-                border: '1px solid var(--surface-border)',
-                borderRadius: '999px',
-                padding: '0.75rem 1.5rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                boxShadow: 'var(--glass-shadow)',
-                cursor: 'pointer'
-            }}>
-                <img src="/logo.png" alt="Fiinny Logo" style={{ width: '32px', height: '32px' }} />
-                <span style={{ fontSize: '1.25rem', fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
-                    Fiinny <span style={{ color: 'var(--primary)' }}>KaranArjun</span>
-                </span>
-            </div>
+            <Link to="/" style={{ textDecoration: 'none', pointerEvents: 'auto' }}>
+                <div style={{
+                    background: 'hsla(0, 0%, 100%, 0.8)',
+                    backdropFilter: 'blur(12px)',
+                    border: '1px solid var(--surface-border)',
+                    borderRadius: '999px',
+                    padding: '0.75rem 1.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    boxShadow: 'var(--glass-shadow)',
+                    cursor: 'pointer',
+                }}>
+                    <img src="/logo.png" alt="Fiinny Logo" style={{ width: '32px', height: '32px' }} />
+                    <span style={{ fontSize: '1.25rem', fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
+                        Fiinny <span style={{ color: 'var(--primary)' }}>Business</span>
+                    </span>
+                </div>
+            </Link>
 
             {/* Right Island: Navigation & Actions */}
             <div style={{
@@ -49,32 +50,56 @@ export default function Navbar() {
                 backdropFilter: 'blur(12px)',
                 border: '1px solid var(--surface-border)',
                 borderRadius: '999px',
-                padding: '0.75rem 1.5rem',
+                padding: '0.6rem 1.25rem',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '2rem',
-                boxShadow: 'var(--glass-shadow)'
+                gap: '1.5rem',
+                boxShadow: 'var(--glass-shadow)',
             }}>
+                {/* Nav Links */}
                 <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }} className="nav-links-desktop">
-                    {['Features', 'Pricing', 'Trust & Safety'].map((item) => (
+                    {[
+                        { label: 'Features', href: '#features' },
+                        { label: 'Pricing', href: '#pricing' },
+                        { label: 'FAQ', href: '#faq' },
+                    ].map((item) => (
                         <motion.a
-                            key={item}
-                            href={`#${item.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}`}
+                            key={item.label}
+                            href={item.href}
                             whileHover={{ color: 'var(--primary)' }}
                             style={{
                                 color: 'var(--text-secondary)',
                                 textDecoration: 'none',
                                 fontSize: '0.9rem',
                                 fontWeight: 600,
-                                transition: 'color 0.2s'
+                                transition: 'color 0.2s',
                             }}
                         >
-                            {item}
+                            {item.label}
                         </motion.a>
                     ))}
                 </div>
 
-                <Link to={currentUser ? "/dashboard" : "/login"} style={{ textDecoration: 'none' }}>
+                {/* Divider */}
+                <div style={{ width: '1px', height: '20px', background: 'var(--surface-border)' }} />
+
+                {/* Login link */}
+                {!currentUser && (
+                    <Link
+                        to="/login"
+                        style={{
+                            color: 'var(--text-secondary)',
+                            textDecoration: 'none',
+                            fontSize: '0.9rem',
+                            fontWeight: 600,
+                        }}
+                    >
+                        Login
+                    </Link>
+                )}
+
+                {/* Primary CTA */}
+                <Link to={currentUser ? '/dashboard' : '/login?signup=true'} style={{ textDecoration: 'none' }}>
                     <motion.button
                         whileHover={{ scale: 1.05, boxShadow: 'var(--neon-glow)' }}
                         whileTap={{ scale: 0.95 }}
@@ -86,10 +111,11 @@ export default function Navbar() {
                             borderRadius: '99px',
                             fontWeight: 700,
                             cursor: 'pointer',
-                            fontSize: '0.9rem'
+                            fontSize: '0.9rem',
+                            whiteSpace: 'nowrap',
                         }}
                     >
-                        {currentUser ? 'Console' : 'Get Started'}
+                        {currentUser ? 'Console →' : 'Start Free →'}
                     </motion.button>
                 </Link>
             </div>

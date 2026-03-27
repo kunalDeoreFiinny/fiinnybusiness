@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { getDocs, getDoc, query, orderBy, where } from 'firebase/firestore';
+import { getDocs, getDoc, query, orderBy, where, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { getTenantCollection, getTenantDoc } from '../utils/tenantPath';
-import { ShoppingCart, FileText, User, Package, Truck, CheckCircle, Clock } from 'lucide-react';
+import { useToast } from '../contexts/ToastContext';
+import { ShoppingCart, FileText, User, Package, Truck, CheckCircle, Clock, Plus, X, Search } from 'lucide-react';
+
+interface Product { id: string; name: string; b2bRate: number; taxRate?: number; unit: string; category?: string; }
 
 const STATUS_BADGE: Record<string, { label: string; color: string; bg: string }> = {
     draft: { label: 'Draft', color: 'var(--text-tertiary)', bg: 'var(--surface-raised)' },
@@ -20,19 +23,54 @@ export default function RetailerPortalPage() {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'orders' | 'account'>('orders');
 
-    useEffect(() => {
+    const [products, setProducts] = useState<Product[]>([]);
+    const [showOrderModal, setShowOrderModal] = useState(false);
+    const [cart, setCart] = useState<{product:Product; qty:number}[]>([]);
+    const [searchQ, setSearchQ] = useState('');
+    const { showToast } = useToast();
+
+    const fetchAll = async () => {
         if (!tenantId || !linkedId) return;
-        const fetch = async () => {
-            const [rSnap, oSnap] = await Promise.all([
-                getDoc(getTenantDoc(db, tenantId, 'retailers', linkedId)),
-                getDocs(query(getTenantCollection(db, tenantId, 'salesOrders'), where('retailerId', '==', linkedId), orderBy('createdAt', 'desc'))),
-            ]);
-            if (rSnap.exists()) setRetailer({ id: rSnap.id, ...rSnap.data() });
-            setOrders(oSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-            setLoading(false);
-        };
-        fetch();
+        const [rSnap, oSnap, pSnap] = await Promise.all([
+            getDoc(getTenantDoc(db, tenantId, 'retailers', linkedId)),
+            getDocs(query(getTenantCollection(db, tenantId, 'salesOrders'), where('retailerId', '==', linkedId), orderBy('createdAt', 'desc'))),
+            getDocs(query(getTenantCollection(db, tenantId, 'products')))
+        ]);
+        if (rSnap.exists()) setRetailer({ id: rSnap.id, ...rSnap.data() });
+        setOrders(oSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setProducts(pSnap.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
+        setLoading(false);
+    };
+
+    useEffect(() => {
+        fetchAll();
     }, [tenantId, linkedId]);
+
+    const handlePlaceOrder = async () => {
+        if (!tenantId || cart.length === 0) return;
+        try {
+            let taxableValue = 0, totalTax = 0, netAmount = 0;
+            const lineItems = cart.map(c => {
+                const amount = (c.product.b2bRate||0) * c.qty;
+                const tax = amount * (c.product.taxRate||0) / 100;
+                taxableValue+=amount; totalTax+=tax; netAmount+=(amount+tax);
+                return { productId:c.product.id, productName:c.product.name, qty: c.qty, unit:c.product.unit||'kg', rate:c.product.b2bRate||0, amount, taxRate:c.product.taxRate||0 };
+            });
+            await addDoc(getTenantCollection(db, tenantId, 'salesOrders'), {
+               orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
+               retailerId: retailer.id, retailerName: retailer.name, buyerGstin: retailer.gstin || '',
+               createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+               status: 'draft', paymentStatus: 'Pending', invoiceDate: new Date().toISOString().split('T')[0],
+               taxableValue, cgst:totalTax/2, sgst:totalTax/2, totalTax,
+               netAmount, grandTotal:netAmount, lineItems, type: 'b2b_self_serve'
+            });
+            setShowOrderModal(false); setCart([]);
+            showToast('Order placed successfully!', 'success');
+            fetchAll();
+        } catch(e) { console.error(e); showToast('Failed to place order','error'); }
+    };
+
+    const cartTotal = cart.reduce((s,c)=>s+(((c.product.b2bRate||0) * c.qty) * (1+(c.product.taxRate||0)/100)),0);
 
     if (loading) return <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-secondary)' }}>Loading your account...</div>;
     if (!retailer) return <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--danger)' }}>Account not found. Please contact administrator.</div>;
@@ -44,9 +82,14 @@ export default function RetailerPortalPage() {
 
     return (
         <div className="animate-fade-in" style={{ maxWidth: '900px', margin: '0 auto' }}>
-            <div style={{ marginBottom: '2rem' }}>
-                <h1 className="primary-gradient-text" style={{ fontSize: '2rem' }}>{retailer.name}</h1>
-                <p style={{ color: 'var(--text-secondary)' }}>{retailer.atPost}, {retailer.taluka}, {retailer.district}</p>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:'1rem', marginBottom: '2rem' }}>
+                <div>
+                    <h1 className="primary-gradient-text" style={{ fontSize: '2rem' }}>{retailer.name}</h1>
+                    <p style={{ color: 'var(--text-secondary)' }}>{retailer.atPost}, {retailer.taluka}, {retailer.district}</p>
+                </div>
+                <button onClick={()=>setShowOrderModal(true)} style={{ display:'flex', alignItems:'center', gap:'0.5rem', padding:'0.75rem 1.5rem', background:'var(--primary-light)', color:'#fff', border:'none', borderRadius:'10px', fontWeight:600, cursor:'pointer' }}>
+                   <Plus size={18}/> Place New Order
+                </button>
             </div>
 
             {/* Financial Summary */}
@@ -144,6 +187,58 @@ export default function RetailerPortalPage() {
                                 <div style={{ fontWeight: 500 }}>{value}</div>
                             </div>
                         ))}
+                    </div>
+                </div>
+            )}
+
+            {showOrderModal && (
+                <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.5)', zIndex:1000, display:'flex', justifyContent:'center', alignItems:'center', padding:'1rem', backdropFilter:'blur(4px)' }}>
+                    <div className="glass-panel animate-fade-in" style={{ width:'100%', maxWidth:'600px', maxHeight:'90vh', display:'flex', flexDirection:'column', background:'var(--surface-base)' }}>
+                        <div style={{ padding:'1.5rem', borderBottom:'1px solid var(--surface-border)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                            <h2 style={{ fontSize:'1.25rem', display:'flex', alignItems:'center', gap:'0.5rem' }}><ShoppingCart size={20}/> New B2B Order</h2>
+                            <button onClick={()=>setShowOrderModal(false)} style={{ background:'transparent', border:'none', cursor:'pointer', color:'var(--text-secondary)' }}><X size={20}/></button>
+                        </div>
+                        
+                        <div style={{ padding:'1.5rem', flex:1, overflowY:'auto' }}>
+                            <div style={{ display:'flex', gap:'0.5rem', marginBottom:'1rem', background:'var(--surface-raised)', padding:'0.5rem 1rem', borderRadius:'8px', border:'1px solid var(--surface-border)' }}>
+                                <Search size={18} color="var(--text-tertiary)" style={{ marginTop:'0.2rem' }}/>
+                                <input placeholder="Search products..." value={searchQ} onChange={e=>setSearchQ(e.target.value)} style={{ border:'none', background:'transparent', flex:1, color:'var(--text-primary)', outline:'none' }} />
+                            </div>
+
+                            <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
+                                {products.filter(p=>p.name.toLowerCase().includes(searchQ.toLowerCase())).slice(0,50).map(p=>(
+                                    <div key={p.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'1rem', background:'var(--surface-raised)', borderRadius:'8px', border:'1px solid var(--surface-border)' }}>
+                                        <div>
+                                            <div style={{ fontWeight:600 }}>{p.name}</div>
+                                            <div style={{ fontSize:'0.8rem', color:'var(--text-secondary)' }}>₹{p.b2bRate||0} / {p.unit||'kg'} (+{p.taxRate||0}% GST)</div>
+                                        </div>
+                                        <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
+                                            <button onClick={()=>{
+                                                const ex = cart.find(c=>c.product.id===p.id);
+                                                if(ex && ex.qty>1) setCart(cart.map(c=>c.product.id===p.id?{...c,qty:c.qty-1}:c));
+                                                else if(ex) setCart(cart.filter(c=>c.product.id!==p.id));
+                                            }} style={{ width:'28px', height:'28px', borderRadius:'6px', border:'none', background:'var(--surface-border)', cursor:'pointer', fontWeight:700 }}>-</button>
+                                            <span style={{ width:'20px', textAlign:'center', fontSize:'0.9rem', fontWeight:600 }}>{cart.find(c=>c.product.id===p.id)?.qty || 0}</span>
+                                            <button onClick={()=>{
+                                                const ex = cart.find(c=>c.product.id===p.id);
+                                                if(ex) setCart(cart.map(c=>c.product.id===p.id?{...c,qty:c.qty+1}:c));
+                                                else setCart([...cart,{product:p,qty:1}]);
+                                            }} style={{ width:'28px', height:'28px', borderRadius:'6px', border:'none', background:'var(--primary-light)', color:'#fff', cursor:'pointer', fontWeight:700 }}>+</button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div style={{ padding:'1.5rem', borderTop:'1px solid var(--surface-border)', background:'var(--surface-raised)' }}>
+                            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'1rem', fontSize:'1.1rem', fontWeight:700 }}>
+                                <span>Cart Total (Inc. Tax)</span>
+                                <span style={{ color:'var(--primary-light)' }}>₹{cartTotal.toLocaleString(undefined,{maximumFractionDigits:2})}</span>
+                            </div>
+                            <button onClick={handlePlaceOrder} disabled={cart.length===0} style={{ width:'100%', padding:'1rem', background:'var(--primary-light)', color:'#fff', border:'none', borderRadius:'10px', fontWeight:700, fontSize:'1.1rem', cursor:cart.length===0?'not-allowed':'pointer', opacity:cart.length===0?0.5:1 }}>
+                                Place Order
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

@@ -85,6 +85,20 @@ export default function FinancialReportsPage() {
     } else if (tab === 'daybook') {
       rows = [['Date','Description','Ref','Debit','Credit','Balance'],
         ...dayBook.map(e=>[e.date,e.description,e.ref,String(e.debit),String(e.credit),String(e.balance)])];
+    } else if (tab === 'balance') {
+      rows = [
+        ['Balance Sheet', `As of ${MONTHS[month]} ${year}`],[''],
+        ['ASSETS',''],
+        ['Accounts Receivable (Outstanding)', String(orders.filter(o=>o.status!=='paid').reduce((s,o)=>s+(o.netAmount||0),0))],
+        ['Cash / Bank (Received Invoices)', String(orders.filter(o=>o.status==='paid').reduce((s,o)=>s+(o.netAmount||0),0))],
+        ['GST Input Credit (ITC)', `0.00`],
+        ['TOTAL ASSETS', String(pl.totalRevenue)],[''],
+        ['LIABILITIES & EQUITY',''],
+        ['GST Payable (Output Tax)', String(pl.totalGst)],
+        ['Accounts Payable (Expenses)', String(pl.totalExpenses)],
+        ['Retained Earnings (Net Profit)', String(pl.netProfit)],
+        ['TOTAL LIABILITIES + EQUITY', String(pl.totalRevenue)],
+      ];
     }
     const blob = new Blob(['\uFEFF'+rows.map(r=>r.join(',')).join('\n')],{type:'text/csv;charset=utf-8'});
     const a = document.createElement('a'); a.href=URL.createObjectURL(blob);

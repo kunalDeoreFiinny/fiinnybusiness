@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Phone, MapPin, Calendar, MessageCircle, FileText, CheckSquare, ShoppingCart, Loader2, Trash2, Mic, TrendingUp, X, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, User, Phone, MapPin, Calendar, MessageCircle, FileText, CheckSquare, ShoppingCart, Loader2, Trash2, Mic, TrendingUp, X, AlertTriangle, FilePen, Printer, PlusCircle } from 'lucide-react';
+import { RadialBarChart, RadialBar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useTranslation } from 'react-i18next';
 import { getDoc, query, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -100,6 +101,10 @@ export default function WorklistDetailsPage() {
     // Advanced Order Form States
     const [dbProducts, setDbProducts] = useState<any[]>([]);
     const [newOrderProductId, setNewOrderProductId] = useState<string>('');
+
+    // Quick-update inline payment notes per order
+    const [orderNotes, setOrderNotes] = useState<Record<string, string>>({});
+    const [orderPayDates, setOrderPayDates] = useState<Record<string, string>>({});
 
     // New Note Form States
     const [newNoteTalkedTo, setNewNoteTalkedTo] = useState('');
@@ -229,6 +234,47 @@ export default function WorklistDetailsPage() {
     };
 
     // handleAddOrder & handleEditOrder removed for legacy items
+
+    // ─── Quick status update for B2B sales orders ───
+    const updateOrderStatus = async (soId: string, field: 'status' | 'paymentStatus' | 'modeOfPayment', value: string, so: any) => {
+        if (!tenantId || !id) return;
+        const update: Record<string, any> = { [field]: value };
+
+        // When marking payment as done, adjust retailer outstanding / paid
+        if (field === 'paymentStatus') {
+            const grandTotal = Number(so.grandTotal || so.netAmount || 0);
+            const alreadyPaid = Number(so.amountPaid || 0);
+            const newlyPaid = grandTotal - alreadyPaid;
+
+            if (value === 'Paid' && so.paymentStatus !== 'Paid' && newlyPaid > 0) {
+                update.amountPaid = grandTotal;
+                // update retailer financials
+                await updateDoc(getTenantDoc(db, tenantId, 'retailers', id), {
+                    totalPaid: (Number(retailer?.totalPaid) || 0) + newlyPaid,
+                    outstandingAmount: Math.max(0, (Number(retailer?.outstandingAmount) || 0) - newlyPaid),
+                });
+                // log payment entry
+                await addDoc(getTenantCollection(db, tenantId, 'retailers', id, 'payments'), {
+                    amount: newlyPaid,
+                    notes: `Quick mark Paid — Order ${so.orderNumber || soId.slice(-6)}`,
+                    createdAt: serverTimestamp(),
+                });
+            }
+            if (value === 'Pending' && so.paymentStatus === 'Paid') {
+                const revert = Number(so.amountPaid || so.grandTotal || 0);
+                update.amountPaid = 0;
+                await updateDoc(getTenantDoc(db, tenantId, 'retailers', id), {
+                    totalPaid: Math.max(0, (Number(retailer?.totalPaid) || 0) - revert),
+                    outstandingAmount: (Number(retailer?.outstandingAmount) || 0) + revert,
+                });
+            }
+        }
+
+        await updateDoc(getTenantDoc(db, tenantId, 'salesOrders', soId), update);
+        // Retailer card will auto-refresh via onSnapshot
+        const updatedSnap = await getDoc(getTenantDoc(db, tenantId, 'retailers', id));
+        setRetailer({ id: updatedSnap.id, ...updatedSnap.data() } as Retailer);
+    };
 
     const handleDeleteOrder = async (order: Order) => {
         if (!id || !tenantId || !window.confirm(t('worklist_details.delete_confirm'))) return;
@@ -459,13 +505,102 @@ export default function WorklistDetailsPage() {
                 </div>
             </div>
 
+            {/* ── Partner Analytics ── */}
+            {salesOrders.length > 0 && (() => {
+                const totalSales = Number(retailer.totalSales || 0);
+                const totalPaid  = Number(retailer.totalPaid  || 0);
+                const outstanding = Number(retailer.outstandingAmount || 0);
+                const paidPct = totalSales > 0 ? Math.round((totalPaid / totalSales) * 100) : 0;
+
+                const radialData = [
+                    { name: 'Paid', value: paidPct, fill: '#10b981' },
+                    { name: 'Outstanding', value: 100 - paidPct, fill: '#ef4444' },
+                ];
+
+                // Order trend: group salesOrders by month
+                const monthMap: Record<string, number> = {};
+                salesOrders.forEach((so: any) => {
+                    const d = so.createdAt?.toDate ? so.createdAt.toDate() : null;
+                    if (!d) return;
+                    const key = d.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
+                    monthMap[key] = (monthMap[key] || 0) + Number(so.grandTotal || so.netAmount || 0);
+                });
+                const trendData = Object.entries(monthMap)
+                    .map(([month, value]) => ({ month, value }))
+                    .slice(-6); // last 6 months
+
+                return (
+                    <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '1.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Partner Analytics</h3>
+                        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+
+                            {/* Radial payment circle */}
+                            <div style={{ flexShrink: 0, textAlign: 'center', minWidth: 140 }}>
+                                <div style={{ position: 'relative', width: 130, height: 130, margin: '0 auto' }}>
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <RadialBarChart cx="50%" cy="50%" innerRadius="65%" outerRadius="90%"
+                                            startAngle={90} endAngle={-270} data={radialData} barSize={14}>
+                                            <RadialBar dataKey="value" cornerRadius={8} />
+                                        </RadialBarChart>
+                                    </ResponsiveContainer>
+                                    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                        <span style={{ fontSize: '1.4rem', fontWeight: 800, color: '#10b981' }}>{paidPct}%</span>
+                                        <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>PAID</span>
+                                    </div>
+                                </div>
+                                <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>
+                                    <span style={{ color: '#10b981', fontWeight: 600 }}>₹{totalPaid.toLocaleString()}</span> paid · <span style={{ color: '#ef4444', fontWeight: 600 }}>₹{outstanding.toLocaleString()}</span> due
+                                </div>
+                            </div>
+
+                            {/* Vertical divider (hidden on mobile) */}
+                            <div style={{ width: '1px', background: 'var(--surface-border)', alignSelf: 'stretch', minHeight: 80 }} />
+
+                            {/* Bar trend chart */}
+                            <div style={{ flex: 1, minWidth: 200, minHeight: 120 }}>
+                                <p style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', fontWeight: 600, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Order Value Trend</p>
+                                {trendData.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height={110}>
+                                        <BarChart data={trendData} barSize={22}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="hsla(0,0%,100%,0.05)" />
+                                            <XAxis dataKey="month" tick={{ fontSize: 10, fill: 'var(--text-tertiary)' }} axisLine={false} tickLine={false} />
+                                            <YAxis hide />
+                                            <Tooltip
+                                                contentStyle={{ background: 'var(--surface-raised)', border: '1px solid var(--surface-border)', borderRadius: 8, fontSize: '0.78rem' }}
+                                                formatter={(v: any) => [`₹${Number(v).toLocaleString()}`, 'Order Value']}
+                                            />
+                                            <Bar dataKey="value" fill="var(--primary-light)" radius={[4,4,0,0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                ) : <p style={{ color: 'var(--text-tertiary)', fontSize: '0.8rem' }}>Not enough data for trend.</p>}
+                            </div>
+
+                            {/* Quick stats column */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', minWidth: 120 }}>
+                                {[
+                                    { label: 'Total Orders', value: salesOrders.length },
+                                    { label: 'Avg Order', value: `₹${salesOrders.length > 0 ? Math.round(totalSales / salesOrders.length).toLocaleString() : 0}` },
+                                    { label: 'Paid Orders', value: salesOrders.filter((s: any) => s.paymentStatus === 'Paid').length },
+                                    { label: 'Delivered', value: salesOrders.filter((s: any) => s.status === 'delivered').length },
+                                ].map(stat => (
+                                    <div key={stat.label} style={{ background: 'var(--surface-raised)', borderRadius: '10px', padding: '0.5rem 0.85rem' }}>
+                                        <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</div>
+                                        <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--text-primary)' }}>{stat.value}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
+
             {/* Tabs Navigation */}
             <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--surface-border)', marginBottom: '2rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
                 {[
                     { id: 'overview', label: t('common.overview'), icon: User },
                     { id: 'tasks', label: t('worklist_details.tasks'), icon: CheckSquare, count: tasks.length },
                     { id: 'notes', label: t('worklist_details.notes'), icon: FileText, count: notes.length },
-                    { id: 'orders', label: t('worklist_details.orders'), icon: ShoppingCart, count: orders.length }
+                    { id: 'orders', label: 'B2B Orders', icon: ShoppingCart, count: salesOrders.length }
                 ].map(tab => (
                     <button
                         key={tab.id}
@@ -644,8 +779,8 @@ export default function WorklistDetailsPage() {
 
                 {activeTab === 'orders' && (
                     <div className="animate-fade-in">
-                        {/* Outstanding Invoice Button */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        {/* Action toolbar */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
                             <button
                                 className="btn"
                                 onClick={() => setShowOutstandingModal(true)}
@@ -653,13 +788,22 @@ export default function WorklistDetailsPage() {
                             >
                                 <AlertTriangle size={16} /> Outstanding Statement
                             </button>
-                            <button
-                                className="btn btn-primary animate-pulse"
-                                onClick={() => navigate(`/sales-order/new?retailerId=${id}`)}
-                                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem', padding: '0.65rem 1.5rem' }}
-                            >
-                                <ShoppingCart size={18} /> + Create Sales Order
-                            </button>
+                            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={() => navigate(`/sales-order/new?retailerId=${id}`)}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', padding: '0.55rem 1.25rem' }}
+                                >
+                                    <PlusCircle size={16} /> + New Sales Order
+                                </button>
+                                <button
+                                    className="btn btn-primary animate-pulse"
+                                    onClick={() => navigate(`/b2b-invoice?retailerId=${id}`)}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', padding: '0.55rem 1.25rem' }}
+                                >
+                                    <FilePen size={16} /> + New B2B GST Invoice
+                                </button>
+                            </div>
                         </div>
 
                         {/* Outstanding Invoice Modal */}
@@ -673,24 +817,123 @@ export default function WorklistDetailsPage() {
 
                         {/* Sales Orders */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '3rem' }}>
-                            <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Sales Orders</h3>
-                            {salesOrders.length === 0 ? <p style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: '2rem' }}>No formal sales orders yet.</p> :
-                                salesOrders.map((so: any) => (
-                                    <div key={so.id} className="glass-panel" style={{ padding: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                                        <div>
-                                            <div style={{ fontWeight: 700, color: 'var(--primary-light)', fontSize: '1.05rem', marginBottom: '0.25rem' }}>{so.orderNumber}</div>
-                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>{so.createdAt?.toDate ? new Date(so.createdAt.toDate()).toLocaleDateString() : ''} · {so.lineItems?.length || 0} Items</div>
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                                            <div style={{ textAlign: 'right' }}>
-                                                <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--secondary)' }}>₹{Number(so.grandTotal).toLocaleString()}</div>
-                                                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{so.status?.toUpperCase() || 'DRAFT'}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                                <h3 style={{ fontSize: '1.15rem', margin: 0 }}>Sales Orders ({salesOrders.length})</h3>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>Click any order to edit or regenerate invoice</span>
+                            </div>
+                            {salesOrders.length === 0 ? (
+                                <div className="glass-panel" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+                                    <ShoppingCart size={40} color="var(--surface-border)" style={{ margin: '0 auto 1rem', display: 'block' }} />
+                                    <p style={{ margin: 0 }}>No sales orders yet for this partner.</p>
+                                    <p style={{ margin: '0.5rem 0 0', fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>Use the buttons above to create one.</p>
+                                </div>
+                            ) : salesOrders.map((so: any) => {
+                                const statusColor: Record<string, string> = { confirmed: '#10b981', draft: '#f59e0b', dispatched: '#38bdf8', cancelled: '#ef4444' };
+                                const color = statusColor[so.status?.toLowerCase()] || '#94a3b8';
+                                const date = so.createdAt?.toDate ? new Date(so.createdAt.toDate()).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'2-digit' }) : '—';
+                                const outstanding = Math.max(0, (Number(so.grandTotal) || 0) - (Number(so.amountPaid) || 0));
+                                return (
+                                    <div key={so.id} className="glass-panel" style={{ padding: '1.25rem', borderLeft: `4px solid ${color}`, transition: 'box-shadow 0.15s' }}
+                                        onMouseOver={e => e.currentTarget.style.boxShadow = `0 4px 20px ${color}22`}
+                                        onMouseOut={e => e.currentTarget.style.boxShadow = 'none'}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+                                            {/* Left: order info */}
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.4rem' }}>
+                                                    <span style={{ fontWeight: 700, color: 'var(--primary-light)', fontSize: '1rem' }}>{so.orderNumber || so.invoiceNumber || so.id.slice(-8).toUpperCase()}</span>
+                                                    <span style={{ background: `${color}22`, color, padding: '0.15rem 0.6rem', borderRadius: '99px', fontSize: '0.72rem', fontWeight: 700 }}>
+                                                        {so.status?.toUpperCase() || 'DRAFT'}
+                                                    </span>
+                                                    {so.invoiceType === 'B2B_GST' && (
+                                                        <span style={{ background: '#8b5cf622', color: '#8b5cf6', padding: '0.15rem 0.5rem', borderRadius: '99px', fontSize: '0.7rem', fontWeight: 600 }}>GST Invoice</span>
+                                                    )}
+                                                </div>
+                                                <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                                                    <span>📅 {date}</span>
+                                                    <span>📦 {so.lineItems?.length || (so.items?.length) || 0} items</span>
+                                                    {so.paymentStatus && <span>💳 {so.paymentStatus}</span>}
+                                                </div>
                                             </div>
-                                            <button className="btn btn-secondary" onClick={() => navigate(`/sales-order/${so.id}`)} style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>Open Order</button>
+                                            {/* Right: amounts */}
+                                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                                <div style={{ fontWeight: 800, fontSize: '1.15rem', color: 'var(--secondary)' }}>₹{Number(so.grandTotal || so.netAmount || so.totalAmount || 0).toLocaleString()}</div>
+                                                {outstanding > 0 && (
+                                                    <div style={{ fontSize: '0.78rem', color: '#ef4444', fontWeight: 600 }}>Outstanding: ₹{outstanding.toLocaleString()}</div>
+                                                )}
+                                                {outstanding === 0 && (so.amountPaid > 0) && (
+                                                    <div style={{ fontSize: '0.78rem', color: '#10b981', fontWeight: 600 }}>✅ Fully Paid</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        {/* Quick-update status dropdowns + payment date + notes */}
+                                        <div style={{ marginTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                                            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                                                <label style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', fontWeight: 600, whiteSpace: 'nowrap' }}>Quick update:</label>
+                                                <select value={so.status || 'pending'} onChange={e => updateOrderStatus(so.id, 'status', e.target.value, so)}
+                                                    style={{ fontSize: '0.78rem', padding: '0.25rem 0.5rem', borderRadius: '8px', border: '1px solid var(--surface-border)', background: 'var(--surface-raised)', color: 'var(--text-primary)', cursor: 'pointer' }}>
+                                                    <option value="draft">📋 Draft</option>
+                                                    <option value="confirmed">✅ Confirmed</option>
+                                                    <option value="in_transit">🚛 In Transit</option>
+                                                    <option value="dispatched">📦 Dispatched</option>
+                                                    <option value="delivered">🏠 Delivered</option>
+                                                    <option value="cancelled">❌ Cancelled</option>
+                                                    <option value="pending">⏳ Pending</option>
+                                                </select>
+                                                <select value={so.paymentStatus || 'Pending'} onChange={e => updateOrderStatus(so.id, 'paymentStatus', e.target.value, so)}
+                                                    style={{ fontSize: '0.78rem', padding: '0.25rem 0.5rem', borderRadius: '8px', border: '1px solid var(--surface-border)', background: so.paymentStatus === 'Paid' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.08)', color: so.paymentStatus === 'Paid' ? '#10b981' : '#ef4444', cursor: 'pointer' }}>
+                                                    <option value="Pending">💳 Payment Pending</option>
+                                                    <option value="Paid">✅ Payment Done</option>
+                                                    <option value="Partial">🔶 Partial</option>
+                                                </select>
+                                                <select value={so.modeOfPayment || ''} onChange={e => updateOrderStatus(so.id, 'modeOfPayment', e.target.value, so)}
+                                                    style={{ fontSize: '0.78rem', padding: '0.25rem 0.5rem', borderRadius: '8px', border: '1px solid var(--surface-border)', background: 'var(--surface-raised)', color: 'var(--text-primary)', cursor: 'pointer' }}>
+                                                    <option value="">-- Mode --</option>
+                                                    <option value="Cash">💵 Cash</option>
+                                                    <option value="UPI">📱 UPI</option>
+                                                    <option value="Cheque">🏦 Cheque</option>
+                                                    <option value="15 Days">⏱ 15 Days</option>
+                                                    <option value="30 Days">⏱ 30 Days</option>
+                                                    <option value="45 Days">⏱ 45 Days</option>
+                                                    <option value="Credit">💳 Credit</option>
+                                                </select>
+                                                {/* Payment Date */}
+                                                <input type="date" value={orderPayDates[so.id] ?? (so.paymentDate || '')}
+                                                    onChange={e => setOrderPayDates(prev => ({ ...prev, [so.id]: e.target.value }))}
+                                                    title="Payment Date"
+                                                    style={{ fontSize: '0.78rem', padding: '0.25rem 0.5rem', borderRadius: '8px', border: '1px solid var(--surface-border)', background: 'var(--surface-raised)', color: 'var(--text-primary)', cursor: 'pointer' }} />
+                                            </div>
+                                            {/* Notes */}
+                                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                <input type="text" placeholder="Payment notes / remarks…" value={orderNotes[so.id] ?? (so.paymentNotes || '')}
+                                                    onChange={e => setOrderNotes(prev => ({ ...prev, [so.id]: e.target.value }))}
+                                                    style={{ flex: 1, fontSize: '0.78rem', padding: '0.3rem 0.6rem', borderRadius: '8px', border: '1px solid var(--surface-border)', background: 'var(--surface-raised)', color: 'var(--text-primary)' }} />
+                                                <button className="btn btn-secondary"
+                                                    style={{ fontSize: '0.75rem', padding: '0.3rem 0.75rem', whiteSpace: 'nowrap' }}
+                                                    onClick={async () => {
+                                                        await updateDoc(getTenantDoc(db, tenantId!, 'salesOrders', so.id), {
+                                                            paymentDate: orderPayDates[so.id] ?? so.paymentDate ?? '',
+                                                            paymentNotes: orderNotes[so.id] ?? so.paymentNotes ?? '',
+                                                        });
+                                                    }}>💾 Save</button>
+                                            </div>
+                                        </div>
+                                        {/* Action buttons */}
+                                        <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--surface-border)', flexWrap: 'wrap' }}>
+                                            <button className="btn btn-secondary"
+                                                onClick={() => so.invoiceType === 'B2B_GST'
+                                                    ? navigate(`/b2b-invoice?orderId=${so.id}&retailerId=${id}`)
+                                                    : navigate(`/sales-order/${so.id}`)}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 1rem', fontSize: '0.82rem' }}>
+                                                <FilePen size={14} /> Edit Order
+                                            </button>
+                                            <button className="btn btn-secondary" onClick={() => navigate(`/b2b-invoice?orderId=${so.id}&retailerId=${id}`)}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 1rem', fontSize: '0.82rem' }}>
+                                                <Printer size={14} /> View / Print Invoice
+                                            </button>
                                         </div>
                                     </div>
-                                ))
-                            }
+                                );
+                            })}
                         </div>
 
                         {/* Legacy Orders */}

@@ -65,8 +65,8 @@ export const fetchInvoiceBranding = async (tenantId: string): Promise<InvoiceTem
         if (snap.exists()) return snap.data() as InvoiceTemplateBranding;
     } catch { /* ignore */ }
     return {
-        businessName: 'KaranArjun Krushi Seva Kendra',
-        address: 'Main Road, Maharashtra',
+        businessName: '',
+        address: '',
     };
 };
 

@@ -32,7 +32,7 @@ const PRESET_TEMPLATES = [
 ];
 
 export default function InvoiceTemplateBuilderPage() {
-    const { tenantId } = useAuth();
+    const { tenantId, tenantData } = useAuth();
     const { showToast } = useToast();
     const [activeTab, setActiveTab] = useState<'gallery' | 'editor'>('gallery');
     const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
@@ -365,8 +365,8 @@ export default function InvoiceTemplateBuilderPage() {
                         layout
                         style={{ background: 'white', color: '#111', padding: '16px', borderRadius: '10px', border: '2px dashed #ccc', fontFamily: "'Courier New', monospace", fontSize: '11px', maxWidth: '300px', boxShadow: '0 6px 24px rgba(0,0,0,0.15)' }}
                     >
-                        <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '14px', letterSpacing: '0.02em' }}>{branding.businessName || 'Your Business Name'}</div>
-                        <div style={{ textAlign: 'center', fontSize: '9px', color: '#555', marginBottom: '6px' }}>{branding.address || 'Address'}</div>
+                        <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '14px', letterSpacing: '0.02em' }}>{branding.businessName || tenantData?.businessName || 'Your Business Name'}</div>
+                        <div style={{ textAlign: 'center', fontSize: '9px', color: '#555', marginBottom: '6px' }}>{branding.address || tenantData?.location || 'Address'}</div>
                         {branding.gstin && <div style={{ textAlign: 'center', fontSize: '8px', color: '#777', marginBottom: '4px' }}>GSTIN: {branding.gstin}</div>}
                         <div style={{ borderTop: '1px dashed #bbb', borderBottom: '1px dashed #bbb', padding: '5px 0', margin: '6px 0', fontSize: '10px' }}>
                             <div><strong>{template.name}</strong></div>

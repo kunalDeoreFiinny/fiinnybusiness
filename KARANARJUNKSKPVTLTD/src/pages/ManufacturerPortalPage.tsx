@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { getDocs, query, orderBy, where, updateDoc, serverTimestamp, addDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { getTenantCollection, getTenantDoc } from '../utils/tenantPath';
 import { useToast } from '../contexts/ToastContext';
-import { Truck, MapPin, Package, CheckCircle, Clock, History, FileText, AlertCircle, RefreshCw } from 'lucide-react';
+import { Truck, MapPin, Package, CheckCircle, Clock, History, FileText, AlertCircle, RefreshCw, UploadCloud, X, Paperclip, ExternalLink } from 'lucide-react';
 
 const STATUS_FLOW = [
     { key: 'placed',     label: 'Placed',     color: '#6366f1' },
@@ -40,6 +41,13 @@ export default function ManufacturerPortalPage() {
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'pending' | 'active' | 'completed'>('pending');
+    
+    // Upload Modal State
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+    const [uploadDocType, setUploadDocType] = useState('Invoice');
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
 
     const fetchOrders = async () => {
         if (!tenantId || !linkedId) return;
@@ -93,6 +101,39 @@ export default function ManufacturerPortalPage() {
             showToast('Invoice generated!', 'success');
         } catch { showToast('Invoice generation failed.', 'error'); }
         finally { setActionLoading(null); }
+    };
+
+    const handleFileUpload = async () => {
+        if (!tenantId || !selectedOrderId || !selectedFile) return;
+        setIsUploading(true);
+        try {
+            const fileRef = ref(storage, `tenants/${tenantId}/salesOrders/${selectedOrderId}/documents/${Date.now()}_${selectedFile.name.replace(/[^a-zA-Z0-9.]/g, '_')}`);
+            await uploadBytes(fileRef, selectedFile);
+            const downloadUrl = await getDownloadURL(fileRef);
+
+            const orderRef = getTenantDoc(db, tenantId, 'salesOrders', selectedOrderId);
+            const orderDoc = orders.find(o => o.id === selectedOrderId);
+            const existingDocs = orderDoc?.documents || [];
+            
+            await updateDoc(orderRef, {
+                documents: [...existingDocs, {
+                    name: selectedFile.name,
+                    url: downloadUrl,
+                    type: uploadDocType,
+                    uploadedAt: new Date().toISOString()
+                }]
+            });
+            
+            showToast('Document uploaded successfully!', 'success');
+            setIsUploadModalOpen(false);
+            setSelectedFile(null);
+            fetchOrders();
+        } catch (error) {
+            console.error("Upload error: ", error);
+            showToast('Failed to upload document.', 'error');
+        } finally {
+            setIsUploading(false);
+        }
     };
 
     const pendingOrders = orders.filter(o => ['placed'].includes(o.status));
@@ -200,8 +241,29 @@ export default function ManufacturerPortalPage() {
                             </div>
                         )}
 
+                        {/* Display Uploaded Documents */}
+                        {order.documents && order.documents.length > 0 && (
+                            <div style={{ marginBottom: '1rem' }}>
+                                <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <Paperclip size={12} /> Documents
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                    {order.documents.map((doc: any, i: number) => (
+                                        <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.75rem', background: 'var(--surface-raised)', border: '1px solid var(--surface-border)', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--primary-light)', textDecoration: 'none', transition: 'border-color 0.2s', fontWeight: 500 }} onMouseOver={e => e.currentTarget.style.borderColor = 'var(--primary-light)'} onMouseOut={e => e.currentTarget.style.borderColor = 'var(--surface-border)'}>
+                                            <FileText size={14} />
+                                            <span>{doc.type}</span>
+                                            <ExternalLink size={12} style={{ opacity: 0.6 }} />
+                                        </a>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Action Buttons */}
                         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', paddingTop: '0.5rem', borderTop: '1px solid var(--surface-border)' }}>
+                            <button className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={() => { setSelectedOrderId(order.id); setIsUploadModalOpen(true); setSelectedFile(null); }}>
+                                <UploadCloud size={16} /> Upload Doc
+                            </button>
                             {order.status === 'placed' && (
                                 <button className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} disabled={actionLoading === order.id} onClick={() => updateStatus(order, 'confirmed')}>
                                     <CheckCircle size={16} /> {actionLoading === order.id ? 'Confirming...' : '✓ Confirm Order'}
@@ -231,6 +293,41 @@ export default function ManufacturerPortalPage() {
                     </div>
                 ))}
             </div>
+
+            {/* Upload Modal */}
+            {isUploadModalOpen && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem', backdropFilter: 'blur(4px)' }}>
+                    <div className="glass-panel animate-fade-in" style={{ width: '100%', maxWidth: '400px', padding: '1.5rem', position: 'relative' }}>
+                        <button onClick={() => setIsUploadModalOpen(false)} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'transparent', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer' }}>
+                            <X size={20} />
+                        </button>
+                        <h3 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <UploadCloud size={20} color="var(--primary-light)" /> Upload Document
+                        </h3>
+                        
+                        <div className="form-group" style={{ marginBottom: '1rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Document Type</label>
+                            <select className="form-input" style={{ width: '100%', background: 'transparent' }} value={uploadDocType} onChange={e => setUploadDocType(e.target.value)}>
+                                <option value="Invoice">Invoice</option>
+                                <option value="Sales Order">Sales Order</option>
+                                <option value="Claim Document">Claim Document</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Select File</label>
+                            <input type="file" onChange={e => setSelectedFile(e.target.files?.[0] || null)} style={{ width: '100%', padding: '0.5rem', background: 'var(--surface-raised)', border: '1px dashed var(--surface-border)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer' }} />
+                        </div>
+                        
+                        <button className="btn btn-primary" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }} disabled={isUploading || !selectedFile} onClick={handleFileUpload}>
+                            {isUploading ? <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <UploadCloud size={16} />}
+                            {isUploading ? 'Uploading...' : 'Upload File'}
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
     );

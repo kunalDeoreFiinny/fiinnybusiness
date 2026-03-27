@@ -3,6 +3,7 @@ import { addDoc, getDocs, query, orderBy, serverTimestamp, updateDoc, deleteDoc 
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { getTenantCollection, getTenantDoc } from '../utils/tenantPath';
+import { useToast } from '../contexts/ToastContext';
 import { Warehouse, Plus, Trash2, Loader2, Package, ArrowLeftRight, AlertCircle, Check, X } from 'lucide-react';
 
 interface GodownItem { name: string; quantity: number; unit: string; minStock: number; }
@@ -21,6 +22,7 @@ export default function WarehousePage() {
   const [transferTo, setTransferTo] = useState('');
   const [transferQty, setTransferQty] = useState('');
   const [form, setForm] = useState({ name:'', location:'', managerName:'', contact:'' });
+  const { showToast } = useToast();
 
   const fetchGodowns = async () => {
     if (!tenantId) return;
@@ -49,6 +51,29 @@ export default function WarehousePage() {
     if (!tenantId || !confirm('Delete this godown? All stock data will be lost.')) return;
     await deleteDoc(getTenantDoc(db, tenantId, 'godowns', id) as any);
     fetchGodowns();
+  };
+
+  const handleGeneratePO = async (item: GodownItem) => {
+    if (!tenantId) return;
+    try {
+      const poNumber = `PO-${Date.now().toString().slice(-6)}`;
+      await addDoc(getTenantCollection(db, tenantId, 'purchaseOrders'), {
+        poNumber,
+        supplierName: 'Pending Supplier (Generated from Alert)',
+        status: 'pending_approval',
+        totalAmount: 0,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        lineItems: [{
+           productName: item.name,
+           quantity: Math.max(10, (item.minStock * 2) - item.quantity), // Suggest order quantity
+           unit: item.unit,
+           rate: 0,
+           amount: 0
+        }]
+      });
+      showToast(`Draft PO ${poNumber} generated. Queued for Owner approval.`, 'success');
+    } catch (e) { console.error(e); showToast('Failed to generate PO', 'error'); }
   };
 
   const handleTransfer = async () => {
@@ -214,6 +239,14 @@ export default function WarehousePage() {
                           </div>
                           <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
                             <span style={{ fontWeight:700, fontSize:'0.9rem', color:isLow?'#ef4444':'var(--text-primary)' }}>{item.quantity} {item.unit}</span>
+                            {isLow && (
+                                <button
+                                  onClick={()=>handleGeneratePO(item)}
+                                  style={{ display:'flex', alignItems:'center', gap:'0.25rem', padding:'0.3rem 0.6rem', background:'hsla(0,84%,60%,0.15)', color:'#ef4444', border:'1px solid hsla(0,84%,60%,0.3)', borderRadius:'6px', cursor:'pointer', font:'inherit', fontSize:'0.75rem', fontWeight:600 }}
+                                >
+                                  <AlertCircle size={12}/> Create PO
+                                </button>
+                            )}
                             <button
                               onClick={()=>setTransferModal({open:true, from:g.id, item})}
                               style={{ display:'flex', alignItems:'center', gap:'0.25rem', padding:'0.3rem 0.6rem', background:'var(--surface-raised)', border:'1px solid var(--surface-border)', borderRadius:'6px', cursor:'pointer', font:'inherit', fontSize:'0.75rem', color:'var(--text-secondary)' }}

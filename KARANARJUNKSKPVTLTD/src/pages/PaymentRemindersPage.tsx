@@ -46,14 +46,14 @@ export default function PaymentRemindersPage() {
   const [remindedSet, setRemindedSet] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<'all'|'overdue'|'week'>('overdue');
 
-  const businessName = (tenantData as any)?.businessName || 'KaranArjun';
+  const businessName = (tenantData as any)?.businessName || 'Your Business Name';
 
   const fetchInvoices = async () => {
     if (!tenantId) return;
     setLoading(true);
     try {
       const snap = await getDocs(query(getTenantCollection(db, tenantId, 'salesOrders'), orderBy('createdAt','desc')));
-      const all = snap.docs.map(d=>({ id:d.id, ...d.data() } as Invoice));
+      const all = snap.docs.map(d => ({ id: d.id, ...d.data(), netAmount: Number((d.data() as any).netAmount) || 0 } as Invoice));
       // Only pending/credit invoices
       setInvoices(all.filter(o => o.status !== 'paid' && o.modeOfPayment !== 'Cash'));
     } catch(e) { console.error(e); } finally { setLoading(false); }
@@ -70,7 +70,7 @@ export default function PaymentRemindersPage() {
     }).sort((a,b) => daysDiff(b.invoiceDate) - daysDiff(a.invoiceDate));
   }, [invoices, filter]);
 
-  const totalOutstanding = filtered.reduce((s,inv)=>s+inv.netAmount, 0);
+  const totalOutstanding = filtered.reduce((s, inv) => s + (Number(inv.netAmount) || 0), 0);
   const overdueCount = invoices.filter(inv=>daysDiff(inv.invoiceDate)>0).length;
   const highRisk = invoices.filter(inv=>daysDiff(inv.invoiceDate)>30).length;
 

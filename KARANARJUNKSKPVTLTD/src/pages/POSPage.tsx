@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Save, Loader2, Printer } from 'lucide-react';
+import UpiQrCode from '../components/UpiQrCode';
 import {
     query, onSnapshot, addDoc,
     serverTimestamp, updateDoc,
@@ -66,6 +67,30 @@ export default function POSPage() {
     );
 
     const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'F2') {
+                e.preventDefault();
+                const firstEmptyIdx = rows.findIndex(r => !r.productId && !r.productName);
+                if (firstEmptyIdx !== -1) {
+                    const inputs = document.querySelectorAll(`input[placeholder="Search product..."]`) as NodeListOf<HTMLInputElement>;
+                    if (inputs[firstEmptyIdx]) inputs[firstEmptyIdx].focus();
+                }
+            }
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                if (!isProcessing) handleSave(true);
+            }
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                if (!isProcessing) handleSave(false);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [rows, isProcessing]);
 
     useEffect(() => {
         if (!tenantId) return;
@@ -335,12 +360,44 @@ export default function POSPage() {
                 resetForm();
                 setIsProcessing(false);
             } else {
-                // Allow React to clear the processing state spinner before printing
                 setIsProcessing(false);
+                // Snapshot DOM -> new window so iOS Safari prints correctly
+                // (window.print() on same page races with resetForm() clearing React state)
                 setTimeout(() => {
-                    window.print();
+                    const container = document.querySelector('.pos-print-container') as HTMLElement | null;
+                    const html = container ? container.outerHTML : document.body.innerHTML;
+                    const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+                        .map(el => el.outerHTML).join('\n');
+                    const win = window.open('', '_blank');
+                    if (!win) {
+                        // Fallback for strict popup-blockers
+                        window.print();
+                        resetForm();
+                        return;
+                    }
+                    win.document.write(`<!DOCTYPE html><html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>POS Bill</title>
+${styles}
+<style>
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-scheme: light !important; }
+  body { background: #fff !important; color: #000 !important; font-family: serif; padding: 0; margin: 0; }
+  .pos-page-wrapper { background: #fff !important; padding: 0 !important; }
+  .no-print { display: none !important; }
+  .pos-print-container { box-shadow: none !important; border: none !important; border-radius: 0 !important; margin: 0 !important; padding: 10px !important; background: #fff !important; color: #000 !important; }
+  input, select, textarea { border: none !important; background: transparent !important; -webkit-appearance: none; appearance: none; font-family: inherit; font-size: inherit; color: #000; padding: 0; }
+  select { background-image: none !important; }
+  @media print { .no-print { display: none !important; } }
+</style>
+</head><body>${html}</body></html>`);
+                    win.document.close();
+                    win.focus();
+                    // Give the new window time to render fonts/images
+                    setTimeout(() => { win.print(); }, 600);
+                    // Reset form after snapshot is taken — safe now
                     resetForm();
-                }, 100);
+                }, 200);
             }
 
         } catch (error) {
@@ -393,6 +450,9 @@ export default function POSPage() {
                     }
                     .no-print {
                         display: none !important;
+                    }
+                    .print-only {
+                        display: block !important;
                     }
                     .pos-page-wrapper {
                         padding: 0 !important;
@@ -629,15 +689,38 @@ export default function POSPage() {
                 Note : The product is delivered on the consumer responsibility. Sold product won't be taken back.
             </div>
 
+            {/* UPI QR Code — print only */}
+            {branding?.upiId && (
+                <div className="print-only" style={{ display: 'none', marginTop: '12px', borderTop: '1px solid #000', paddingTop: '10px', flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
+                    <div style={{ fontSize: '0.78rem', color: '#333' }}>
+                        <strong>Pay via UPI</strong><br />
+                        Scan QR or use UPI ID:<br />
+                        <strong>{branding.upiId}</strong><br />
+                        <span style={{ fontSize: '0.7rem', color: '#666' }}>Amount: ₹{grandTotal.toLocaleString('en-IN')}</span>
+                    </div>
+                    <UpiQrCode
+                        upiId={branding.upiId}
+                        payeeName={branding.businessName || ''}
+                        amount={grandTotal}
+                        transactionNote={nextBillNumber}
+                        size={100}
+                    />
+                </div>
+            )}
+
+            <div style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-tertiary)', marginTop: '1rem' }} className="no-print">
+                <strong>Keyboard Shortcuts:</strong> <kbd>F2</kbd> Search Items | <kbd>Ctrl+P</kbd> Print Bill | <kbd>Ctrl+S</kbd> Save Bill
+            </div>
+
             {/* Action Buttons (HIDDEN IN PRINT) */}
-            <div className="no-print" style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '2rem' }}>
+            <div className="no-print" style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '1rem' }}>
                 <button
                     onClick={() => handleSave(true)}
                     disabled={isProcessing}
                     className="btn print-btn"
                     style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 2rem', fontSize: '1.1rem', borderRadius: '8px' }}
                 >
-                    {isProcessing ? <Loader2 className="animate-spin" /> : <Printer size={20} />} Print Form
+                    {isProcessing ? <Loader2 className="animate-spin" /> : <Printer size={20} />} Print Form (Ctrl+P)
                 </button>
                 <button
                     onClick={() => handleSave(false)}
@@ -645,7 +728,7 @@ export default function POSPage() {
                     className="btn save-btn"
                     style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 2rem', fontSize: '1.1rem', borderRadius: '8px' }}
                 >
-                    {isProcessing ? <Loader2 className="animate-spin" /> : <Save size={20} />} Complete & Save Bill
+                    {isProcessing ? <Loader2 className="animate-spin" /> : <Save size={20} />} Save Bill (Ctrl+S)
                 </button>
             </div>
         </div>

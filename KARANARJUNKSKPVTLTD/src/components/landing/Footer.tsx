@@ -95,6 +95,46 @@ export default function Footer() {
                 ))}
             </div>
 
+            {/* Cross-Brand Banner */}
+            <div style={{
+                marginBottom: '4rem',
+                padding: '1.75rem 2rem',
+                background: 'hsla(152, 60%, 40%, 0.06)',
+                border: '1px solid hsla(152, 60%, 40%, 0.2)',
+                borderRadius: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '1rem',
+            }}>
+                <div>
+                    <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.25rem' }}>
+                        📱 Also by Fiinny — <span style={{ color: 'var(--primary-light)' }}>Personal Expense Tracker</span>
+                    </div>
+                    <div style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>
+                        Track your own spending, shared bills, and savings goals — free on iOS & Android.
+                    </div>
+                </div>
+                <a
+                    href="https://fiinny.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                        background: 'var(--primary)',
+                        color: 'white',
+                        padding: '0.6rem 1.4rem',
+                        borderRadius: '99px',
+                        textDecoration: 'none',
+                        fontWeight: 700,
+                        fontSize: '0.85rem',
+                        whiteSpace: 'nowrap',
+                    }}
+                >
+                    Visit fiinny.com →
+                </a>
+            </div>
+
             <div style={{
                 paddingTop: '3rem',
                 borderTop: '1px solid hsla(220, 20%, 40%, 0.1)',

@@ -14,25 +14,25 @@ interface TenantData {
 }
 
 export type AppScreen =
-  | 'dashboard'
-  | 'b2c_dashboard'
-  | 'retailers'
-  | 'worklist'
-  | 'dispatch'
-  | 'pos'
-  | 'inventory'
-  | 'settings'
-  | 'manage_retailers'
-  | 'admin'
-  | 'invoice_settings'
-  | 'schema_builder'
-  | 'invoice_templates'
-  | 'manufacturers'
-  | 'order_history'
-  | 'online_orders'
-  | 'online_dashboard'
-  | 'manage_store'
-  | 'analytics';
+    | 'dashboard'
+    | 'b2c_dashboard'
+    | 'retailers'
+    | 'worklist'
+    | 'dispatch'
+    | 'pos'
+    | 'inventory'
+    | 'settings'
+    | 'manage_retailers'
+    | 'admin'
+    | 'invoice_settings'
+    | 'schema_builder'
+    | 'invoice_templates'
+    | 'manufacturers'
+    | 'order_history'
+    | 'online_orders'
+    | 'online_dashboard'
+    | 'manage_store'
+    | 'analytics';
 
 export type RolePermissions = Record<UserRole, Record<AppScreen, boolean>>;
 export const defaultPermissions: RolePermissions = {
@@ -49,6 +49,7 @@ interface AuthContextType {
     tenantId: string | null;
     tenantData: TenantData | null;
     linkedId: string | null; // retailerId or manufacturerId for non-admin users
+    userName: string | null;
     permissions: RolePermissions;
     loading: boolean;
     logout: () => Promise<void>;
@@ -60,6 +61,7 @@ const AuthContext = createContext<AuthContextType>({
     tenantId: null,
     tenantData: null,
     linkedId: null,
+    userName: null,
     permissions: defaultPermissions,
     loading: true,
     logout: async () => { },
@@ -75,35 +77,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [tenantId, setTenantId] = useState<string | null>(null);
     const [tenantData, setTenantData] = useState<TenantData | null>(null);
     const [linkedId, setLinkedId] = useState<string | null>(null);
+    const [userName, setUserName] = useState<string | null>(null);
     const [permissions, setPermissions] = useState<RolePermissions>(defaultPermissions);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         let unsubscribePerms: (() => void) | null = null;
-        
+
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
                 try {
                     const userDocRef = doc(db, 'users', user.uid);
                     const userDoc = await getDoc(userDocRef);
                     const emailLC = user.email?.toLowerCase() || '';
-                    const isMasterAdmin = emailLC.includes('arjuntanpure') || emailLC.includes('arjutanpure');
-                    
+                    const isMasterAdmin = emailLC.includes('arjuntanpure') || emailLC.includes('arjutanpure') || emailLC.includes('arjun1829') || emailLC.includes('karanarjun');
+
                     let existingRole = userDoc.exists() ? (userDoc.data().role as UserRole) : null;
                     let existingTenantId = userDoc.exists() ? userDoc.data().tenantId : null;
 
-                    // Restore access for legacy users (before multi-tenant)
-                    // If they are an admin or analyst without a tenantId, they belong to the master tenant
-                    if (userDoc.exists() && !existingTenantId) {
-                        // Any user created before multi-tenancy had no tenantId
-                        existingTenantId = 'master';
-                    }
-
                     let role: UserRole = isMasterAdmin ? 'admin' : (existingRole || 'analyst');
-                    let tId = isMasterAdmin ? 'master' : existingTenantId;
+                    let tId = isMasterAdmin ? (existingTenantId && existingTenantId !== 'master' ? existingTenantId : 'master') : existingTenantId;
                     let lId: string | null = userDoc.exists() ? (userDoc.data().linkedId || null) : null;
 
-                    if (!userDoc.exists() || isMasterAdmin) {
+                    // Avoid unnecessary writes for master admin if doc already exists
+                    if (!userDoc.exists()) {
                         await setDoc(userDocRef, {
                             email: user.email,
                             name: user.displayName || user.email?.split('@')[0] || 'Arjun Tanpure',
@@ -118,6 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setUserRole(role);
                     setTenantId(tId);
                     setLinkedId(lId);
+                    setUserName(userDoc.exists() ? (userDoc.data().name || user.displayName || user.email?.split('@')[0] || null) : (user.displayName || user.email?.split('@')[0] || null));
 
                     if (tId && tId !== 'master') {
                         const tenantDoc = await getDoc(doc(db, 'tenants', tId));
@@ -142,7 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                                 if (permDoc.exists() && Object.keys(permDoc.data() || {}).length > 0) {
                                     const fetchedPerms = permDoc.data() as RolePermissions;
                                     const mergedPerms: any = { ...defaultPermissions };
-                                    
+
                                     for (const [r, pObj] of Object.entries(fetchedPerms)) {
                                         mergedPerms[r] = {
                                             ...(defaultPermissions[r as UserRole] || {}),
@@ -168,7 +166,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
                 } catch (error) {
                     console.error("Error fetching user role:", error);
-                    setUserRole('analyst');
+                    
+                    // Fallback to ensure owner never gets locked out
+                    const emailLC = user.email?.toLowerCase() || '';
+                    const isMasterAdmin = emailLC.includes('arjuntanpure') || emailLC.includes('arjutanpure') || emailLC.includes('arjun1829') || emailLC.includes('karanarjun');
+                    
+                    setUserRole(isMasterAdmin ? 'admin' : 'analyst');
+                    if (isMasterAdmin) {
+                        setTenantId('master');
+                        setTenantData({ businessName: 'KaranArjun' });
+                    } else {
+                        setTenantId(null);
+                        setTenantData(null);
+                    }
                     setPermissions(defaultPermissions);
                 }
             } else {
@@ -198,6 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         tenantId,
         tenantData,
         linkedId,
+        userName,
         permissions,
         loading,
         logout

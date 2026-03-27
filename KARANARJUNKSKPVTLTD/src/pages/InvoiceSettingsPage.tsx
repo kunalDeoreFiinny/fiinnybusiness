@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
-import { FileText, Save, Loader2, ShieldAlert, Building2, MapPin, Hash, ShieldCheck, Image as ImageIcon, CreditCard, PenLine } from 'lucide-react';
+import { FileText, Save, Loader2, ShieldAlert, Building2, MapPin, Hash, ShieldCheck, Image as ImageIcon, CreditCard, PenLine, QrCode, KeyRound } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { getTenantDoc } from '../utils/tenantPath';
@@ -9,18 +9,20 @@ import { useToast } from '../contexts/ToastContext';
 
 export default function InvoiceSettingsPage() {
     const { t } = useTranslation();
-    const { userRole, tenantId } = useAuth();
+    const { userRole, tenantId, tenantData } = useAuth();
     const { showToast } = useToast();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [settings, setSettings] = useState({
-        businessName: 'KaranArjun Krushi Seva Kendra',
-        address: 'Main Road, Sample City, Maharashtra',
+        businessName: tenantData?.businessName || '',
+        address: tenantData?.location || '',
         gstin: '',
         licenseNumbers: '',
-        logoUrl: '',
-        bankDetails: `A/c Holder's Name : KARANARJUN KRUSHI SEVA KENDRA\nBank Name          : Bank of Maharashtra\nA/c No.            : 60377054187\nIFSC Code          : MAHB0001571\nBranch             : Karjat - 414402`,
+        logoUrl: tenantData?.logoUrl || '',
+        bankDetails: '',
         signatureName: '',
+        upiId: '',
+        razorpayKeyId: '',
         terms: '1. Goods once sold will not be taken back.\n2. Payment should be made within 30 days.'
     });
 
@@ -180,6 +182,36 @@ export default function InvoiceSettingsPage() {
                                 value={settings.signatureName}
                                 onChange={e => setSettings({ ...settings, signatureName: e.target.value })}
                             />
+                        </div>
+
+                        {/* UPI + Razorpay section */}
+                        <div style={{ borderTop: '1px solid var(--surface-border)', paddingTop: '1.25rem' }}>
+                            <p style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.75rem', color: 'var(--primary-light)' }}>💳 Payment Settings</p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                <div className="input-group">
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <QrCode size={16} /> UPI ID (for QR codes on printed bills)
+                                    </label>
+                                    <input
+                                        className="input-field"
+                                        placeholder="e.g. 9307199040@paytm or yourname@upi"
+                                        value={(settings as any).upiId || ''}
+                                        onChange={e => setSettings({ ...settings, upiId: e.target.value } as any)}
+                                    />
+                                </div>
+                                <div className="input-group">
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <KeyRound size={16} /> Razorpay Public Key (for online payment links)
+                                    </label>
+                                    <input
+                                        className="input-field"
+                                        placeholder="rzp_live_xxxxxxxxxxxxxxxx"
+                                        value={(settings as any).razorpayKeyId || ''}
+                                        onChange={e => setSettings({ ...settings, razorpayKeyId: e.target.value } as any)}
+                                    />
+                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.25rem' }}>Only your public key (starts with rzp_live_...). Never enter your secret key here.</p>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="input-group">

@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase';
-import { useNavigate } from 'react-router-dom';
-import { Lock, Mail, AlertCircle } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Lock, Mail, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export default function LoginPage() {
     const { t } = useTranslation();
+    const [searchParams] = useSearchParams();
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -15,11 +16,19 @@ export default function LoginPage() {
 
     const navigate = useNavigate();
 
+    // Pre-select signup mode if ?signup=true in URL
+    useEffect(() => {
+        if (searchParams.get('signup') === 'true') {
+            setIsLogin(false);
+        }
+    }, [searchParams]);
+
     const handleGoogleSignIn = async () => {
         setError('');
         setLoading(true);
         try {
             await signInWithPopup(auth, googleProvider);
+            // AuthContext will handle redirect — if no tenantId → /client-onboarding
             navigate('/dashboard');
         } catch (err: any) {
             console.error(err);
@@ -34,9 +43,8 @@ export default function LoginPage() {
         setError('');
         setLoading(true);
 
-        // Shorthand for default admin
         let finalEmail = email;
-        if (email === 'arjutanpure' || email === 'arjuntanpure') {
+        if (email === 'arjutanpure' || email === 'arjuntanpure' || email === 'arjun1829' || email === 'karanarjun') {
             finalEmail = 'arjutanpure@karanarjun.com';
         }
 
@@ -45,7 +53,6 @@ export default function LoginPage() {
                 try {
                     await signInWithEmailAndPassword(auth, finalEmail, password);
                 } catch (err: any) {
-                    // Special case: If it's the default admin and doesn't exist, create it
                     const defaultAdminEmail = 'arjutanpure@karanarjun.com';
                     if (
                         finalEmail === defaultAdminEmail &&
@@ -57,10 +64,12 @@ export default function LoginPage() {
                         throw err;
                     }
                 }
+                navigate('/dashboard');
             } else {
+                // Sign up → go to onboarding
                 await createUserWithEmailAndPassword(auth, finalEmail, password);
+                navigate('/client-onboarding');
             }
-            navigate('/dashboard');
         } catch (err: any) {
             console.error(err);
             if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
@@ -79,23 +88,88 @@ export default function LoginPage() {
 
     return (
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-            <div className="glass-panel animate-fade-in" style={{ width: '100%', maxWidth: '400px', padding: '2.5rem 2rem' }}>
+            <div className="glass-panel animate-fade-in" style={{ width: '100%', maxWidth: '440px', padding: '2.5rem 2rem' }}>
+
+                {/* Header */}
                 <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                    <h1 className="primary-gradient-text" style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{t('auth.title')}</h1>
-                    <p style={{ color: 'var(--text-secondary)' }}>{t('auth.subtitle')}</p>
+                    <h1 className="primary-gradient-text" style={{ fontSize: '1.75rem', marginBottom: '0.4rem' }}>
+                        {isLogin ? 'Welcome back' : 'Create your free account'}
+                    </h1>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                        {isLogin
+                            ? 'Sign in to your Fiinny Business console'
+                            : 'Join retailers across India — GST invoices, payments & more'}
+                    </p>
                 </div>
 
+                {/* Prominent Tab Switcher */}
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    background: 'var(--surface-base)',
+                    borderRadius: '12px',
+                    padding: '4px',
+                    marginBottom: '1.75rem',
+                    border: '1px solid var(--surface-border)',
+                }}>
+                    {[
+                        { label: 'Sign In', value: true },
+                        { label: 'Sign Up — Free', value: false },
+                    ].map((tab) => (
+                        <button
+                            key={String(tab.value)}
+                            onClick={() => { setIsLogin(tab.value); setError(''); }}
+                            style={{
+                                padding: '0.6rem 0.5rem',
+                                borderRadius: '9px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontWeight: 700,
+                                fontSize: '0.88rem',
+                                font: 'inherit',
+                                background: isLogin === tab.value ? 'var(--primary)' : 'transparent',
+                                color: isLogin === tab.value ? 'white' : 'var(--text-tertiary)',
+                                transition: 'all 0.2s',
+                            }}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Signup value prop */}
+                {!isLogin && (
+                    <div style={{
+                        background: 'hsla(152, 60%, 40%, 0.08)',
+                        border: '1px solid hsla(152, 60%, 40%, 0.2)',
+                        borderRadius: '10px',
+                        padding: '0.875rem 1rem',
+                        marginBottom: '1.5rem',
+                    }}>
+                        {[
+                            'GST-compliant invoices in seconds',
+                            'Online payments via Razorpay / UPI',
+                            'Inventory, analytics & AI advisor',
+                        ].map((item) => (
+                            <div key={item} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', fontSize: '0.82rem', color: 'var(--primary-light)', fontWeight: 600 }}>
+                                <CheckCircle2 size={13} /> {item}
+                            </div>
+                        ))}
+                    </div>
+                )}
+
                 {error && (
-                    <div style={{ padding: '0.75rem', background: 'hsla(0, 84%, 60%, 0.1)', color: 'var(--danger)', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.875rem' }}>
+                    <div style={{ padding: '0.75rem', background: 'hsla(0, 84%, 60%, 0.1)', color: 'var(--danger)', borderRadius: '8px', marginBottom: '1.25rem', display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.875rem' }}>
                         <AlertCircle size={16} /> {error}
                     </div>
                 )}
 
+                {/* Google button */}
                 <button
                     type="button"
                     onClick={handleGoogleSignIn}
-                    className="btn btn-secondary animate-pulse"
-                    style={{ width: '100%', marginBottom: '1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', background: 'white', color: '#333' }}
+                    className="btn btn-secondary"
+                    style={{ width: '100%', marginBottom: '1.25rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', background: 'white', color: '#333' }}
                     disabled={loading}
                 >
                     <svg width="18" height="18" viewBox="0 0 48 48">
@@ -105,10 +179,10 @@ export default function LoginPage() {
                         <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
                         <path fill="none" d="M0 0h48v48H0z" />
                     </svg>
-                    {t('auth.google_signin')}
+                    {isLogin ? t('auth.google_signin') : 'Continue with Google — Free'}
                 </button>
 
-                <div style={{ display: 'flex', alignItems: 'center', margin: '1.5rem 0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', margin: '1.25rem 0' }}>
                     <div style={{ flex: 1, height: '1px', background: 'var(--surface-border)' }} />
                     <span style={{ padding: '0 1rem', color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>{t('auth.or')}</span>
                     <div style={{ flex: 1, height: '1px', background: 'var(--surface-border)' }} />
@@ -132,7 +206,7 @@ export default function LoginPage() {
                         </div>
                     </div>
 
-                    <div className="input-group" style={{ marginBottom: '2rem' }}>
+                    <div className="input-group" style={{ marginBottom: '1.75rem' }}>
                         <label htmlFor="password">{t('auth.password')}</label>
                         <div style={{ position: 'relative' }}>
                             <Lock size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
@@ -152,26 +226,15 @@ export default function LoginPage() {
                     <button
                         type="submit"
                         className="btn btn-primary animate-pulse"
-                        style={{ width: '100%', marginBottom: '1.5rem' }}
+                        style={{ width: '100%', marginBottom: '1rem' }}
                         disabled={loading}
                     >
-                        {loading ? t('auth.authenticating') : (isLogin ? t('auth.signin_button') : t('auth.signup_button'))}
+                        {loading ? t('auth.authenticating') : (isLogin ? t('auth.signin_button') : 'Create Free Account →')}
                     </button>
-
-                    <div style={{ textAlign: 'center', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                        {isLogin ? t('auth.no_account') + " " : t('auth.have_account') + " "}
-                        <button
-                            type="button"
-                            onClick={() => setIsLogin(!isLogin)}
-                            style={{ background: 'none', border: 'none', color: 'var(--primary-light)', fontWeight: 600, cursor: 'pointer', padding: 0, font: 'inherit' }}
-                        >
-                            {isLogin ? t('auth.signup_link') : t('auth.login_link')}
-                        </button>
-                    </div>
                 </form>
 
-                {/* Legal links — required for compliance */}
-                <div style={{ textAlign: 'center', marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid var(--surface-border)', fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>
+                {/* Legal */}
+                <div style={{ textAlign: 'center', marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--surface-border)', fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>
                     By signing in, you agree to our{' '}
                     <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-light)', textDecoration: 'none', fontWeight: 600 }}>Terms of Service</a>
                     {' '}and{' '}

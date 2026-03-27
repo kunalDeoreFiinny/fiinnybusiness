@@ -1,8 +1,12 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Play, ArrowRight } from 'lucide-react';
+import { ArrowRight, ShieldCheck, MapPin, FileText } from 'lucide-react';
 
 export default function Hero() {
+    const scrollToFeatures = () => {
+        document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
+    };
+
     return (
         <section style={{
             padding: '10rem 2rem 5rem',
@@ -11,12 +15,12 @@ export default function Hero() {
             alignItems: 'center',
             gap: '4rem',
             maxWidth: '1200px',
-            margin: '0 auto'
+            margin: '0 auto',
         }}>
             <motion.div
                 initial={{ x: -100, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                transition={{ duration: 1, ease: "easeOut" }}
+                transition={{ duration: 1, ease: 'easeOut' }}
             >
                 <span style={{
                     background: 'hsla(152, 60%, 40%, 0.15)',
@@ -27,9 +31,9 @@ export default function Hero() {
                     fontWeight: 600,
                     marginBottom: '1.5rem',
                     display: 'inline-block',
-                    border: '1px solid hsla(152, 60%, 40%, 0.3)'
+                    border: '1px solid hsla(152, 60%, 40%, 0.3)',
                 }}>
-                    Revolutionizing Retail 2.0
+                    🇮🇳 Made for Indian Retailers
                 </span>
 
                 <h1 style={{
@@ -37,7 +41,7 @@ export default function Hero() {
                     lineHeight: 1.1,
                     fontWeight: 800,
                     marginBottom: '1.5rem',
-                    letterSpacing: '-0.04em'
+                    letterSpacing: '-0.04em',
                 }}>
                     Financial <span className="primary-gradient-text">clarity,</span> <br />
                     automated.
@@ -46,15 +50,29 @@ export default function Hero() {
                 <p style={{
                     fontSize: '1.25rem',
                     color: 'var(--text-secondary)',
-                    marginBottom: '2.5rem',
+                    marginBottom: '1rem',
                     lineHeight: 1.6,
-                    maxWidth: '500px'
+                    maxWidth: '500px',
                 }}>
-                    The old way is manual, messy, and public. The <span style={{ color: 'white' }}>Fiinny KaranArjun</span> way is automated, private, and precise. Manage your entire business in one place.
+                    GST invoices, inventory, POS billing & online payments — all in one place.
+                    The smart way to run your shop.
                 </p>
 
-                <div style={{ display: 'flex', gap: '1.5rem' }}>
-                    <Link to="/login" style={{ textDecoration: 'none' }}>
+                {/* Free callout */}
+                <p style={{
+                    fontSize: '0.9rem',
+                    color: 'var(--primary-light)',
+                    fontWeight: 600,
+                    marginBottom: '2rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                }}>
+                    ✅ Free forever · No credit card · Setup in 2 minutes
+                </p>
+
+                <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
+                    <Link to="/login?signup=true" style={{ textDecoration: 'none' }}>
                         <motion.button
                             whileHover={{ scale: 1.05, boxShadow: 'var(--neon-glow)' }}
                             whileTap={{ scale: 0.95 }}
@@ -69,39 +87,76 @@ export default function Hero() {
                                 fontSize: '1.1rem',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '0.75rem'
+                                gap: '0.75rem',
                             }}
                         >
-                            Get Started Now <ArrowRight size={20} />
+                            Start Free <ArrowRight size={20} />
                         </motion.button>
                     </Link>
 
                     <motion.button
+                        onClick={scrollToFeatures}
                         whileHover={{ scale: 1.05, background: 'var(--surface-raised)' }}
                         whileTap={{ scale: 0.95 }}
                         style={{
                             background: 'transparent',
                             color: 'white',
                             border: '1px solid var(--surface-border)',
-                            padding: '1rem 2.5rem',
+                            padding: '1rem 2rem',
                             borderRadius: '12px',
-                            fontWeight: 700,
+                            fontWeight: 600,
                             cursor: 'pointer',
-                            fontSize: '1.1rem',
+                            fontSize: '1rem',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '0.75rem'
+                            gap: '0.5rem',
                         }}
                     >
-                        <Play size={20} fill="currentColor" /> See how it works
+                        ▶ See how it works
                     </motion.button>
+                </div>
+
+                {/* Already have account */}
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>
+                    Already have an account?{' '}
+                    <Link to="/login" style={{ color: 'var(--primary-light)', fontWeight: 600, textDecoration: 'none' }}>
+                        Login →
+                    </Link>
+                </p>
+
+                {/* Stats row */}
+                <div style={{
+                    display: 'flex',
+                    gap: '2rem',
+                    marginTop: '2.5rem',
+                    paddingTop: '2rem',
+                    borderTop: '1px solid var(--surface-border)',
+                    flexWrap: 'wrap',
+                }}>
+                    {[
+                        { icon: <FileText size={16} />, label: 'GST Invoices Ready' },
+                        { icon: <MapPin size={16} />, label: 'Works Across India' },
+                        { icon: <ShieldCheck size={16} />, label: '100% Private Data' },
+                    ].map((stat) => (
+                        <div key={stat.label} style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            color: 'var(--text-tertiary)',
+                            fontSize: '0.82rem',
+                            fontWeight: 600,
+                        }}>
+                            <span style={{ color: 'var(--primary-light)' }}>{stat.icon}</span>
+                            {stat.label}
+                        </div>
+                    ))}
                 </div>
             </motion.div>
 
             <motion.div
                 initial={{ x: 100, opacity: 0, scale: 0.8 }}
                 animate={{ x: 0, opacity: 1, scale: 1 }}
-                transition={{ duration: 1.2, ease: "easeOut" }}
+                transition={{ duration: 1.2, ease: 'easeOut' }}
                 style={{ position: 'relative' }}
             >
                 <div style={{
@@ -112,17 +167,16 @@ export default function Hero() {
                     width: '120%',
                     height: '120%',
                     background: 'radial-gradient(circle, hsla(152, 60%, 40%, 0.15) 0%, transparent 70%)',
-                    zIndex: -1
+                    zIndex: -1,
                 }} />
-
                 <img
                     src="/mockup.png"
-                    alt="Dashboard Mockup"
+                    alt="Fiinny Business Dashboard — GST billing and inventory management"
                     style={{
                         width: '100%',
                         borderRadius: '24px',
                         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-                        border: '8px solid hsla(220, 20%, 15%, 0.8)'
+                        border: '8px solid hsla(220, 20%, 15%, 0.8)',
                     }}
                 />
             </motion.div>

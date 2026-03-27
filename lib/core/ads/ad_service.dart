@@ -126,33 +126,10 @@ class AdService {
             testIdentifiers: []),
       );
 
-      consentManager.requestConsentInfoUpdate(
-        params,
-        () async {
-          // If consent is required, show the form
-          if (await consentManager.isConsentFormAvailable()) {
-            final consentStatus = await consentManager.getConsentStatus();
-            if (consentStatus == ConsentStatus.required) {
-              await ConsentForm.loadAndShowConsentFormIfRequired(
-                (FormError? formError) {
-                  if (formError != null) {
-                    debugPrint('[AdService] UMP Consent Form error: ${formError.message}');
-                  }
-                },
-              );
-            }
-          }
+      final completer = Completer<void>();
 
-          final canRequestAds = await consentManager.canRequestAds();
-          
-          if (!canRequestAds) {
-            debugPrint('[AdService] UMP Consent missing. Ads disabled.');
-            _adsEnabled = false;
-            _ready = false;
-            return;
-          }
-          // -------------------------------
-
+      Future<void> initializeMobileAds() async {
+        if (await consentManager.canRequestAds()) {
           final initStatus = await MobileAds.instance.initialize();
           assert(() {
             final entries = initStatus.adapterStatuses.entries.map((entry) {
@@ -171,13 +148,41 @@ class AdService {
           _ready = true;
           preloadInterstitial();
           preloadRewarded();
-        },
-        (FormError formError) {
-          debugPrint('[AdService] UMP Consent update failed: ${formError.message}');
+        } else {
+          debugPrint('[AdService] UMP Consent missing or denied. Ads disabled.');
           _adsEnabled = false;
           _ready = false;
+        }
+        if (!completer.isCompleted) completer.complete();
+      }
+
+      consentManager.requestConsentInfoUpdate(
+        params,
+        () async {
+          // If consent is required, show the form
+          if (await consentManager.isConsentFormAvailable()) {
+            final consentStatus = await consentManager.getConsentStatus();
+            if (consentStatus == ConsentStatus.required) {
+              await ConsentForm.loadAndShowConsentFormIfRequired(
+                (FormError? formError) {
+                  if (formError != null) {
+                    debugPrint('[AdService] UMP Consent Form error: ${formError.message}');
+                  }
+                },
+              );
+            }
+          }
+
+          await initializeMobileAds();
+        },
+        (FormError formError) async {
+          debugPrint('[AdService] UMP Consent update failed: ${formError.message}');
+          // Attempt to initialize using cached consent if available
+          await initializeMobileAds();
         },
       );
+
+      await completer.future;
     } catch (err, stackTrace) {
       _adsEnabled = false;
       _ready = false;

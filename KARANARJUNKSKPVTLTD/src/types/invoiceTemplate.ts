@@ -22,9 +22,13 @@ export interface InvoiceTemplateBranding {
     bankDetails?: string;
     signatureName?: string;
     terms?: string;
+    contact?: string;
+    email?: string;
+    upiId?: string;           // UPI VPA for QR code (e.g. "yourname@paytm")
+    razorpayKeyId?: string;   // Razorpay public key for payment links
     // thermal header customisation
-    thermalHeader?: string; // defaults to businessName
-    thermalFooter?: string; // defaults to "Thank You!"
+    thermalHeader?: string;   // defaults to businessName
+    thermalFooter?: string;   // defaults to "Thank You!"
 }
 
 export interface InvoiceTemplate {

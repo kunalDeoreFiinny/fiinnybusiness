@@ -1041,6 +1041,29 @@ function MainContent() {
             </div>
           </div>
 
+          {/* Cross-Brand: Fiinny Business */}
+          <div className="max-w-4xl mx-auto mb-16">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-6 bg-white/5 border border-white/10 rounded-3xl px-8 py-6 backdrop-blur-sm">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">🏪</span>
+                  <span className="font-bold text-white text-lg">Also by Fiinny — <span className="text-teal-400">Business Tools</span></span>
+                </div>
+                <p className="text-slate-400 text-sm font-medium">
+                  GST invoices, inventory & billing for Indian retailers. Free for your shop.
+                </p>
+              </div>
+              <a
+                href="https://karanarjun-pvt-ltd.web.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="whitespace-nowrap flex-shrink-0 inline-flex items-center gap-2 px-6 py-3 rounded-full bg-teal-500 text-slate-950 font-bold text-sm hover:bg-teal-400 hover:scale-105 transition-all"
+              >
+                Try Fiinny Business →
+              </a>
+            </div>
+          </div>
+
           {/* Step 2: The Footer Navigation */}
           <div className="grid md:grid-cols-4 gap-12 border-t border-slate-800/50 pt-20 mb-12">
             <div className="col-span-1 md:col-span-2">

@@ -1,93 +1,133 @@
 import { useState, useEffect } from 'react';
 import { query, orderBy, getDocs, limit } from 'firebase/firestore';
 import { db } from '../firebase';
-import { ShoppingCart, TrendingUp, ShieldAlert, BarChart3, ReceiptText } from 'lucide-react';
+import { ShoppingCart, TrendingUp, ShieldAlert, ReceiptText, IndianRupee, Calendar, Users, CreditCard, Clock, BarChart3 } from 'lucide-react';
 import { getTenantCollection } from '../utils/tenantPath';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import SalesChart from '../components/SalesChart';
+import {
+    ResponsiveContainer, ComposedChart, Bar, Line,
+    XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+    Area, AreaChart
+} from 'recharts';
 
 interface SalesOrder {
     id: string;
     orderNumber: string;
     retailerName: string;
     phoneNumber?: string;
-    subtotal: number;
-    grandTotal: number;
-    paymentStatus: string;
+    subtotal?: number;
+    grandTotal?: number;
+    netAmount?: number;
+    amount?: number;
+    paymentStatus?: string;
+    modeOfPayment?: string;
+    status?: string;
+    invoiceType?: string;
     createdAt?: any;
-    lineItems: any[];
+    lineItems?: any[];
 }
+
+const fmtINR = (n: number) => {
+    if (n >= 1_00_00_000) return `₹${(n / 1_00_00_000).toFixed(1).replace(/\.0$/, '')}Cr`;
+    if (n >= 1_00_000)    return `₹${(n / 1_00_000).toFixed(2).replace(/\.?0+$/, '')}L`;
+    if (n >= 1_000)       return `₹${(n / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
+    return `₹${Math.round(n).toLocaleString('en-IN')}`;
+};
+
+interface DailyBucket { date: string; revenue: number; orders: number; }
 
 export default function B2CDashboardPage() {
     const { userRole, tenantId } = useAuth();
     const [orders, setOrders] = useState<SalesOrder[]>([]);
     const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState({ totalOrders: 0, totalRevenue: 0, todayRevenue: 0 });
-    const [chartData, setChartData] = useState<{ date: string; amount: number }[]>([]);
+    const [stats, setStats] = useState({
+        totalOrders: 0, totalRevenue: 0,
+        todayRevenue: 0, todayCount: 0,
+        monthRevenue: 0, monthCount: 0,
+        avgOrderValue: 0,
+        cashRevenue: 0, creditRevenue: 0,
+        pendingCount: 0,
+    });
+    const [chartData, setChartData] = useState<DailyBucket[]>([]);
+    const [chartMode, setChartMode] = useState<'30d' | '7d'>('30d');
 
     useEffect(() => {
         if (!tenantId) return;
 
-        const fetchDashboardData = async () => {
+        const fetchData = async () => {
             try {
-                // Fetch recent B2C POS orders
-                const ordersQ = query(
+                const snap = await getDocs(query(
                     getTenantCollection(db, tenantId, 'salesOrders'),
                     orderBy('createdAt', 'desc'),
-                    limit(100) // limit for analytics chart
-                );
-                
-                const ordersSnapshot = await getDocs(ordersQ);
+                    limit(500)
+                ));
 
-                let totalOrders = 0;
-                let totalRevenue = 0;
-                let todayRevenue = 0;
+                const now = new Date();
+                const todayStr = now.toISOString().split('T')[0];
+                const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+                let totalOrders = 0, totalRevenue = 0;
+                let todayRevenue = 0, todayCount = 0;
+                let monthRevenue = 0, monthCount = 0;
+                let cashRevenue = 0, creditRevenue = 0;
+                let pendingCount = 0;
+                const dailyMap = new Map<string, DailyBucket>();
                 const fetchedOrders: SalesOrder[] = [];
-                const dailyData: Record<string, number> = {};
 
-                const todayStr = new Date().toISOString().split('T')[0];
+                snap.docs.forEach(doc => {
+                    const data = doc.data() as SalesOrder;
+                    // POS only — skip B2B GST invoices
+                    if (data.invoiceType === 'B2B_GST') return;
 
-                ordersSnapshot.docs.forEach(doc => {
-                    const data = doc.data() as Omit<SalesOrder, 'id'>;
-                    const orderData = { id: doc.id, ...data };
-                    
-                    fetchedOrders.push(orderData);
+                    const amount = Number(data.grandTotal || data.netAmount || data.amount || data.subtotal || 0);
+                    const ts: Date = data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || 0);
+                    const dateStr = ts.toISOString().split('T')[0];
+
+                    fetchedOrders.push({ id: doc.id, ...data });
                     totalOrders++;
-                    
-                    const amount = Number(data.grandTotal) || 0;
                     totalRevenue += amount;
 
-                    if (data.createdAt) {
-                        const dateStr = data.createdAt.toDate().toISOString().split('T')[0];
-                        dailyData[dateStr] = (dailyData[dateStr] || 0) + amount;
-                        
-                        if (dateStr === todayStr) {
-                            todayRevenue += amount;
-                        }
-                    }
+                    if (dateStr === todayStr) { todayRevenue += amount; todayCount++; }
+                    if (ts >= startOfMonth) { monthRevenue += amount; monthCount++; }
+
+                    const mode = (data.modeOfPayment || '').toLowerCase();
+                    if (mode === 'cash') cashRevenue += amount;
+                    else creditRevenue += amount;
+
+                    const isPending = data.status === 'pending' || (data.modeOfPayment && data.modeOfPayment !== 'Cash' && data.status !== 'paid');
+                    if (isPending) pendingCount++;
+
+                    // Daily bucket
+                    if (!dailyMap.has(dateStr)) dailyMap.set(dateStr, { date: dateStr, revenue: 0, orders: 0 });
+                    const b = dailyMap.get(dateStr)!;
+                    b.revenue += amount;
+                    b.orders++;
                 });
 
-                // Format chart data
-                const formattedChartData = Object.entries(dailyData).map(([date, amount]) => ({
-                    date,
-                    amount
-                })).sort((a, b) => a.date.localeCompare(b.date));
+                setOrders(fetchedOrders.slice(0, 15));
+                setStats({
+                    totalOrders, totalRevenue,
+                    todayRevenue, todayCount,
+                    monthRevenue, monthCount,
+                    avgOrderValue: totalOrders > 0 ? totalRevenue / totalOrders : 0,
+                    cashRevenue, creditRevenue, pendingCount,
+                });
 
-                setOrders(fetchedOrders.slice(0, 15)); // Only show top 15 in the list
-                setStats({ totalOrders, totalRevenue, todayRevenue });
-                setChartData(formattedChartData);
+                const sorted = Array.from(dailyMap.values())
+                    .sort((a, b) => a.date.localeCompare(b.date))
+                    .slice(-30);
+                setChartData(sorted);
             } catch (err) {
-                console.error("Error fetching B2C dashboard data: ", err);
+                console.error('B2C dashboard error:', err);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchDashboardData();
-    }, [userRole, tenantId]);
+        fetchData();
+    }, [tenantId]);
 
-    // Analysts usually don't see financial dashboards, but we'll let admins control this via RoleMatrix
     if (userRole !== 'admin' && userRole !== 'analyst') {
         return (
             <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--danger)' }}>
@@ -101,97 +141,160 @@ export default function B2CDashboardPage() {
         );
     }
 
+    const visibleChart = chartMode === '7d' ? chartData.slice(-7) : chartData;
+
+    const KpiCard = ({ label, value, sub, icon: Icon, color, border }: { label: string; value: string; sub?: string; icon: any; color: string; border: string }) => (
+        <div className="glass-panel" style={{ padding: '1.25rem 1.5rem', borderLeft: `4px solid ${border}`, background: `linear-gradient(120deg, ${color}, transparent)`, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.3rem' }}>{label}</p>
+                    <h2 style={{ margin: 0, fontSize: 'clamp(1rem, 2.2vw, 1.45rem)', fontWeight: 800, color: border, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{loading ? '—' : value}</h2>
+                    {sub && <p style={{ margin: '0.2rem 0 0', color: 'var(--text-tertiary)', fontSize: '0.72rem' }}>{loading ? '' : sub}</p>}
+                </div>
+                <div style={{ background: `${border}22`, borderRadius: '12px', padding: '0.65rem', flexShrink: 0 }}>
+                    <Icon size={20} color={border} />
+                </div>
+            </div>
+        </div>
+    );
+
     return (
-        <div className="animate-fade-in" style={{ maxWidth: '1000px', margin: '0 auto' }}>
+        <div className="animate-fade-in" style={{ maxWidth: '1100px', margin: '0 auto' }}>
+
+            {/* Header */}
             <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
                     <h1 className="primary-gradient-text" style={{ fontSize: '2rem' }}>B2C Dashboard</h1>
-                    <p style={{ color: 'var(--text-secondary)' }}>Track point-of-sale performance and walk-in walk-in metrics.</p>
+                    <p style={{ color: 'var(--text-secondary)' }}>Point-of-sale performance — walk-in & retail counter only.</p>
                 </div>
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                    <Link to="/pos" className="btn btn-primary animate-pulse" style={{ textDecoration: 'none' }}>
-                        <ShoppingCart size={20} /> New POS Bill
-                    </Link>
+                <Link to="/pos" className="btn btn-primary animate-pulse" style={{ textDecoration: 'none' }}>
+                    <ShoppingCart size={20} /> New POS Bill
+                </Link>
+            </div>
+
+            {/* KPI Grid — 6 cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+                <KpiCard label="Today's Revenue" value={fmtINR(stats.todayRevenue)} sub={`${stats.todayCount} bills today`} icon={IndianRupee} color="rgba(16,185,129,0.07)" border="#10b981" />
+                <KpiCard label="This Month" value={fmtINR(stats.monthRevenue)} sub={`${stats.monthCount} bills this month`} icon={Calendar} color="rgba(99,102,241,0.07)" border="#818cf8" />
+                <KpiCard label="Avg Order Value" value={fmtINR(stats.avgOrderValue)} sub={`across ${stats.totalOrders} orders`} icon={TrendingUp} color="rgba(245,158,11,0.07)" border="#f59e0b" />
+                <KpiCard label="Cash Sales" value={fmtINR(stats.cashRevenue)} sub="mode: Cash" icon={IndianRupee} color="rgba(16,185,129,0.05)" border="#34d399" />
+                <KpiCard label="Credit / UPI Sales" value={fmtINR(stats.creditRevenue)} sub="non-cash modes" icon={CreditCard} color="rgba(96,165,250,0.07)" border="#60a5fa" />
+                <KpiCard label="Pending / Unpaid" value={String(stats.pendingCount)} sub="open invoices" icon={Clock} color="rgba(239,68,68,0.07)" border="#f87171" />
+            </div>
+
+            {/* Chart */}
+            <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        <BarChart3 size={22} color="var(--primary-light)" />
+                        <h3 style={{ margin: 0, fontSize: '1.1rem' }}>POS Revenue & Order Volume</h3>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                        {(['7d', '30d'] as const).map(m => (
+                            <button key={m} onClick={() => setChartMode(m)}
+                                style={{ padding: '0.3rem 0.85rem', borderRadius: '20px', border: `1px solid ${chartMode === m ? 'var(--primary-light)' : 'var(--surface-border)'}`, background: chartMode === m ? 'var(--primary-light)' : 'transparent', color: chartMode === m ? '#fff' : 'var(--text-secondary)', fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+                                {m === '7d' ? 'Last 7 days' : 'Last 30 days'}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                <div style={{ height: '340px' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={visibleChart} margin={{ top: 5, right: 20, left: 0, bottom: 0 }}>
+                            <defs>
+                                <linearGradient id="revGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.03} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--surface-border)" vertical={false} />
+                            <XAxis dataKey="date" stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false}
+                                tickFormatter={s => { const d = new Date(s); return `${d.getDate()} ${d.toLocaleString('default', { month: 'short' })}`; }} />
+                            <YAxis yAxisId="rev" stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false}
+                                tickFormatter={v => fmtINR(v)} />
+                            <YAxis yAxisId="cnt" orientation="right" stroke="var(--text-tertiary)" fontSize={11} tickLine={false} axisLine={false}
+                                tickFormatter={v => `${v} bills`} />
+                            <Tooltip
+                                contentStyle={{ background: 'var(--surface-raised)', border: '1px solid var(--surface-border)', borderRadius: '10px', color: 'var(--text-primary)' }}
+                                formatter={(value: any, name: string) => name === 'revenue' ? [fmtINR(Number(value)), 'Revenue'] : [value, 'Bills']}
+                                labelFormatter={s => { const d = new Date(s); return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }); }}
+                            />
+                            <Legend iconType="circle" wrapperStyle={{ fontSize: '0.82rem', paddingTop: '0.5rem' }} />
+                            <Bar yAxisId="rev" dataKey="revenue" name="Revenue" fill="url(#revGradient)" stroke="#10b981" strokeWidth={1.5} radius={[4, 4, 0, 0]} />
+                            <Line yAxisId="cnt" dataKey="orders" name="Bills" type="monotone" stroke="#818cf8" strokeWidth={2.5} dot={{ r: 3, fill: '#818cf8' }} activeDot={{ r: 5 }} />
+                        </ComposedChart>
+                    </ResponsiveContainer>
                 </div>
             </div>
 
-            {/* Stats Overview */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '3rem' }}>
-                <div className="glass-panel animate-fade-in delay-100" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', animationFillMode: 'forwards' }}>
-                    <div style={{ background: 'hsla(152, 60%, 40%, 0.2)', borderRadius: '12px', padding: '1rem' }}>
-                        <ReceiptText size={24} color="var(--primary-light)" />
+            {/* Cash vs Credit Visual Split */}
+            {!loading && stats.totalRevenue > 0 && (
+                <div className="glass-panel" style={{ padding: '1.25rem 1.5rem', marginBottom: '2rem' }}>
+                    <p style={{ margin: '0 0 0.6rem', fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Payment Mode Split</p>
+                    <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', height: '28px', gap: '2px' }}>
+                        <div style={{ flex: stats.cashRevenue, background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '0.75rem', fontWeight: 700, minWidth: '2px' }}>
+                            {stats.totalRevenue > 0 && Math.round(stats.cashRevenue * 100 / stats.totalRevenue) > 8 ? `Cash ${Math.round(stats.cashRevenue * 100 / stats.totalRevenue)}%` : ''}
+                        </div>
+                        <div style={{ flex: stats.creditRevenue, background: '#818cf8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '0.75rem', fontWeight: 700, minWidth: '2px' }}>
+                            {stats.totalRevenue > 0 && Math.round(stats.creditRevenue * 100 / stats.totalRevenue) > 8 ? `Credit/UPI ${Math.round(stats.creditRevenue * 100 / stats.totalRevenue)}%` : ''}
+                        </div>
                     </div>
-                    <div>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Recent Orders (Trend)</p>
-                        <h2 style={{ margin: 0 }}>{loading ? '-' : stats.totalOrders}</h2>
-                    </div>
-                </div>
-
-                <div className="glass-panel animate-fade-in delay-200" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', animationFillMode: 'forwards' }}>
-                    <div style={{ background: 'hsla(45, 93%, 47%, 0.2)', borderRadius: '12px', padding: '1rem' }}>
-                        <TrendingUp size={24} color="var(--secondary)" />
-                    </div>
-                    <div>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Today's POS Revenue</p>
-                        <h2 style={{ margin: 0 }}>{loading ? '-' : `₹${stats.todayRevenue.toLocaleString()}`}</h2>
+                    <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.5rem', fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>
+                        <span>🟢 Cash: {fmtINR(stats.cashRevenue)}</span>
+                        <span>🟣 Credit/UPI: {fmtINR(stats.creditRevenue)}</span>
                     </div>
                 </div>
+            )}
 
-                <div className="glass-panel animate-fade-in delay-300" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', animationFillMode: 'forwards', borderLeft: '4px solid var(--primary)' }}>
-                    <div style={{ background: 'hsla(152, 60%, 40%, 0.2)', borderRadius: '12px', padding: '1rem' }}>
-                        <TrendingUp size={24} color="var(--primary-light)" />
-                    </div>
-                    <div>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Gross B2C Revenue (Trend)</p>
-                        <h2 style={{ margin: 0, color: 'var(--primary-light)' }}>
-                            {loading ? '-' : `₹${stats.totalRevenue.toLocaleString()}`}
-                        </h2>
-                    </div>
-                </div>
-            </div>
-
-            <div style={{ marginBottom: '3rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                    <BarChart3 size={24} color="var(--primary-light)" />
-                    <h2 style={{ margin: 0, fontSize: '1.25rem' }}>POS Sales Analytics</h2>
-                </div>
-                <SalesChart data={chartData} />
-            </div>
-
-            <h3 style={{ marginBottom: '1rem' }}>Recent POS Orders</h3>
-
+            {/* Recent POS Orders */}
+            <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ReceiptText size={20} color="var(--primary-light)" /> Recent POS Orders
+            </h3>
             {loading ? (
-                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-tertiary)' }}>
-                    Loading recent orders...
-                </div>
+                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-tertiary)' }}>Loading...</div>
             ) : orders.length === 0 ? (
                 <div className="glass-panel" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
                     <ShoppingCart size={48} color="var(--surface-border)" style={{ marginBottom: '1rem' }} />
                     <h3 style={{ color: 'var(--text-secondary)' }}>No POS Orders</h3>
-                    <p style={{ color: 'var(--text-tertiary)', marginBottom: '1.5rem' }}>You haven't processed any walk-in transactions yet.</p>
+                    <p style={{ color: 'var(--text-tertiary)', marginBottom: '1.5rem' }}>No walk-in transactions yet.</p>
                     <Link to="/pos" className="btn btn-secondary animate-pulse" style={{ textDecoration: 'none' }}>Create First Bill</Link>
                 </div>
             ) : (
-                <div className="dashboard-grid" style={{ marginTop: '0' }}>
-                    {orders.map((o, i) => (
-                        <div key={o.id} className={`glass-panel dashboard-card animate-fade-in delay-${Math.min((i + 1) * 100, 300)}`} style={{ animationFillMode: 'forwards' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                <div>
-                                    <h4 style={{ margin: 0, fontSize: '1.125rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>{o.retailerName}</h4>
-                                    <p style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>{o.orderNumber}</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem' }}>
+                    {orders.map((o) => {
+                        const amt = Number(o.grandTotal || o.netAmount || o.amount || 0);
+                        const isPaid = o.status === 'paid' || o.modeOfPayment === 'Cash';
+                        return (
+                            <div key={o.id} className="glass-panel" style={{ padding: '1rem 1.25rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.6rem' }}>
+                                    <div style={{ minWidth: 0 }}>
+                                        <h4 style={{ margin: 0, fontSize: '1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '160px' }}>{o.retailerName || 'Walk-in'}</h4>
+                                        <p style={{ color: 'var(--text-tertiary)', fontSize: '0.78rem', margin: '2px 0 0' }}>{o.orderNumber}</p>
+                                    </div>
+                                    <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--primary-light)', whiteSpace: 'nowrap', marginLeft: '0.5rem' }}>{fmtINR(amt)}</span>
                                 </div>
-                                <span className={`status-badge big`} style={{ backgroundColor: 'hsla(152, 60%, 40%, 0.1)', color: 'var(--primary-light)', padding: '0.25rem 0.6rem', fontSize: '0.8rem', borderRadius: '12px' }}>
-                                    ₹{o.grandTotal.toLocaleString()}
-                                </span>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.6rem', borderTop: '1px solid var(--surface-border)', fontSize: '0.78rem' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>{o.createdAt?.toDate ? o.createdAt.toDate().toLocaleDateString('en-IN') : 'N/A'}</span>
+                                    <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                                        <span style={{ padding: '2px 8px', borderRadius: '99px', fontSize: '0.72rem', fontWeight: 600, background: isPaid ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)', color: isPaid ? '#10b981' : '#f59e0b' }}>
+                                            {isPaid ? 'Paid' : 'Pending'}
+                                        </span>
+                                        <span style={{ padding: '2px 8px', borderRadius: '99px', fontSize: '0.72rem', fontWeight: 600, background: 'rgba(99,102,241,0.1)', color: '#818cf8' }}>
+                                            {o.modeOfPayment || 'N/A'}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
-                            <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--surface-border)', display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
-                                <span style={{ color: 'var(--text-secondary)' }}>{o.createdAt?.toDate ? o.createdAt.toDate().toLocaleDateString() : 'N/A'}</span>
-                                <Link to={`/order-history`} style={{ color: 'var(--primary-light)', textDecoration: 'none', fontWeight: 500 }}>View →</Link>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
+
+            <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+                <Link to="/order-history" style={{ color: 'var(--primary-light)', textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem' }}>
+                    View All Orders in History →
+                </Link>
+            </div>
         </div>
     );
 }
