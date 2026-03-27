@@ -178,7 +178,7 @@ export function OnlineDashboardPage() {
                                 tickFormatter={v => `${v}`} />
                             <Tooltip
                                 contentStyle={{ background: 'var(--surface-raised)', border: '1px solid var(--surface-border)', borderRadius: '10px', color: 'var(--text-primary)' }}
-                                formatter={(value: any, name: string) => name === 'revenue' ? [fmtINR(Number(value)), 'Revenue'] : [value, 'Orders']}
+                                formatter={(value: any, name?: string) => name === 'revenue' ? [fmtINR(Number(value)), 'Revenue'] : [value, 'Orders']}
                                 labelFormatter={s => { const d = new Date(s); return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }); }}
                             />
                             <Legend iconType="circle" wrapperStyle={{ fontSize: '0.82rem', paddingTop: '0.5rem' }} />

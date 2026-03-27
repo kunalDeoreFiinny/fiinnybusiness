@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react';
 import { query, orderBy, getDocs, limit } from 'firebase/firestore';
 import { db } from '../firebase';
-import { ShoppingCart, TrendingUp, ShieldAlert, ReceiptText, IndianRupee, Calendar, Users, CreditCard, Clock, BarChart3 } from 'lucide-react';
+import { ShoppingCart, TrendingUp, ShieldAlert, ReceiptText, IndianRupee, Calendar, CreditCard, Clock, BarChart3 } from 'lucide-react';
 import { getTenantCollection } from '../utils/tenantPath';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
     ResponsiveContainer, ComposedChart, Bar, Line,
-    XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-    Area, AreaChart
+    XAxis, YAxis, CartesianGrid, Tooltip, Legend
 } from 'recharts';
 
 interface SalesOrder {
@@ -84,7 +83,7 @@ export default function B2CDashboardPage() {
                     const ts: Date = data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || 0);
                     const dateStr = ts.toISOString().split('T')[0];
 
-                    fetchedOrders.push({ id: doc.id, ...data });
+                    fetchedOrders.push({ ...data, id: doc.id });
                     totalOrders++;
                     totalRevenue += amount;
 
@@ -216,7 +215,7 @@ export default function B2CDashboardPage() {
                                 tickFormatter={v => `${v} bills`} />
                             <Tooltip
                                 contentStyle={{ background: 'var(--surface-raised)', border: '1px solid var(--surface-border)', borderRadius: '10px', color: 'var(--text-primary)' }}
-                                formatter={(value: any, name: string) => name === 'revenue' ? [fmtINR(Number(value)), 'Revenue'] : [value, 'Bills']}
+                                formatter={(value: any, name?: string) => name === 'revenue' ? [fmtINR(Number(value)), 'Revenue'] : [value, 'Bills']}
                                 labelFormatter={s => { const d = new Date(s); return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }); }}
                             />
                             <Legend iconType="circle" wrapperStyle={{ fontSize: '0.82rem', paddingTop: '0.5rem' }} />
