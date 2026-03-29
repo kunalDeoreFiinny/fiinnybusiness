@@ -1,6 +1,7 @@
 export interface UserProfile {
     phoneNumber: string;
     displayName?: string;
+    name?: string;
     email?: string;
     photoURL?: string;
     createdAt?: Date;

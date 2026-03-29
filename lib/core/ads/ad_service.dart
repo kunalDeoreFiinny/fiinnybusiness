@@ -129,51 +129,55 @@ class AdService {
       final completer = Completer<void>();
 
       Future<void> initializeMobileAds() async {
-        if (await consentManager.canRequestAds()) {
-          final initStatus = await MobileAds.instance.initialize();
-          assert(() {
-            final entries = initStatus.adapterStatuses.entries.map((entry) {
-              final state = entry.value.state.toString().split('.').last;
-              return '${entry.key}:$state(${entry.value.description})';
-            }).join(', ');
-            debugPrint('[AdService] MobileAds initialised (adapters: $entries)');
-            return true;
-          }());
-          await MobileAds.instance.updateRequestConfiguration(
-            RequestConfiguration(
-              testDeviceIds: <String>[],
-            ),
-          );
-          _adsEnabled = true;
-          _ready = true;
-          preloadInterstitial();
-          preloadRewarded();
-        } else {
-          debugPrint('[AdService] UMP Consent missing or denied. Ads disabled.');
+        try {
+          if (await consentManager.canRequestAds()) {
+            final initStatus = await MobileAds.instance.initialize();
+            assert(() {
+              final entries = initStatus.adapterStatuses.entries.map((entry) {
+                final state = entry.value.state.toString().split('.').last;
+                return '${entry.key}:$state(${entry.value.description})';
+              }).join(', ');
+              debugPrint('[AdService] MobileAds initialised (adapters: $entries)');
+              return true;
+            }());
+            await MobileAds.instance.updateRequestConfiguration(
+              RequestConfiguration(
+                testDeviceIds: <String>[],
+              ),
+            );
+            _adsEnabled = true;
+            _ready = true;
+            preloadInterstitial();
+            preloadRewarded();
+          } else {
+            debugPrint('[AdService] UMP Consent missing or denied. Ads disabled.');
+            _adsEnabled = false;
+            _ready = false;
+          }
+        } catch (err, stackTrace) {
+          debugPrint('[AdService] initializeMobileAds error: $err\n$stackTrace');
           _adsEnabled = false;
           _ready = false;
+        } finally {
+          if (!completer.isCompleted) completer.complete();
         }
-        if (!completer.isCompleted) completer.complete();
       }
 
       consentManager.requestConsentInfoUpdate(
         params,
         () async {
-          // If consent is required, show the form
           if (await consentManager.isConsentFormAvailable()) {
-            final consentStatus = await consentManager.getConsentStatus();
-            if (consentStatus == ConsentStatus.required) {
-              await ConsentForm.loadAndShowConsentFormIfRequired(
-                (FormError? formError) {
-                  if (formError != null) {
-                    debugPrint('[AdService] UMP Consent Form error: ${formError.message}');
-                  }
-                },
-              );
-            }
+            ConsentForm.loadAndShowConsentFormIfRequired(
+              (FormError? formError) async {
+                if (formError != null) {
+                  debugPrint('[AdService] UMP Consent Form error: ${formError.message}');
+                }
+                await initializeMobileAds();
+              },
+            );
+          } else {
+             await initializeMobileAds();
           }
-
-          await initializeMobileAds();
         },
         (FormError formError) async {
           debugPrint('[AdService] UMP Consent update failed: ${formError.message}');
@@ -209,8 +213,10 @@ class AdService {
     if (!_adsEnabled || _inter != null) {
       return;
     }
+    final unitId = AdIds.interstitial;
+    if (unitId.isEmpty) return;
     InterstitialAd.load(
-      adUnitId: AdIds.interstitial,
+      adUnitId: unitId,
       request: AdService.buildAdRequest(),
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
@@ -237,8 +243,10 @@ class AdService {
     if (!_adsEnabled || _rewarded != null) {
       return;
     }
+    final unitId = AdIds.rewarded;
+    if (unitId.isEmpty) return;
     RewardedAd.load(
-      adUnitId: AdIds.rewarded,
+      adUnitId: unitId,
       request: AdService.buildAdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (ad) {

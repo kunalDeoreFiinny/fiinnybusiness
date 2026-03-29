@@ -56,12 +56,14 @@ export const incomeConverter = {
     },
     fromFirestore: (snap: DocumentSnapshot) => {
         const data = snap.data() as any;
+        const parseDate = (val: any) => val?.toDate ? val.toDate() : (val ? new Date(val) : new Date());
         return {
             ...data,
             id: snap.id,
-            date: (data.date as Timestamp).toDate(),
+            date: parseDate(data.date),
             labels: data.labels || [],
             attachments: data.attachments || [],
+            source: data.source || '',
         } as IncomeItem;
     }
 };

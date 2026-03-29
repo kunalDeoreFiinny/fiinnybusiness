@@ -84,13 +84,14 @@ export const expenseConverter = {
     },
     fromFirestore: (snap: DocumentSnapshot) => {
         const data = snap.data() as any;
+        const parseDate = (val: any) => val?.toDate ? val.toDate() : (val ? new Date(val) : new Date());
         return {
             ...data,
             id: snap.id,
-            date: (data.date as Timestamp).toDate(),
-            billDueDate: data.billDueDate ? (data.billDueDate as Timestamp).toDate() : undefined,
-            statementStart: data.statementStart ? (data.statementStart as Timestamp).toDate() : undefined,
-            statementEnd: data.statementEnd ? (data.statementEnd as Timestamp).toDate() : undefined,
+            date: parseDate(data.date),
+            billDueDate: data.billDueDate ? parseDate(data.billDueDate) : undefined,
+            statementStart: data.statementStart ? parseDate(data.statementStart) : undefined,
+            statementEnd: data.statementEnd ? parseDate(data.statementEnd) : undefined,
             friendIds: data.friendIds || [],
             settledFriendIds: data.settledFriendIds || [],
             labels: data.labels || [],

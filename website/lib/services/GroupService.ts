@@ -42,7 +42,7 @@ export class GroupService {
                     memberAvatars: data.memberAvatars,
                     memberDisplayNames: data.memberDisplayNames,
                     createdBy: data.createdBy || "",
-                    createdAt: (data.createdAt as Timestamp).toDate(),
+                    createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : new Date()),
                     avatarUrl: data.avatarUrl
                 } as GroupModel;
             });

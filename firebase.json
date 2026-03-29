@@ -104,6 +104,22 @@
           "destination": "/index.html"
         }
       ]
+    },
+    {
+      "target": "admin",
+      "public": "admin/dist",
+      "cleanUrls": true,
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
     }
   ]
 }

@@ -9,6 +9,32 @@ class AuthService {
 
   String? currentUserPhone; // New: store E.164 phone for global use
 
+  /// Records one app-open event per session into activityLog subcollection.
+  /// Structure: users/{phone}/activityLog/{date}  →  { date, openCount (incremented), lastOpenAt }
+  Future<void> _recordActivityLog(String phone) async {
+    try {
+      final today = DateTime.now().toIso8601String().split('T')[0]; // YYYY-MM-DD
+      final logRef = _firestore
+          .collection('users')
+          .doc(phone)
+          .collection('activityLog')
+          .doc(today);
+      await logRef.set({
+        'date': today,
+        'openCount': FieldValue.increment(1),
+        'lastOpenAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      // NEW: Update parent user doc with last log date so Admin Dashboard can filter active users.
+      await _firestore.collection('users').doc(phone).set({
+        'lastLogDate': today,
+        'lastLogAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (_) {
+      // non-critical — don't block login
+    }
+  }
+
   /// Google Sign-In (Phone is primary ID in Firestore)
   Future<User?> signInWithGoogle({
     required String phone,
@@ -52,6 +78,8 @@ class AuthService {
           'avatar': user.photoURL ?? '',
         });
       }
+      // Record session
+      await _recordActivityLog(e164Phone);
     }
     return user;
   }
@@ -88,6 +116,8 @@ class AuthService {
               'createdAt': FieldValue.serverTimestamp(),
             });
           }
+          // Record session
+          await _recordActivityLog(e164Phone);
         }
         verificationCompleted(credential);
       },

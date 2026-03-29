@@ -215,17 +215,18 @@ export default function Dashboard() {
 
     const loadDashboardData = async (userId: string) => {
         setDataLoading(true);
+        console.log("[Dashboard] Loading data for userId:", userId);
         try {
             const [
-                expensesData,
-                incomesData,
-                goalsData,
-                loansData,
-                assetsData,
-                groupsData,
-                friendsData,
-                profileData
-            ] = await Promise.all([
+                expensesResult,
+                incomesResult,
+                goalsResult,
+                loansResult,
+                assetsResult,
+                groupsResult,
+                friendsResult,
+                profileResult
+            ] = await Promise.allSettled([
                 getExpenses(userId),
                 getIncomes(userId),
                 getGoals(userId),
@@ -235,6 +236,21 @@ export default function Dashboard() {
                 getFriends(userId),
                 getUserProfile(userId)
             ]);
+
+            const getOrDefault = <T,>(result: PromiseSettledResult<T>, fallback: T, label: string): T => {
+                if (result.status === "fulfilled") return result.value;
+                console.error(`[Dashboard] Failed to load ${label}:`, (result as PromiseRejectedResult).reason);
+                return fallback;
+            };
+
+            const expensesData = getOrDefault(expensesResult, [] as any[], "expenses");
+            const incomesData  = getOrDefault(incomesResult,  [] as any[], "incomes");
+            const goalsData    = getOrDefault(goalsResult,    [] as any[], "goals");
+            const loansData    = getOrDefault(loansResult,    [] as any[], "loans");
+            const assetsData   = getOrDefault(assetsResult,   [] as any[], "assets");
+            const groupsData   = getOrDefault(groupsResult,   [] as any[], "groups");
+            const friendsData  = getOrDefault(friendsResult,  [] as any[], "friends");
+            const profileData  = getOrDefault(profileResult,  null, "profile");
 
             // Initialize FX Service
             await FxService.getInstance().init();
@@ -287,7 +303,7 @@ export default function Dashboard() {
             setGroups(groupsData);
             setFriends(friendsData);
             setUserProfile(profileData);
-            setUserName(profileData?.displayName || "there");
+            setUserName(profileData?.displayName || (profileData as any)?.name || "there");
             // @ts-ignore
             setUserEmail(profileData?.email || null);
 

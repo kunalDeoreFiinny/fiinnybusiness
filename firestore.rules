@@ -57,8 +57,14 @@ service cloud.firestore {
 
     // --- NEW: secure users subtree used by notifications/prefs/feed ---
     match /users/{uid} {
-      // User root doc: the owner can read/write
-      allow read, write: if isUserOwner(uid);
+      // User root doc: Web admin dashboard needs public read.
+      allow read: if true;
+      allow write: if isUserOwner(uid);
+
+      match /activityLog/{date} {
+        allow read: if true;
+        allow write: if isUserOwner(uid);
+      }
 
       // Notification preferences: owner only
       match /prefs/{doc} {
@@ -89,12 +95,40 @@ service cloud.firestore {
     match /users/{uid}/incomes/{docId} {
       allow read, write: if isUserOwner(uid);
     }
+    // User Goals
+    match /users/{uid}/goals/{docId} {
+      allow read, write: if isUserOwner(uid);
+    }
+    // User Loans
+    match /users/{uid}/loans/{docId} {
+      allow read, write: if isUserOwner(uid);
+    }
+    // User Assets
+    match /users/{uid}/assets/{docId} {
+      allow read, write: if isUserOwner(uid);
+    }
+    // User Friends
+    match /users/{uid}/friends/{docId} {
+      allow read, write: if isUserOwner(uid);
+    }
+    // User Credit Cards
+    match /users/{uid}/credit_cards/{docId} {
+      allow read, write: if isUserOwner(uid);
+    }
+    // User Budget
+    match /users/{uid}/budgets/{docId} {
+      allow read, write: if isUserOwner(uid);
+    }
     // User Bill Reminders
     match /users/{uid}/bill_reminders/{docId} {
       allow read, write: if isUserOwner(uid);
     }
     // Ingest Jobs (for off-device processing)
     match /users/{uid}/ingest_jobs/{jobId} {
+      allow read, write: if isUserOwner(uid);
+    }
+    // Catch-all for any other user subcollections
+    match /users/{uid}/{subcollection}/{docId} {
       allow read, write: if isUserOwner(uid);
     }
     

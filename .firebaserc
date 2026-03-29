@@ -10,6 +10,9 @@
         ],
         "wiki": [
           "fiinny-wiki"
+        ],
+        "admin": [
+          "fiinny-admin"
         ]
       }
     }

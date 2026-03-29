@@ -8,10 +8,19 @@ export class AuthService {
         const snap = await getDoc(docRef);
         if (snap.exists()) {
             const data = snap.data();
+            
+            let parsedDate: Date | undefined;
+            if (data.createdAt?.toDate) {
+                parsedDate = data.createdAt.toDate();
+            } else if (data.createdAt) {
+                parsedDate = new Date(data.createdAt);
+            }
+
             return {
                 phoneNumber: snap.id,
                 ...data,
-                createdAt: data.createdAt ? (data.createdAt as Timestamp).toDate() : undefined
+                displayName: data.displayName || data.name,
+                createdAt: parsedDate
             } as UserProfile;
         }
         return null;
