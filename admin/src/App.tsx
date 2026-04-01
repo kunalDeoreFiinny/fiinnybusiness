@@ -1,13 +1,14 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { collection, getDocs, Timestamp } from 'firebase/firestore';
-import { db } from './firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from './firebase';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import {
   Activity, Users, TrendingUp, Search, RefreshCw, Smartphone,
   Download, Zap, Globe, Hash, ChevronUp,
-  ChevronDown, BarChart2, UserCheck
+  ChevronDown, BarChart2, UserCheck, PieChart, CreditCard
 } from 'lucide-react';
 import './index.css';
 
@@ -22,8 +23,28 @@ interface UserWithActivity extends FiinnyUser {
   daysActive: number; totalSessions: number; activityLoaded: boolean;
 }
 interface DAUEntry { date: string; count: number; users: FiinnyUser[]; }
-type View = 'overview' | 'dau' | 'users' | 'topusers' | 'retention';
+interface ParsedMoneyReport {
+  totalParsed: number;
+  totalDebit: number;
+  totalCredit: number;
+  friendsMoney: number;
+  expenseCount: number;
+  incomeCount: number;
+  totalCount: number;
+  topTransactions?: {
+    id: string;
+    amount: number;
+    date: string;
+    type: "expense" | "income";
+    userId: string;
+    userName: string;
+    userPhone: string;
+    message: string;
+  }[];
+}
+type View = 'overview' | 'dau' | 'users' | 'topusers' | 'retention' | 'parsed_money';
 type Theme = 'dark' | 'light' | 'purple' | 'midnight' | 'saffron';
+// ... (rest of types and helpers)
 type SortDir = 'asc' | 'desc';
 
 // Safe Timestamp to Date string conversion
@@ -94,7 +115,7 @@ const themeColors: Record<Theme, string> = {
 export default function App() {
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('fa-theme') as Theme) || 'dark');
   const [view, setView] = useState<View>('overview');
-  const [startDate, setStartDate] = useState(daysAgo(6));
+  const [startDate, setStartDate] = useState('2023-01-01');
   const [endDate, setEndDate] = useState(todayStr());
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
@@ -105,6 +126,27 @@ export default function App() {
   const [selectedDay, setSelectedDay] = useState<DAUEntry | null>(null);
   const [sortKey, setSortKey] = useState<keyof UserWithActivity>('totalSessions');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
+
+  // Parsed Money state
+  const [report, setReport] = useState<ParsedMoneyReport | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
+
+  const fetchReport = useCallback(async () => {
+    setReportLoading(true);
+    try {
+      const getReport = httpsCallable(functions, 'getParsedMoneyReport');
+      const res = await getReport({ startDate, endDate });
+      setReport(res.data as ParsedMoneyReport);
+    } catch (err) {
+      console.error('fetchReport error:', err);
+    } finally {
+      setReportLoading(false);
+    }
+  }, [startDate, endDate]);
+
+  useEffect(() => {
+    if (view === 'parsed_money') fetchReport();
+  }, [view, fetchReport]);
 
 
   // Apply theme
@@ -251,11 +293,12 @@ export default function App() {
   };
 
   const navItems = [
-    { id: 'overview',  label: 'Overview',    icon: <BarChart2 size={17} /> },
-    { id: 'dau',       label: 'DAU Chart',   icon: <Activity size={17} /> },
-    { id: 'users',     label: 'User Lookup', icon: <Search size={17} /> },
-    { id: 'topusers',  label: 'Top Users',   icon: <TrendingUp size={17} /> },
-    { id: 'retention', label: 'Retention',   icon: <UserCheck size={17} /> },
+    { id: 'overview',     label: 'Overview',      icon: <BarChart2 size={17} /> },
+    { id: 'parsed_money', label: 'Parsed Money',  icon: <PieChart size={17} /> },
+    { id: 'dau',          label: 'DAU Chart',     icon: <Activity size={17} /> },
+    { id: 'users',        label: 'User Lookup',   icon: <Search size={17} /> },
+    { id: 'topusers',     label: 'Top Users',     icon: <TrendingUp size={17} /> },
+    { id: 'retention',    label: 'Retention',     icon: <UserCheck size={17} /> },
   ] as const;
 
   // Date preset handler
@@ -324,10 +367,10 @@ export default function App() {
         <header className="topbar">
           <div className="topbar-title">
             {navItems.find(n => n.id === view)?.label ?? 'Dashboard'}
-            {(loading || activityLoading) && (
+            {(loading || activityLoading || reportLoading) && (
               <span style={{ marginLeft: '0.75rem', fontSize: '0.72rem', color: 'var(--text3)', fontWeight: 400 }}>
                 <RefreshCw size={11} className="spin" style={{ display: 'inline', marginRight: 4 }} />
-                {loading ? 'Fetching users' : 'Loading sessions'}…
+                {loading ? 'Fetching users' : activityLoading ? 'Loading sessions' : 'Calculating money'}…
               </span>
             )}
           </div>
@@ -339,7 +382,8 @@ export default function App() {
             <input type="date" value={endDate} max={todayStr()} min={startDate} onChange={e => setEndDate(e.target.value)} />
             <button className="btn btn-ghost" onClick={() => setPreset(1)}>Today</button>
             <button className="btn btn-ghost" onClick={() => setPreset(7)}>7d</button>
-            <button className="btn btn-ghost" onClick={() => setPreset(30)}>30d</button>
+            <button className="btn btn-ghost" onClick={() => setPreset(30)}>300d</button>
+            <button className="btn btn-ghost" onClick={() => { setStartDate('2023-01-01'); setEndDate(todayStr()); }}>Till Date</button>
           </div>
         </header>
 
@@ -449,6 +493,192 @@ export default function App() {
                   ))}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* ── PARSED MONEY ── */}
+          {view === 'parsed_money' && (
+            <div className="fade-up">
+              <div className="card" style={{ marginBottom: '1.25rem', padding: '1.5rem', background: 'linear-gradient(135deg, var(--bg-card) 0%, rgba(124, 58, 237, 0.05) 100%)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                  <div className="kpi-icon" style={{ background: 'var(--purple-soft)', width: 48, height: 48 }}>
+                    <Smartphone size={24} color="var(--purple)" />
+                  </div>
+                  <div>
+                    <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>Total Money Parsed</h1>
+                    <p style={{ color: 'var(--text3)', margin: 0, fontSize: '0.85rem' }}>Investor Report — Aggregated platform volume</p>
+                  </div>
+                  <button className="btn btn-primary" style={{ marginLeft: 'auto' }} onClick={fetchReport} disabled={reportLoading}>
+                    <RefreshCw size={14} className={reportLoading ? 'spin' : ''} /> Recalculate
+                  </button>
+                </div>
+
+                <div className="kpi-row" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+                  <div className="kpi">
+                    <div className="kpi-glow" style={{ background: 'var(--purple)' }} />
+                    <div className="kpi-label">Total Volume</div>
+                    <div className="kpi-value" style={{ color: 'var(--purple)', fontSize: '2.2rem' }}>
+                      ₹{fmtNum(report?.totalParsed ?? 0)}
+                    </div>
+                    <div className="kpi-sub">processed till date</div>
+                  </div>
+                  <div className="kpi">
+                    <div className="kpi-glow" style={{ background: 'var(--amber)' }} />
+                    <div className="kpi-label">Shared with Friends</div>
+                    <div className="kpi-value" style={{ color: 'var(--amber)' }}>
+                      ₹{fmtNum(report?.friendsMoney ?? 0)}
+                    </div>
+                    <div className="kpi-sub">split transactions</div>
+                  </div>
+                  <div className="kpi">
+                    <div className="kpi-glow" style={{ background: 'var(--purple-soft)' }} />
+                    <div className="kpi-label">Total Transactions</div>
+                    <div className="kpi-value">
+                      {fmtNum(report?.totalCount ?? 0)}
+                    </div>
+                    <div className="kpi-sub">events monitored</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid-2">
+                <div className="card">
+                  <div className="card-header">
+                    <div className="dot" style={{ background: 'var(--pink)' }} />
+                    <h2>Expenses (Debits)</h2>
+                  </div>
+                  <div style={{ padding: '1rem 0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <span style={{ color: 'var(--text2)' }}>Total Amount</span>
+                      <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--pink)' }}>₹{report?.totalDebit.toLocaleString('en-IN') ?? 0}</span>
+                    </div>
+                    <div className="bar-track" style={{ height: 12 }}>
+                      <div className="bar-fill" style={{ width: '100%', background: 'var(--pink)' }} />
+                    </div>
+                    <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem' }}>
+                      <div style={{ flex: 1, padding: '0.75rem', background: 'var(--bg-shell)', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text3)', textTransform: 'uppercase' }}>Count</div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>{report?.expenseCount ?? 0}</div>
+                      </div>
+                      <div style={{ flex: 1, padding: '0.75rem', background: 'var(--bg-shell)', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text3)', textTransform: 'uppercase' }}>Avg Ticket</div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>₹{Math.round((report?.totalDebit ?? 0) / (report?.expenseCount || 1))}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="card">
+                  <div className="card-header">
+                    <div className="dot" style={{ background: 'var(--green)' }} />
+                    <h2>Incomes (Credits)</h2>
+                  </div>
+                  <div style={{ padding: '1rem 0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <span style={{ color: 'var(--text2)' }}>Total Amount</span>
+                      <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--green)' }}>₹{report?.totalCredit.toLocaleString('en-IN') ?? 0}</span>
+                    </div>
+                    <div className="bar-track" style={{ height: 12 }}>
+                      <div className="bar-fill" style={{ width: '100%', background: 'var(--green)' }} />
+                    </div>
+                    <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem' }}>
+                      <div style={{ flex: 1, padding: '0.75rem', background: 'var(--bg-shell)', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text3)', textTransform: 'uppercase' }}>Count</div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>{report?.incomeCount ?? 0}</div>
+                      </div>
+                      <div style={{ flex: 1, padding: '0.75rem', background: 'var(--bg-shell)', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text3)', textTransform: 'uppercase' }}>Avg Ticket</div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>₹{Math.round((report?.totalCredit ?? 0) / (report?.incomeCount || 1))}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="card" style={{ marginTop: '1.25rem' }}>
+                <div className="card-header">
+                  <div className="dot" style={{ background: 'var(--purple)' }} />
+                  <h2>Achievement Breakdown</h2>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', padding: '0.5rem' }}>
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <div className="kpi-icon" style={{ background: 'var(--purple-soft)' }}><CreditCard size={18} color="var(--purple)" /></div>
+                    <div>
+                      <div style={{ fontWeight: 700 }}>Financial Ingestors</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text3)' }}>Monitoring {report?.totalCount ?? 0} source points including SMS and Gmail parsers.</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <div className="kpi-icon" style={{ background: 'var(--amber-soft)' }}><Users size={18} color="var(--amber)" /></div>
+                    <div>
+                      <div style={{ fontWeight: 700 }}>Social Economy</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text3)' }}>₹{fmtNum(report?.friendsMoney ?? 0)} handled via peer-to-peer sharing and group settlements.</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <div className="kpi-icon" style={{ background: 'var(--green-soft)' }}><TrendingUp size={18} color="var(--green)" /></div>
+                    <div>
+                      <div style={{ fontWeight: 700 }}>Retention Driver</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text3)' }}>Users have tracked an average of ₹{fmtNum((report?.totalParsed ?? 0) / (allUsers.length || 1))} each.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── TOP 10 VERIFICATION TABLE ── */}
+              {report?.topTransactions && report.topTransactions.length > 0 && (
+                <div className="card" style={{ marginTop: '1.25rem' }}>
+                  <div className="card-header">
+                    <div className="dot" style={{ background: 'var(--amber)' }} />
+                    <h2>Top 10 High-Volume Transactions</h2>
+                    <span className="card-meta">Data Verification List</span>
+                  </div>
+                  <div className="table-wrap">
+                    <table style={{ borderCollapse: 'separate', borderSpacing: '0 4px' }}>
+                      <thead style={{ background: 'var(--bg-shell)', position: 'sticky', top: 0, zIndex: 10 }}>
+                        <tr>
+                          <th style={{ borderRadius: '8px 0 0 8px' }}>Amount</th>
+                          <th>User Details</th>
+                          <th>Date</th>
+                          <th>Type</th>
+                          <th style={{ borderRadius: '0 8px 8px 0' }}>Raw Message / Memo</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {report.topTransactions.map((tx) => (
+                          <tr key={tx.id} style={{ background: 'var(--bg-shell)', transition: 'transform 0.2s' }}>
+                            <td style={{ padding: '1rem', borderLeft: `4px solid ${tx.type === 'expense' ? 'var(--pink)' : 'var(--green)'}`, borderRadius: '8px 0 0 8px' }}>
+                              <div style={{ fontWeight: 800, fontSize: '1.1rem', color: tx.type === 'expense' ? 'var(--pink)' : 'var(--green)' }}>
+                                ₹{tx.amount.toLocaleString('en-IN')}
+                              </div>
+                            </td>
+                            <td style={{ padding: '1rem' }}>
+                              <div style={{ fontWeight: 700 }}>{tx.userName}</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text3)' }} className="mono">{tx.userPhone}</div>
+                            </td>
+                            <td style={{ padding: '1rem', fontSize: '0.85rem' }}>
+                              {new Date(tx.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </td>
+                            <td style={{ padding: '1rem' }}>
+                              <span className={`badge ${tx.type === 'expense' ? 'badge-pink' : 'badge-green'}`} style={{ textTransform: 'capitalize' }}>
+                                {tx.type}
+                              </span>
+                            </td>
+                            <td style={{ padding: '1rem', maxWidth: '350px' }}>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text2)', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={tx.message}>
+                                {tx.message}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div style={{ padding: '0.75rem', fontSize: '0.75rem', color: 'var(--text3)', textAlign: 'center', borderTop: '1px solid var(--border)' }}>
+                    Only top 10 items are shown to ensure performance.
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

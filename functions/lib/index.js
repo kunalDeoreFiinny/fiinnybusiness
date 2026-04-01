@@ -201,6 +201,7 @@ export * from "./watchdog.js";
 export * from "./social_notifications.js";
 export { createPaymentOrder, verifyPaymentSignature, cancelSubscription, razorpayWebhook } from "./subscriptions.js";
 export { createSaaSOrder, verifySaaSPayment, getSaaSSubscription, } from "./saasSubscriptions.js";
+export { getParsedMoneyReport } from "./financials.js";
 export { fiinnyBrainQuery } from "./fiinnyBrainQuery.js";
 /* ----------------------- New: Cloud reminder pipeline ---------------------- */
 /**

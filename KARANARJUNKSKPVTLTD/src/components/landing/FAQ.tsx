@@ -4,44 +4,36 @@ import { ChevronDown } from 'lucide-react';
 
 const faqs = [
     {
-        q: 'Is Fiinny Business free to use?',
-        a: 'Yes! Fiinny Business is completely free during our Early Adopter Program. You get full access to GST invoicing, inventory management, POS billing, payment links, analytics, and the AI advisor — all at no cost. We believe every Indian retailer deserves access to powerful business tools.',
+        q: 'Is KaranArjun OS free to use?',
+        a: 'Yes! KaranArjun OS is completely free during our Early Adopter Partnership program. You get full access to GST invoicing, smart inventory management, POS billing, Digital Khata, and analytics — all at zero cost. We are committed to empowering Indian retailers.',
     },
     {
-        q: 'Can I use it from anywhere in India — Kashmir, Northeast, rural areas?',
-        a: 'Absolutely! Fiinny Business is a web-based platform that works on any device with a browser — phone, tablet, or laptop. Whether you\'re in Kashmir, Kanyakumari, Assam, or a small town in Rajasthan, as long as you have internet, you can run your business. It also has offline support via PWA technology for areas with spotty connectivity.',
+        q: 'Can I use it in rural areas or with slow internet?',
+        a: 'Absolutely. KaranArjun is built with PWA technology, meaning it works offline. You can continue billing at your counter even if the internet goes down. Your data safe-syncs to our secure cloud as soon as you\'re back online. It works on any budget smartphone, tablet, or laptop.',
     },
     {
-        q: 'Does it support GST invoices?',
-        a: 'Yes, fully! You can generate professional GST-compliant invoices with GSTIN, HSN codes, CGST/SGST/IGST breakdowns, and business logo. Invoices can be downloaded as PDF or sent directly via WhatsApp. GST reports like GSTR-1 summary are also available in the Reports section.',
+        q: 'Does it support professional GST compliance?',
+        a: 'Yes. From HSN codes to CGST/SGST/IGST breakdowns, every invoice is 100% GST compliant. You can generate GSTR-1 summaries and share professional PDF invoices with your business logo instantly via WhatsApp.',
     },
     {
-        q: 'Is my business data private and secure?',
-        a: 'Your data is 100% private. Each business gets a completely isolated workspace (we call it a "tenant") — meaning no other user, admin, or entity can ever see your data. We use Google Firestore with strict security rules and row-level isolation. Your competitor\'s data and yours will never mix.',
+        q: 'How is my business data protected?',
+        a: 'Data privacy is our top priority. Your business operates in a strictly isolated digital "Tenant" workspace. We use bank-grade encryption and Google Firestore security protocols to ensure that your inventory, sales, and customer data are visible only to you.',
     },
     {
-        q: 'How is Fiinny different from Tally, Vyapar, or Busy?',
-        a: 'Tally costs ₹18,000+/year and requires a Windows desktop + CA knowledge. Vyapar is Android-only with limited B2B features. Busy/Marg is designed for accountants, not shop owners. Fiinny Business is free, works on any browser, handles both B2B and B2C billing, has an AI advisor, and is built for the modern Indian retailer — not a 1990s accountant.',
+        q: 'How is KaranArjun different from Tally or Vyapar?',
+        a: 'Tally is complex and requires specialized training. Vyapar is often limited to a single device. KaranArjun OS is a modern, web-native "Operating System" for your shop. It\'s faster (3-second billing), works on any device simultaneously, includes a Digital Khata, and is designed for the retailer, not just the accountant.',
     },
     {
-        q: 'Can my customers pay online via UPI or card?',
-        a: 'Yes! You can generate payment links from any invoice and share them via WhatsApp instantly. Customers can pay via UPI, debit card, credit card, or net banking — powered by Razorpay. Once paid, the invoice is automatically marked as paid in your dashboard.',
+        q: 'Can I manage customer Udhaar (Credit) digitally?',
+        a: 'Yes! Our Digital Khata feature replaces physical registers. You can track exactly who owes you what, set automated payment reminders via WhatsApp, and mark settlements with a single click.',
     },
     {
-        q: 'Does it work in Hindi or regional languages?',
-        a: 'We currently support English and Hindi interfaces, with more Indian languages coming soon. The app is designed with Indian business workflows in mind — including Indian number formatting (lakhs, crores), ₹ currency, and GST-specific features.',
+        q: 'What kind of printers and scanners are supported?',
+        a: 'KaranArjun supports standard 58mm and 80mm thermal receipt printers via browser print. For inventory, you can use any USB or Bluetooth barcode scanner, or even your phone\'s camera to scan items instantly.',
     },
     {
-        q: 'Can I print invoices and thermal receipts?',
-        a: 'Yes! You can generate professional PDF invoices from any browser. For thermal receipt printing, the POS billing module supports standard 58mm and 80mm thermal printers. You can also customize the invoice with your business logo, address, and branding.',
-    },
-    {
-        q: 'Can I add staff or employees to my account?',
-        a: 'Yes. As the owner (Admin), you can invite staff members with specific roles — Analyst (can view and bill) or custom roles via the Role Matrix. You control exactly what each team member can see and do. Great for managing cashiers, sales staff, or accountants.',
-    },
-    {
-        q: 'What happens to my data if I stop using Fiinny?',
-        a: 'Your data remains safe in your Firestore workspace. You can export all your invoices, customers, inventory, and reports as CSV or PDF at any time. We believe your data belongs to you — always. There are no lock-ins.',
+        q: 'Can I add multiple staff members?',
+        a: 'Yes. You can invite your sales staff, cashiers, or managers with specific "Role-Based Permissions". You decide exactly what they can see (e.g., billing only) and what stay private (e.g., profit reports).',
     },
 ];
 

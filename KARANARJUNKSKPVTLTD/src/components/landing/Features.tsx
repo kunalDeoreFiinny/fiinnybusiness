@@ -1,49 +1,50 @@
 import { motion } from 'framer-motion';
-import { Package, Calculator, BarChart3, CloudOff, ShieldCheck, Zap } from 'lucide-react';
+import { Package, Calculator, BarChart3, CloudOff, ShieldCheck, FileText } from 'lucide-react';
 
 const features = [
     {
-        icon: Package,
-        title: "Inventory Mastery",
-        desc: "Track every piece and box. Real-time stock alerts and organized cataloging for all your retail products."
-    },
-    {
         icon: Calculator,
-        title: "Rapid POS Billing",
-        desc: "Generate professional invoices in seconds. Support for digital PDF and physical thermal receipt printing."
+        title: "3-Second Billing",
+        desc: "Generate professional GST invoices faster than a calculator. Send receipts instantly via WhatsApp or print via Thermal printers."
     },
     {
-        icon: BarChart3,
-        title: "Sales Analytics",
-        desc: "Visualize your revenue trends with beautiful charts. Understand your growth at a single glance."
+        icon: Package,
+        title: "Smart Inventory",
+        desc: "Never run out of stock. Automatic low-stock alerts, expiry tracking, and one-click item addition with Barcode scanning."
+    },
+    {
+        icon: FileText,
+        title: "Digital Khata (Udhaar)",
+        desc: "Replace your physical registers. Track customer credit (Udhaar) digitally with automated payment reminders."
     },
     {
         icon: CloudOff,
-        title: "Offline Ready",
-        desc: "Keep billing even without internet. Our PWA technology ensures your data stays safe and syncs when back online."
+        title: "Offline Resilience",
+        desc: "Business doesn't stop for the internet. Bill customers offline and your data safe-syncs automatically when you're back."
+    },
+    {
+        icon: BarChart3,
+        title: "Profit Analytics",
+        desc: "See exactly how much you're making. Track margins, top-selling products, and daily growth with clean, professional charts."
     },
     {
         icon: ShieldCheck,
-        title: "Tenant Isolation",
-        desc: "Your data is strictly yours. Advanced Firestore security rules ensure maximum privacy and data separation."
-    },
-    {
-        icon: Zap,
-        title: "Native Feel",
-        desc: "Installable on your home screen. Fast, responsive, and smooth animations across all devices."
+        title: "Enterprise Security",
+        desc: "Your data is 100% private and bank-grade secure. Advanced encryption ensures your business secrets stay yours."
     }
 ];
 
 export default function Features() {
     return (
-        <section id="features" style={{ padding: '8rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
-            <div style={{ textAlign: 'center', marginBottom: '5rem' }}>
-                <h2 style={{ fontSize: '3rem', fontWeight: 800, marginBottom: '1.5rem' }}>
-                    Stop managing <span style={{ color: 'var(--danger)' }}>chaos.</span> <br />
-                    Start building <span style={{ color: 'var(--primary-light)' }}>wealth.</span>
+        <section id="features" style={{ padding: '10rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
+            <div style={{ textAlign: 'center', marginBottom: '6rem' }}>
+                <span style={{ color: 'var(--primary-light)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '0.9rem' }}>Powerful Features</span>
+                <h2 style={{ fontSize: '3.5rem', fontWeight: 800, marginTop: '1rem', marginBottom: '1.5rem', letterSpacing: '-0.03em' }}>
+                    Built to manage <span style={{ color: 'var(--primary-light)' }}>everything.</span>
                 </h2>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '1.2rem', maxWidth: '700px', margin: '0 auto' }}>
-                    Everything you need to run your modern retail business, built with premium aesthetics and powerful performance.
+                <p style={{ color: 'var(--text-secondary)', fontSize: '1.3rem', maxWidth: '800px', margin: '0 auto', lineHeight: 1.6 }}>
+                    From the billing counter to the back-office warehouse, KaranArjun gives you the tools 
+                    to scale your retail business with confidence.
                 </p>
             </div>
 

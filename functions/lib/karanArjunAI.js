@@ -1,8 +1,7 @@
 import { onRequest } from "firebase-functions/v2/https";
-import { defineSecret } from "firebase-functions/params";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import * as https from "https";
-const openAiKey = defineSecret("OPENAI_API_KEY");
+// OpenAI key will be read from process.env.OPENAI_API_KEY
 // Production domain — only this origin can call the function
 const ALLOWED_ORIGINS = [
     "https://karanarjun-pvt-ltd.web.app",
@@ -14,7 +13,6 @@ const ALLOWED_ORIGINS = [
 const MAX_DAILY_CALLS = 50;
 export const karanArjunAIChat = onRequest({
     cors: ALLOWED_ORIGINS,
-    secrets: [openAiKey],
     timeoutSeconds: 30,
     memory: "256MiB",
     region: "asia-south1",
@@ -54,7 +52,7 @@ export const karanArjunAIChat = onRequest({
         await usageRef.set({ calls: FieldValue.increment(1), uid, date: today }, { merge: true });
     }
     // ── OpenAI Call ────────────────────────────────────────────
-    const apiKey = openAiKey.value();
+    const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
         res.status(500).json({ error: "AI service not configured" });
         return;

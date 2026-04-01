@@ -3,13 +3,18 @@ import { useTranslation } from 'react-i18next';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Lock, Mail, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Lock, Mail, AlertCircle, CheckCircle2, User, Phone } from 'lucide-react';
+import { updateProfile } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 export default function LoginPage() {
     const { t } = useTranslation();
     const [searchParams] = useSearchParams();
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
+    const [fullName, setFullName] = useState('');
+    const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -43,9 +48,16 @@ export default function LoginPage() {
         setError('');
         setLoading(true);
 
-        let finalEmail = email;
-        if (email === 'arjutanpure' || email === 'arjuntanpure' || email === 'arjun1829' || email === 'karanarjun') {
-            finalEmail = 'arjutanpure@karanarjun.com';
+        let finalEmail = email.trim();
+        // Standardize username to email format
+        if (!finalEmail.includes('@')) {
+            const lowEmail = finalEmail.toLowerCase();
+            // Handle existing admin shortcuts
+            if (lowEmail === 'arjutanpure' || lowEmail === 'arjuntanpure' || lowEmail === 'arjun1829' || lowEmail === 'karanarjun') {
+                finalEmail = 'arjutanpure@karanarjun.com';
+            } else {
+                finalEmail = `${lowEmail}@karanarjun.com`;
+            }
         }
 
         try {
@@ -66,8 +78,29 @@ export default function LoginPage() {
                 }
                 navigate('/dashboard');
             } else {
-                // Sign up → go to onboarding
-                await createUserWithEmailAndPassword(auth, finalEmail, password);
+                // Sign up -> Name is required
+                if (!fullName.trim()) {
+                    throw new Error('Full Name is required for signup');
+                }
+
+                // Sign up -> go to onboarding
+                const userCredential = await createUserWithEmailAndPassword(auth, finalEmail, password);
+                const user = userCredential.user;
+
+                // Update Profile
+                await updateProfile(user, { displayName: fullName });
+
+                // Create User records in Firestore for recovery & meta
+                await setDoc(doc(db, 'users', user.uid), {
+                    uid: user.uid,
+                    email: finalEmail,
+                    name: fullName,
+                    phone: phone || null,
+                    username: !email.includes('@') ? email : null,
+                    role: 'admin',
+                    createdAt: new Date().toISOString()
+                });
+
                 navigate('/client-onboarding');
             }
         } catch (err: any) {
@@ -189,6 +222,45 @@ export default function LoginPage() {
                 </div>
 
                 <form onSubmit={handleSubmit}>
+                    {!isLogin && (
+                        <>
+                            <div className="input-group">
+                                <label htmlFor="fullName">Full Name</label>
+                                <div style={{ position: 'relative' }}>
+                                    <User size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+                                    <input
+                                        required
+                                        type="text"
+                                        id="fullName"
+                                        className="input-field"
+                                        style={{ paddingLeft: '2.75rem' }}
+                                        placeholder="e.g. Arjun Tanpure"
+                                        value={fullName}
+                                        onChange={(e) => setFullName(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="input-group">
+                                <label htmlFor="phone">Phone Number (For account recovery)</label>
+                                <div style={{ position: 'relative' }}>
+                                    <Phone size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+                                    <input
+                                        required
+                                        type="tel"
+                                        id="phone"
+                                        className="input-field"
+                                        style={{ paddingLeft: '2.75rem' }}
+                                        placeholder="e.g. 9876543210"
+                                        pattern="[0-9]{10}"
+                                        value={phone}
+                                        onChange={(e) => setPhone(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        </>
+                    )}
+
                     <div className="input-group">
                         <label htmlFor="email">{t('auth.email_user_label')}</label>
                         <div style={{ position: 'relative' }}>

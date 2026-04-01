@@ -29,6 +29,7 @@ interface Product {
     unitMeasure?: 'pcs' | 'ltr' | 'kg' | 'g' | 'ml'; // Measure
     margin: string;
     gstPct?: number;
+    imageUrl?: string;
 }
 
 export default function RateSheetPage() {
@@ -60,8 +61,10 @@ export default function RateSheetPage() {
         unitSize: 1,
         unitMeasure: 'pcs' as 'pcs' | 'ltr' | 'kg' | 'g' | 'ml',
         gstPct: 5,
-        category: 'B2B' as 'B2B' | 'B2C'
+        category: 'B2B' as 'B2B' | 'B2C',
+        imageUrl: ''
     });
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
 
     useEffect(() => {
         if (!tenantId) return;
@@ -100,8 +103,10 @@ export default function RateSheetPage() {
                 unitSize: product.unitSize || 1,
                 unitMeasure: product.unitMeasure || 'pcs',
                 gstPct: product.gstPct || 5,
-                category: product.category || viewMode
+                category: product.category || viewMode,
+                imageUrl: product.imageUrl || ''
             });
+            setImagePreview(product.imageUrl || null);
         } else {
             setEditingProduct(null);
             setFormData({
@@ -122,8 +127,10 @@ export default function RateSheetPage() {
                 unitSize: 1,
                 unitMeasure: 'pcs',
                 gstPct: 5,
-                category: viewMode
+                category: viewMode,
+                imageUrl: ''
             });
+            setImagePreview(null);
         }
         setIsModalOpen(true);
     };
@@ -131,6 +138,20 @@ export default function RateSheetPage() {
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setEditingProduct(null);
+        setImagePreview(null);
+    };
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const base64 = reader.result as string;
+            setImagePreview(base64);
+            setFormData(prev => ({ ...prev, imageUrl: base64 }));
+        };
+        reader.readAsDataURL(file);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -388,8 +409,15 @@ export default function RateSheetPage() {
                                     #{i + 1}
                                 </td>
                                 <td style={{ padding: '1rem', fontWeight: 500, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                    <div style={{ padding: '0.5rem', background: 'hsla(152, 60%, 40%, 0.1)', borderRadius: '8px', color: 'var(--primary-light)' }}>
-                                        <Package size={18} />
+                                    <div style={{ 
+                                        width: '44px', height: '44px', borderRadius: '8px', overflow: 'hidden', 
+                                        background: 'hsla(152, 60%, 40%, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' 
+                                    }}>
+                                        {product.imageUrl ? (
+                                            <img src={product.imageUrl} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ) : (
+                                            <Package size={20} color="var(--primary-light)" />
+                                        )}
                                     </div>
                                     <div>
                                         <div>{product.name}</div>
@@ -429,13 +457,13 @@ export default function RateSheetPage() {
                                         </td>
                                     </>
                                 )}
-                                <td style={{ padding: '1rem', textAlign: 'right', color: (product.quantity || 0) < 5 ? 'var(--danger)' : 'var(--text-primary)' }}>
-                                    <div style={{ fontWeight: 600 }}>{product.quantity || 0} {t('inventory.box')}s</div>
+                                <td style={{ padding: '1rem', textAlign: 'right', color: (product.quantity || (product as any).stock || 0) < 5 ? 'var(--danger)' : 'var(--text-primary)' }}>
+                                    <div style={{ fontWeight: 600 }}>{product.quantity || (product as any).stock || 0} {t('inventory.box')}s</div>
                                     <div style={{ fontSize: '0.75rem', opacity: 0.8 }}>+ {product.loosePieces || 0} {t('inventory.loose')}</div>
-                                    {(product.quantity || 0) < 5 && <div style={{ fontSize: '0.6rem', color: 'var(--danger)', fontWeight: 700, marginTop: '2px' }}>{t('inventory.low_stock')}</div>}
+                                    {(product.quantity || (product as any).stock || 0) < 5 && <div style={{ fontSize: '0.6rem', color: 'var(--danger)', fontWeight: 700, marginTop: '2px' }}>{t('inventory.low_stock')}</div>}
                                 </td>
                                 <td style={{ padding: '1rem', textAlign: 'right', color: 'var(--text-tertiary)' }}>
-                                    {product.boxCapacity || 1} {t(`common.${(product.baseUnit || 'pcs').toLowerCase()}`)}
+                                    {product.boxCapacity || 1} {t(`common.${(product.baseUnit || (product as any).unit || 'pcs').toLowerCase()}`)}
                                 </td>
                                 {userRole === 'admin' && (
                                     <td style={{ padding: '1rem', textAlign: 'center' }}>
@@ -479,27 +507,47 @@ export default function RateSheetPage() {
                                 <h3 style={{ fontSize: '0.95rem', color: 'var(--primary-light)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <Package size={16} /> {t('inventory.product_basics')}
                                 </h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 0.7fr 0.7fr', gap: '1rem' }}>
-                                    <div>
-                                        <label className="input-label">Product No. (SKU)</label>
-                                        <input className="input-field" value={formData.productNumber} onChange={e => setFormData({ ...formData, productNumber: e.target.value })} placeholder="e.g. KA-001" />
+                                
+                                <div style={{ display: 'flex', gap: '2rem', marginBottom: '1.5rem' }}>
+                                    <div style={{ position: 'relative', width: '120px', height: '120px', borderRadius: '12px', border: '2px dashed var(--surface-border)', background: 'var(--surface-raised)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        {imagePreview ? (
+                                            <img src={imagePreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ) : (
+                                            <div style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>
+                                                <Plus size={24} style={{ margin: '0 auto' }} />
+                                                <div style={{ fontSize: '0.7rem', marginTop: '4px' }}>Add Photo</div>
+                                            </div>
+                                        )}
+                                        <input 
+                                            type="file" 
+                                            accept="image/*" 
+                                            onChange={handleImageChange} 
+                                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }} 
+                                        />
                                     </div>
-                                    <div>
-                                        <label className="input-label">{t('inventory.table_name')} *</label>
-                                        <input required className="input-field" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Tomato Seeds Hybrid-X" />
-                                    </div>
-                                    <div>
-                                        <label className="input-label">GST %</label>
-                                        <input type="number" min="0" className="input-field" value={formData.gstPct} onChange={e => setFormData({ ...formData, gstPct: Number(e.target.value) })} />
-                                    </div>
-                                    <div>
-                                        <label className="input-label">Catalog Type</label>
-                                        <select className="input-field" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value as 'B2B' | 'B2C' })}>
-                                            <option value="B2B">B2B (Retailers)</option>
-                                            <option value="B2C">B2C (Consumers)</option>
-                                        </select>
+                                    <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '1rem' }}>
+                                        <div>
+                                            <label className="input-label">Product No. (SKU)</label>
+                                            <input className="input-field" value={formData.productNumber} onChange={e => setFormData({ ...formData, productNumber: e.target.value })} placeholder="e.g. KA-001" />
+                                        </div>
+                                        <div>
+                                            <label className="input-label">{t('inventory.table_name')} *</label>
+                                            <input required className="input-field" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Tomato Seeds Hybrid-X" />
+                                        </div>
+                                        <div>
+                                            <label className="input-label">GST %</label>
+                                            <input type="number" min="0" className="input-field" value={formData.gstPct} onChange={e => setFormData({ ...formData, gstPct: Number(e.target.value) })} />
+                                        </div>
+                                        <div>
+                                            <label className="input-label">Catalog Type</label>
+                                            <select className="input-field" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value as 'B2B' | 'B2C' })}>
+                                                <option value="B2B">B2B (Retailers)</option>
+                                                <option value="B2C">B2C (Consumers)</option>
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
+                                
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
                                     <div>
                                         <label className="input-label">{t('inventory.pcs_box')}</label>

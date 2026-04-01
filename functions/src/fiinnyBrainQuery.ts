@@ -16,7 +16,7 @@ function getOpenAI() {
     return openaiInstance;
 }
 
-export const fiinnyBrainQuery = functions.https.onRequest(async (req, res) => {
+export const fiinnyBrainQuery = functions.https.onRequest(async (req: any, res: any) => {
     // CORS
     res.set("Access-Control-Allow-Origin", "*");
     res.set("Access-Control-Allow-Methods", "POST, OPTIONS");

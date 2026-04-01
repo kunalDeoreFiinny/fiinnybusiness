@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { query, orderBy, getDocs, limit, where, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Users, UserPlus, TrendingUp, ShieldAlert, BarChart3, CheckCircle, XCircle, FileText, Bot, Calculator, ReceiptText, Package, Activity, Settings2, X, Truck, Bell, ClipboardList, ShoppingCart, Layers, Store, History, Link2, IndianRupee, Calendar, TrendingDown } from 'lucide-react';
+import { Users, UserPlus, TrendingUp, ShieldAlert, BarChart3, CheckCircle, XCircle, FileText, Bot, Calculator, ReceiptText, Package, Activity, Settings2, X, Truck, Bell, ClipboardList, ShoppingCart, Layers, Store, History, Link2, IndianRupee, Calendar, TrendingDown, Target, ArrowRight } from 'lucide-react';
 import { getTenantCollection, getTenantDoc } from '../utils/tenantPath';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -77,6 +77,7 @@ export default function DashboardPage() {
     const [chartData, setChartData] = useState<{ date: string; amount: number }[]>([]);
     const [pendingPOs, setPendingPOs] = useState<any[]>([]);
     const [showCustomize, setShowCustomize] = useState(false);
+    const [hasProducts, setHasProducts] = useState(false);
     const { showToast } = useToast();
 
     // Load saved action preferences per user
@@ -179,6 +180,10 @@ export default function DashboardPage() {
                 setStats({ total, big, medium, small, totalRevenue, outstandingKhata });
                 setChartData(formattedChartData);
                 setPendingPOs(pos);
+
+                // Fetch product count for checklist
+                const productsSnap = await getDocs(query(getTenantCollection(db, tenantId, 'products'), limit(1)));
+                setHasProducts(!productsSnap.empty);
             } catch (err) {
                 console.error("Error fetching dashboard data: ", err);
             } finally {
@@ -258,6 +263,61 @@ export default function DashboardPage() {
                     </div>
                 )}
             </div>
+
+            {/* Day 1 Mastery Checklist - Shown if no sales yet (Success Path for Kirana Owners) */}
+            {stats.totalRevenue === 0 && (
+                <div style={{ marginBottom: '4rem' }}>
+                    <div className="glass-panel pulse-glow" style={{ padding: '2.5rem', border: '1px solid var(--primary-light)', background: 'linear-gradient(135deg, hsla(152, 60%, 40%, 0.05), transparent)' }}>
+                        <div style={{ marginBottom: '2rem' }}>
+                            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.75rem', marginBottom: '0.5rem' }}>
+                                <Target size={32} color="var(--primary-light)" className="pulse-success" />
+                                Day 1 Mastery Checklist
+                            </h2>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>Your path to becoming a Digital Retailer. Complete these 4 steps.</p>
+                        </div>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <Link to="/inventory-batches" className={`checklist-item ${hasProducts ? 'done' : ''}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: hasProducts ? 'var(--primary)' : 'var(--surface-raised)', border: hasProducts ? 'none' : '2px solid var(--surface-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: hasProducts ? 'white' : 'var(--text-tertiary)', fontWeight: 800 }}>
+                                    {hasProducts ? <CheckCircle size={20} /> : 1}
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <h4 style={{ margin: 0, fontSize: '1.1rem' }}>Add your first Stock</h4>
+                                    <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-tertiary)' }}>{hasProducts ? 'Success! Inventory is ready.' : 'Add at least 5 products to start billing.'}</p>
+                                </div>
+                                <ArrowRight size={20} color="var(--text-tertiary)" />
+                            </Link>
+
+                            <Link to="/pos" className="checklist-item" style={{ textDecoration: 'none', color: 'inherit' }}>
+                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--surface-raised)', border: '2px solid var(--surface-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', fontWeight: 800 }}>2</div>
+                                <div style={{ flex: 1 }}>
+                                    <h4 style={{ margin: 0, fontSize: '1.1rem' }}>Generate your first POS Bill</h4>
+                                    <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-tertiary)' }}>Experience the 3-second billing speed.</p>
+                                </div>
+                                <ArrowRight size={20} color="var(--text-tertiary)" />
+                            </Link>
+
+                            <Link to="/digital-khata" className="checklist-item" style={{ textDecoration: 'none', color: 'inherit' }}>
+                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--surface-raised)', border: '2px solid var(--surface-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', fontWeight: 800 }}>3</div>
+                                <div style={{ flex: 1 }}>
+                                    <h4 style={{ margin: 0, fontSize: '1.1rem' }}>Set up Digital Khata (Udhaar)</h4>
+                                    <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-tertiary)' }}>Add a customer and record their first transaction.</p>
+                                </div>
+                                <ArrowRight size={20} color="var(--text-tertiary)" />
+                            </Link>
+
+                            <Link to="/invoice-settings" className="checklist-item" style={{ textDecoration: 'none', color: 'inherit' }}>
+                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--surface-raised)', border: '2px solid var(--surface-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', fontWeight: 800 }}>4</div>
+                                <div style={{ flex: 1 }}>
+                                    <h4 style={{ margin: 0, fontSize: '1.1rem' }}>Connect Hardware</h4>
+                                    <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-tertiary)' }}>Set up your Thermal Printer and GST preferences.</p>
+                                </div>
+                                <ArrowRight size={20} color="var(--text-tertiary)" />
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Quick Actions Grid */}
             <div style={{ marginBottom: '3rem' }}>

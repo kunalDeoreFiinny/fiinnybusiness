@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 
 const firebaseConfig = {
     apiKey: "AIzaSyABuimmTbHwrxY-w7xhRrf-LWOu4gLVfnk",
@@ -14,4 +15,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+export const functions = getFunctions(app, 'asia-south1');
 export const googleProvider = new GoogleAuthProvider();
+
+if (import.meta.env.DEV) {
+  connectFunctionsEmulator(functions, 'localhost', 5001);
+}

@@ -243,6 +243,7 @@ export {
   verifySaaSPayment,
   getSaaSSubscription,
 } from "./saasSubscriptions.js";
+export { getParsedMoneyReport } from "./financials.js";
 export { fiinnyBrainQuery } from "./fiinnyBrainQuery.js";
 
 

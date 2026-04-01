@@ -130,7 +130,12 @@ class AdService {
 
       Future<void> initializeMobileAds() async {
         try {
-          if (await consentManager.canRequestAds()) {
+          final canRequest = await consentManager.canRequestAds();
+          final status = await consentManager.getConsentStatus();
+          
+          debugPrint('[AdService] UMP Status: $status, canRequestAds: $canRequest');
+
+          if (canRequest) {
             final initStatus = await MobileAds.instance.initialize();
             assert(() {
               final entries = initStatus.adapterStatuses.entries.map((entry) {
@@ -140,17 +145,22 @@ class AdService {
               debugPrint('[AdService] MobileAds initialised (adapters: $entries)');
               return true;
             }());
+            
+            // Optimization for Android 13+ / iOS 14+
             await MobileAds.instance.updateRequestConfiguration(
               RequestConfiguration(
                 testDeviceIds: <String>[],
+                // Ensure we don't accidentally restrict ads if consent was granted
+                maxAdContentRating: MaxAdContentRating.pg, 
               ),
             );
+            
             _adsEnabled = true;
             _ready = true;
             preloadInterstitial();
             preloadRewarded();
           } else {
-            debugPrint('[AdService] UMP Consent missing or denied. Ads disabled.');
+            debugPrint('[AdService] UMP Consent state does not allow ad requests yet.');
             _adsEnabled = false;
             _ready = false;
           }
@@ -166,7 +176,8 @@ class AdService {
       consentManager.requestConsentInfoUpdate(
         params,
         () async {
-          if (await consentManager.isConsentFormAvailable()) {
+          final status = await consentManager.getConsentStatus();
+          if (status == ConsentStatus.required || await consentManager.isConsentFormAvailable()) {
             ConsentForm.loadAndShowConsentFormIfRequired(
               (FormError? formError) async {
                 if (formError != null) {
@@ -176,6 +187,7 @@ class AdService {
               },
             );
           } else {
+             // Already has consent or not required (e.g. outside EEA/UK)
              await initializeMobileAds();
           }
         },

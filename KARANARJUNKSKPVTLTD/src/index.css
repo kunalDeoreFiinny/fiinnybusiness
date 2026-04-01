@@ -1,14 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
 :root {
-  /* Brand Colors */
-  --primary: hsl(152, 60%, 40%);
-  /* A rich, agricultural green */
-  --primary-light: hsl(152, 60%, 48%);
-  --primary-dark: hsl(152, 65%, 28%);
+  /* Brand Colors - Mature Emerald & Premium Gold */
+  --primary: hsl(152, 60%, 32%);
+  --primary-light: hsl(152, 60%, 42%);
+  --primary-dark: hsl(152, 70%, 22%);
 
   --secondary: hsl(45, 93%, 47%);
-  /* A premium gold/yellow */
   --secondary-light: hsl(45, 93%, 55%);
   --secondary-dark: hsl(45, 93%, 38%);
 
@@ -18,20 +16,20 @@
   --surface-raised: hsla(220, 33%, 96%, 0.9);
   --surface-border: hsla(220, 20%, 20%, 0.08);
 
-  /* Text */
-  --text-primary: hsl(220, 40%, 15%);
-  --text-secondary: hsl(220, 20%, 40%);
-  --text-tertiary: hsl(220, 15%, 60%);
+  /* Text - High Contrast for Maturity */
+  --text-primary: hsl(220, 45%, 12%);
+  --text-secondary: hsl(220, 20%, 35%);
+  --text-tertiary: hsl(220, 15%, 55%);
 
   /* Status Colors */
-  --success: hsl(142, 60%, 40%);
-  --warning: hsl(38, 92%, 50%);
-  --danger: hsl(0, 84%, 60%);
+  --success: hsl(142, 60%, 35%);
+  --warning: hsl(38, 92%, 45%);
+  --danger: hsl(0, 84%, 55%);
 
   /* Shadows & Effects */
-  --glass-shadow: 0 8px 32px 0 hsla(220, 40%, 20%, 0.08);
-  --neon-glow: 0 0 15px hsla(152, 60%, 40%, 0.2);
-  --blur-radius: 12px;
+  --glass-shadow: 0 12px 40px 0 hsla(220, 45%, 10%, 0.1);
+  --neon-glow: 0 0 20px hsla(152, 60%, 32%, 0.15);
+  --blur-radius: 16px;
 
   /* Transitions */
   --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -363,3 +361,27 @@ h3 {
   color: var(--text-secondary);
   border: 1px solid hsla(220, 10%, 75%, 0.2);
 }
+/* Onboarding \u0026 Setup Wizard Styles */
+.onboarding-step-indicator { display: flex; align-items: center; gap: 1rem; }
+.onboarding-step-circle { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; transition: all 0.3s; border: 2px solid transparent; }
+.onboarding-step-circle.active { background: var(--primary); color: white; box-shadow: 0 0 15px hsla(152, 60%, 42%, 0.4); border-color: var(--primary-light); }
+.onboarding-step-circle.completed { background: hsla(152, 60%, 40%, 0.15); color: var(--primary-light); border: 2px solid var(--primary); }
+.onboarding-step-circle.pending { background: var(--surface-base); color: var(--text-tertiary); border: 2px dashed var(--surface-border); }
+
+.checklist-item { padding: 1.25rem 1.5rem; border-radius: 12px; background: var(--surface-base); border: 1px solid var(--surface-border); display: flex; align-items: center; gap: 1.25rem; transition: all 0.2s; cursor: pointer; margin-bottom: 0.75rem; }
+.checklist-item:hover { border-color: var(--primary-light); background: hsla(152, 60%, 40%, 0.03); transform: translateX(5px); }
+.checklist-item.done { background: hsla(152, 60%, 40%, 0.05); border-color: hsla(152, 60%, 40%, 0.15); opacity: 0.8; }
+
+@keyframes pulse-success { 0% { transform: scale(1); box-shadow: 0 0 0 0 hsla(152, 60%, 40%, 0.4); } 70% { transform: scale(1.05); box-shadow: 0 0 0 10px hsla(152, 60%, 40%, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 hsla(152, 60%, 40%, 0); } }
+.pulse-success { animation: pulse-success 2s infinite; }
+
+/* --- POS Modern Interface --- */
+.pos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 1rem; padding: 0.5rem; overflow-y: auto; }
+.pos-card { background: var(--surface-base); border: 1px solid var(--surface-border); border-radius: 12px; padding: 0.75rem; transition: all 0.2s; cursor: pointer; text-align: center; position: relative; }
+.pos-card:hover { transform: translateY(-3px); border-color: var(--primary-light); box-shadow: var(--neon-glow); }
+.pos-card img { width: 100%; height: 80px; object-fit: contain; margin-bottom: 0.5rem; border-radius: 6px; }
+.pos-card .stock { position: absolute; top: 5px; right: 5px; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; background: hsla(220, 15%, 55%, 0.1); }
+
+.pos-sidebar { width: 400px; height: calc(100vh - 100px); display: flex; flexDirection: column; border-left: 1px solid var(--surface-border); background: var(--surface-raised); padding: 1.5rem; }
+.pos-cart-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid var(--surface-border); }
+.pos-checkout-btn { width: 100%; padding: 1rem; border-radius: 10px; font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 0.5rem; }

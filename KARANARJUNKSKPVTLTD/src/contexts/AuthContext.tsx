@@ -90,7 +90,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     const userDocRef = doc(db, 'users', user.uid);
                     const userDoc = await getDoc(userDocRef);
                     const emailLC = user.email?.toLowerCase() || '';
-                    const isMasterAdmin = emailLC.includes('arjuntanpure') || emailLC.includes('arjutanpure') || emailLC.includes('arjun1829') || emailLC.includes('karanarjun');
+                    
+                    const MASTER_ADMIN_EMAILS = [
+                        'arjuntanpure@karanarjun.com',
+                        'arjutanpure@karanarjun.com',
+                        'arjun1829@karanarjun.com',
+                        'karanarjun@karanarjun.com',
+                        'arjutanpure@gmail.com'
+                    ];
+                    const isMasterAdmin = MASTER_ADMIN_EMAILS.includes(emailLC);
 
                     let existingRole = userDoc.exists() ? (userDoc.data().role as UserRole) : null;
                     let existingTenantId = userDoc.exists() ? userDoc.data().tenantId : null;
@@ -103,19 +111,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     if (!userDoc.exists()) {
                         await setDoc(userDocRef, {
                             email: user.email,
-                            name: user.displayName || user.email?.split('@')[0] || 'Arjun Tanpure',
+                            name: user.displayName || user.email?.split('@')[0] || 'Member',
                             role: role,
                             tenantId: tId,
                             linkedId: lId,
                             updatedAt: serverTimestamp(),
-                            ...(userDoc.exists() ? {} : { createdAt: serverTimestamp() })
+                            createdAt: serverTimestamp()
                         }, { merge: true });
                     }
 
                     setUserRole(role);
                     setTenantId(tId);
                     setLinkedId(lId);
-                    setUserName(userDoc.exists() ? (userDoc.data().name || user.displayName || user.email?.split('@')[0] || null) : (user.displayName || user.email?.split('@')[0] || null));
+                    
+                    // Priority: Firestore name -> Auth displayName -> Email prefix
+                    const resolvedName = userDoc.exists() 
+                        ? (userDoc.data().name || user.displayName || user.email?.split('@')[0] || null)
+                        : (user.displayName || user.email?.split('@')[0] || null);
+                    
+                    setUserName(resolvedName);
 
                     if (tId && tId !== 'master') {
                         const tenantDoc = await getDoc(doc(db, 'tenants', tId));

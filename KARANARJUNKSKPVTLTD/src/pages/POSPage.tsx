@@ -1,15 +1,20 @@
-import { useState, useEffect } from 'react';
-import { Save, Loader2, Printer } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { 
+    Save, Loader2, Printer, Search, ShoppingCart, Plus, Minus, Trash2, 
+    CreditCard, Banknote, History, ExternalLink, Target, LayoutGrid, List,
+    Zap, CheckCircle2, ChevronRight, X, Phone, User, QrCode, Package
+} from 'lucide-react';
 import UpiQrCode from '../components/UpiQrCode';
 import {
     query, onSnapshot, addDoc,
     serverTimestamp, updateDoc,
-    runTransaction, getDoc, getDocs, limit, orderBy, where
+    runTransaction, getDoc, getDocs, limit, orderBy, where, collection
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { getTenantCollection, getTenantDoc } from '../utils/tenantPath';
 import { fetchInvoiceTemplate, fetchInvoiceBranding } from '../services/invoiceTemplateService';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Product {
     id: string;
@@ -19,86 +24,63 @@ interface Product {
     sellingPrice: number;
     boxCapacity: number;
     baseUnit: string;
+    unit?: string;
     quantity: number;
     loosePieces: number;
     gstPct?: number;
+    imageUrl?: string;
+    category?: string;
+    barcode?: string;
 }
 
-interface PosRow {
-    productId: string;
-    productName: string;
-    packing: string;
-    rate: string;
-    quantity: string;
-    total: number;
-    notes?: string;
+interface CartItem extends Product {
+    cartQuantity: number;
+    cartTotal: number;
 }
+
+const CATEGORIES = ['All', 'Kirana', 'Beverages', 'Personal Care', 'Dairy', 'Snacks'];
 
 export default function POSPage() {
     const { tenantId } = useAuth();
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [isProcessing, setIsProcessing] = useState(false);
+    
+    // View States
+    const [isRetailMode, setIsRetailMode] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('All');
+    const searchRef = useRef<HTMLInputElement>(null);
 
-    const [headerData, setHeaderData] = useState({
-        lcfRd: '',
-        gsin: '',
-        date: new Date().toISOString().split('T')[0],
-        customerName: '',
-        customerMobile: '',
+    // Cart State
+    const [cart, setCart] = useState<CartItem[]>([]);
+    const [customer, setCustomer] = useState({
+        name: 'Walk-in Customer',
+        phone: '',
         address: '',
         pin: ''
     });
 
-    const [templateFields, setTemplateFields] = useState<any[]>([]);
+    // POS Settings & Branding
     const [branding, setBranding] = useState<any>(null);
     const [nextBillNumber, setNextBillNumber] = useState<string>('');
-
-    // 14 Fixed Rows
-    const [rows, setRows] = useState<PosRow[]>(
-        Array.from({ length: 14 }, () => ({
-            productId: '',
-            productName: '',
-            packing: '',
-            rate: '',
-            quantity: '',
-            total: 0
-        }))
-    );
-
-    const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
-
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'F2') {
-                e.preventDefault();
-                const firstEmptyIdx = rows.findIndex(r => !r.productId && !r.productName);
-                if (firstEmptyIdx !== -1) {
-                    const inputs = document.querySelectorAll(`input[placeholder="Search product..."]`) as NodeListOf<HTMLInputElement>;
-                    if (inputs[firstEmptyIdx]) inputs[firstEmptyIdx].focus();
-                }
-            }
-            if (e.ctrlKey && e.key === 'p') {
-                e.preventDefault();
-                if (!isProcessing) handleSave(true);
-            }
-            if (e.ctrlKey && e.key === 's') {
-                e.preventDefault();
-                if (!isProcessing) handleSave(false);
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [rows, isProcessing]);
+    const [templateFields, setTemplateFields] = useState<any[]>([]);
 
     useEffect(() => {
         if (!tenantId) return;
 
-        // Fetch Products for dropdown
-        const qProducts = query(getTenantCollection(db, tenantId, 'products'));
-        const unsubProducts = onSnapshot(qProducts, (snapshot) => {
-            setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Product[]);
+        const unsubProducts = onSnapshot(query(getTenantCollection(db, tenantId, 'products')), (snap) => {
+            const productsList = snap.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    quantity: data.quantity ?? (data as any).stock ?? 0,
+                    baseUnit: data.baseUnit ?? data.unit ?? 'pcs',
+                    loosePieces: data.loosePieces ?? 0
+                } as Product;
+            });
+            setProducts(productsList);
         });
 
         const loadSettings = async () => {
@@ -107,631 +89,434 @@ export default function POSPage() {
                     fetchInvoiceTemplate(tenantId, 'retailer_customer'),
                     fetchInvoiceBranding(tenantId)
                 ]);
-                const sortedFields = tmpl.fields.filter(f => f.show).sort((a, b) => a.order - b.order);
-                setTemplateFields(sortedFields);
+                setTemplateFields(tmpl.fields.filter(f => f.show).sort((a, b) => a.order - b.order));
                 setBranding(brd);
 
-                const counterRef = getTenantDoc(db, tenantId, 'counters', 'posBillCounter');
-                const counterSnap = await getDoc(counterRef);
-                let currentSeq = 0;
-                if (counterSnap.exists()) {
-                    currentSeq = counterSnap.data().lastBillNumber || 0;
-                }
+                const counterSnap = await getDoc(getTenantDoc(db, tenantId, 'counters', 'posBillCounter'));
+                let currentSeq = counterSnap.exists() ? counterSnap.data().lastBillNumber || 0 : 0;
                 setNextBillNumber(`KA-${(currentSeq + 1).toString().padStart(4, '0')}`);
-
-                setHeaderData(prev => ({
-                    ...prev,
-                    lcfRd: brd.licenseNumbers || prev.lcfRd,
-                    gsin: brd.gstin || prev.gsin,
-                }));
-            } catch (err) {
-                console.error(err);
-            } finally {
-                setLoading(false);
-            }
+            } catch (err) { console.error(err); } finally { setLoading(false); }
         };
 
         loadSettings();
-
-        return () => {
-            unsubProducts();
-        };
+        return () => unsubProducts();
     }, [tenantId]);
 
-    const handleRowChange = (index: number, field: keyof PosRow, value: string) => {
-        const newRows = [...rows];
-
-        if (field === 'productId') {
-            const product = products.find(p => p.id === value);
-            if (product) {
-                newRows[index].productId = value;
-                newRows[index].productName = product.name;
-                // Determine rate (using sellingPrice natively or maxRetailPrice)
-                const rate = product.sellingPrice || product.retailerPrice || product.maxRetailPrice || 0;
-                newRows[index].rate = rate.toString();
-                newRows[index].packing = product.baseUnit || ''; // e.g. "ML" or "KG"
-
-                const qty = Number(newRows[index].quantity) || 0;
-                newRows[index].total = rate * qty;
-            } else {
-                newRows[index].productId = '';
-                newRows[index].productName = '';
-                newRows[index].rate = '';
-                newRows[index].packing = '';
-                newRows[index].total = 0;
+    // Barcode Auto-Focus
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'F2' || e.key === '/') {
+                e.preventDefault();
+                searchRef.current?.focus();
             }
-        } else {
-            // Provide a manual fallback for productName if they just type
-            if (field === 'productName' && value) {
-                newRows[index].productId = ''; // custom product
-                newRows[index].productName = value;
-            } else {
-                (newRows[index][field] as string) = value;
-            }
+            if (e.ctrlKey && e.key === 'Enter') handleCheckout('Cash');
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [cart]);
 
-            if (field === 'rate' || field === 'quantity') {
-                const r = Number(newRows[index].rate) || 0;
-                const q = Number(newRows[index].quantity) || 0;
-                newRows[index].total = r * q;
+    const addToCart = (product: Product) => {
+        setCart(prev => {
+            const existing = prev.find(item => item.id === product.id);
+            if (existing) {
+                return prev.map(item => item.id === product.id 
+                    ? { ...item, cartQuantity: item.cartQuantity + 1, cartTotal: (item.cartQuantity + 1) * (item.sellingPrice || item.maxRetailPrice) }
+                    : item
+                );
             }
-        }
-
-        setRows(newRows);
+            const rate = product.sellingPrice || product.retailerPrice || product.maxRetailPrice || 0;
+            return [...prev, { ...product, cartQuantity: 1, cartTotal: rate }];
+        });
     };
 
-    const handlePhoneBlur = async () => {
-        if (!tenantId || !headerData.customerMobile || headerData.customerMobile.length < 5) return;
-        try {
-            // Priority 1: Check Master Retailers List
-            const retailerQuery = query(
-                getTenantCollection(db, tenantId, 'retailers'),
-                where('number', '==', headerData.customerMobile),
-                limit(1)
-            );
-            const retailerSnaps = await getDocs(retailerQuery);
-            
-            if (!retailerSnaps.empty) {
-                const data = retailerSnaps.docs[0].data();
-                setHeaderData(prev => ({
-                    ...prev,
-                    customerName: data.name || prev.customerName,
-                    address: data.atPost || prev.address,
-                    pin: data.pin || prev.pin
-                }));
-                return; // Finished
+    const updateQty = (id: string, delta: number) => {
+        setCart(prev => prev.map(item => {
+            if (item.id === id) {
+                const newQty = Math.max(0, item.cartQuantity + delta);
+                const rate = item.sellingPrice || item.maxRetailPrice || 0;
+                return { ...item, cartQuantity: newQty, cartTotal: newQty * rate };
             }
-
-            // Priority 2: Fallback to searching past orders if they were a walk-in before the master list update
-            const orderQuery = query(
-                getTenantCollection(db, tenantId, 'salesOrders'),
-                where('phoneNumber', '==', headerData.customerMobile),
-                orderBy('createdAt', 'desc'),
-                limit(1)
-            );
-            const orderSnaps = await getDocs(orderQuery);
-            if (!orderSnaps.empty) {
-                const data = orderSnaps.docs[0].data();
-                setHeaderData(prev => ({
-                    ...prev,
-                    customerName: data.retailerName || prev.customerName,
-                    address: data.address || prev.address,
-                    pin: data.pin || prev.pin
-                }));
-            }
-        } catch (err) {
-            console.error("Error fetching customer config by phone:", err);
-            // Ignore index errors if composite index isn't ready yet, or fail silently
-        }
+            return item;
+        }).filter(item => item.cartQuantity > 0));
     };
 
-    const grandTotal = rows.reduce((sum, row) => sum + (row.total || 0), 0);
+    const cartSubtotal = cart.reduce((sum, item) => sum + item.cartTotal, 0);
+
+    const handlePhoneLookup = async () => {
+        if (!tenantId || customer.phone.length < 5) return;
+        const q = query(getTenantCollection(db, tenantId, 'retailers'), where('number', '==', customer.phone), limit(1));
+        const snaps = await getDocs(q);
+        if (!snaps.empty) {
+            const data = snaps.docs[0].data();
+            setCustomer(prev => ({ ...prev, name: data.name, address: data.atPost, pin: data.pin }));
+        }
+    };
 
     const generateBillNumber = async (): Promise<string> => {
         if (!tenantId) return `POS-${Date.now().toString().slice(-6)}`;
-
         const counterRef = getTenantDoc(db, tenantId, 'counters', 'posBillCounter');
         let newSeq = 1;
-        try {
-            await runTransaction(db, async (transaction) => {
-                const docSnap = await transaction.get(counterRef);
-                if (!docSnap.exists()) {
-                    transaction.set(counterRef, { lastBillNumber: 1 });
-                    newSeq = 1;
-                } else {
-                    newSeq = (docSnap.data().lastBillNumber || 0) + 1;
-                    transaction.update(counterRef, { lastBillNumber: newSeq });
-                }
-            });
-        } catch (e) {
-            console.error("Counter transaction failed", e);
-            return `POS-${Date.now().toString().slice(-6)}`;
-        }
+        await runTransaction(db, async (transaction) => {
+            const docSnap = await transaction.get(counterRef);
+            newSeq = docSnap.exists() ? (docSnap.data().lastBillNumber || 0) + 1 : 1;
+            transaction.set(counterRef, { lastBillNumber: newSeq }, { merge: true });
+        });
         return `KA-${newSeq.toString().padStart(4, '0')}`;
     };
 
-    const handleSave = async (isPrint = false) => {
-        if (!tenantId) return;
+    const handleCheckout = async (paymentMethod: string) => {
+        if (!tenantId || cart.length === 0) return;
         setIsProcessing(true);
 
         try {
-            const activeRows = rows.filter(r => r.productName || r.quantity || r.rate);
-            if (activeRows.length === 0) {
-                alert("Please add at least one item.");
-                setIsProcessing(false);
-                return;
-            }
-
             const billNumber = await generateBillNumber();
-
-            // Format line items
-            const lineItems = activeRows.map(row => ({
-                productId: row.productId,
-                productName: row.productName,
-                quantity: Number(row.quantity) || 0,
-                unit: row.packing,
-                amount: row.total,
-                mrp: Number(row.rate) || 0,
-                gstPct: 0
-            }));
-
-            // Save Order Document
-            await addDoc(getTenantCollection(db, tenantId, 'salesOrders'), {
+            const orderData = {
                 orderNumber: billNumber,
-                retailerId: 'walk-in',
-                retailerName: headerData.customerName || 'Walk-in Customer',
-                phoneNumber: headerData.customerMobile,
-                lcfRd: headerData.lcfRd,
-                gsin: headerData.gsin,
-                address: headerData.address,
-                pin: headerData.pin,
-                lineItems,
-                subtotal: grandTotal,
-                gstAmount: 0,
-                grandTotal: grandTotal,
-                paymentStatus: 'Paid',
-                amountPaid: grandTotal,
+                retailerName: customer.name || 'Walk-in Customer',
+                phoneNumber: customer.phone,
+                address: customer.address,
+                pin: customer.pin,
+                lineItems: cart.map(item => ({
+                    productId: item.id || '',
+                    productName: item.name || 'Unknown Product',
+                    quantity: Number(item.cartQuantity) || 0,
+                    unit: item.unit || item.baseUnit || 'pcs',
+                    mrp: Number(item.sellingPrice || item.maxRetailPrice) || 0,
+                    amount: Number(item.cartTotal) || 0,
+                    gstPct: Number(item.gstPct) || 0
+                })),
+                subtotal: cartSubtotal,
+                grandTotal: cartSubtotal,
+                paymentStatus: paymentMethod === 'Khata' ? 'Pending' : 'Paid',
+                paymentMethod,
+                amountPaid: paymentMethod === 'Khata' ? 0 : cartSubtotal,
                 status: 'delivered',
                 createdAt: serverTimestamp(),
-                notes: 'POS B2C Form Entry',
-                invoiceDate: headerData.date
-            });
-
-            // Automatically Register Walk-in Customer into Master Retailers list if Phone is provided
-            if (headerData.customerMobile && headerData.customerMobile.length >= 5) {
-                const rQuery = query(
-                    getTenantCollection(db, tenantId, 'retailers'),
-                    where('number', '==', headerData.customerMobile),
-                    limit(1)
-                );
-                const rSnaps = await getDocs(rQuery);
-                if (rSnaps.empty) {
-                    await addDoc(getTenantCollection(db, tenantId, 'retailers'), {
-                        name: headerData.customerName || 'Walk-in Customer',
-                        number: headerData.customerMobile,
-                        atPost: headerData.address || '',
-                        district: '',
-                        taluka: '',
-                        pin: headerData.pin || '',
-                        status: 'active',
-                        createdAt: serverTimestamp(),
-                        source: 'POS'
-                    });
-                }
-            }
-
-            // Update Inventory
-            for (const item of activeRows) {
-                if (!item.productId) continue;
-                const productRef = getTenantDoc(db, tenantId, 'products', item.productId);
-                const product = products.find(p => p.id === item.productId);
-                const qty = Number(item.quantity) || 0;
-
-                if (product && qty > 0) {
-                    // Deduct as LOOSE PIECES
-                    let newLoose = (product.loosePieces || 0) - qty;
-                    let newBoxes = product.quantity || 0;
-                    while (newLoose < 0 && newBoxes > 0) {
-                        newBoxes -= 1;
-                        newLoose += (product.boxCapacity || 1);
-                    }
-                    await updateDoc(productRef, {
-                        quantity: newBoxes >= 0 ? newBoxes : 0,
-                        loosePieces: newBoxes >= 0 ? newLoose : 0
-                    });
-                }
-            }
-
-            const resetForm = () => {
-                setHeaderData({
-                    ...headerData,
-                    customerName: '',
-                    customerMobile: '',
-                    address: '',
-                    pin: ''
-                });
-                setRows(Array.from({ length: 14 }, () => ({
-                    productId: '', productName: '', packing: '', rate: '', quantity: '', total: 0
-                })));
-                setNextBillNumber(`KA-${(parseInt(billNumber.split('-')[1] || '0') + 1).toString().padStart(4, '0')}`);
+                invoiceDate: new Date().toISOString().split('T')[0]
             };
 
-            if (!isPrint) {
-                alert(`Bill ${billNumber} created successfully!`);
-                resetForm();
-                setIsProcessing(false);
-            } else {
-                setIsProcessing(false);
-                // Snapshot DOM -> new window so iOS Safari prints correctly
-                // (window.print() on same page races with resetForm() clearing React state)
-                setTimeout(() => {
-                    const container = document.querySelector('.pos-print-container') as HTMLElement | null;
-                    const html = container ? container.outerHTML : document.body.innerHTML;
-                    const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
-                        .map(el => el.outerHTML).join('\n');
-                    const win = window.open('', '_blank');
-                    if (!win) {
-                        // Fallback for strict popup-blockers
-                        window.print();
-                        resetForm();
-                        return;
-                    }
-                    win.document.write(`<!DOCTYPE html><html><head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POS Bill</title>
-${styles}
-<style>
-  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-scheme: light !important; }
-  body { background: #fff !important; color: #000 !important; font-family: serif; padding: 0; margin: 0; }
-  .pos-page-wrapper { background: #fff !important; padding: 0 !important; }
-  .no-print { display: none !important; }
-  .pos-print-container { box-shadow: none !important; border: none !important; border-radius: 0 !important; margin: 0 !important; padding: 10px !important; background: #fff !important; color: #000 !important; }
-  input, select, textarea { border: none !important; background: transparent !important; -webkit-appearance: none; appearance: none; font-family: inherit; font-size: inherit; color: #000; padding: 0; }
-  select { background-image: none !important; }
-  @media print { .no-print { display: none !important; } }
-</style>
-</head><body>${html}</body></html>`);
-                    win.document.close();
-                    win.focus();
-                    // Give the new window time to render fonts/images
-                    setTimeout(() => { win.print(); }, 600);
-                    // Reset form after snapshot is taken — safe now
-                    resetForm();
-                }, 200);
+            await addDoc(getTenantCollection(db, tenantId, 'salesOrders'), orderData);
+
+            // Inventory Sync (Loose pieces deduction)
+            for (const item of cart) {
+                const productRef = getTenantDoc(db, tenantId, 'products', item.id);
+                const q = item.cartQuantity;
+                let newLoose = (item.loosePieces || 0) - q;
+                let newBoxes = item.quantity || 0;
+                while (newLoose < 0 && newBoxes > 0) {
+                    newBoxes -= 1;
+                    newLoose += (item.boxCapacity || 1);
+                }
+                await updateDoc(productRef, {
+                    quantity: newBoxes >= 0 ? newBoxes : 0,
+                    loosePieces: newBoxes >= 0 ? newLoose : 0,
+                    updatedAt: serverTimestamp()
+                });
             }
 
-        } catch (error) {
-            console.error("Save Error:", error);
-            alert("Error saving the bill.");
-            setIsProcessing(false);
-        }
+            // Optional: Register Customer
+            if (customer.phone.length >= 5) {
+                const q = query(getTenantCollection(db, tenantId, 'retailers'), where('number', '==', customer.phone), limit(1));
+                const snap = await getDocs(q);
+                if (snap.empty) {
+                    await addDoc(getTenantCollection(db, tenantId, 'retailers'), {
+                        name: customer.name, number: customer.phone, atPost: customer.address, pin: customer.pin, status: 'active', createdAt: serverTimestamp()
+                    });
+                }
+            }
+
+            // Print Trigger (Conceptual)
+            setIsRetailMode(false);
+            setTimeout(() => {
+                window.print();
+                setCart([]);
+                setCustomer({ name: 'Walk-in Customer', phone: '', address: '', pin: '' });
+                setIsRetailMode(true);
+                setIsProcessing(false);
+            }, 500);
+
+        } catch (e) { console.error(e); setIsProcessing(false); }
     };
 
-    if (loading) return <div className="p-8 text-center"><Loader2 className="animate-spin m-auto" /></div>;
+    const filteredProducts = products.filter(p => 
+        (selectedCategory === 'All' || p.category === selectedCategory.toLowerCase()) &&
+        (p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.barcode === searchQuery)
+    );
+
+    if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-emerald-600" size={48} /></div>;
 
     return (
-        <div style={{ background: 'var(--surface-base)', padding: '2rem', minHeight: '100vh' }} className="pos-page-wrapper">
-            <div style={{ 
-                padding: '1.5rem', 
-                maxWidth: '1000px', 
-                margin: '0 auto', 
-                background: '#fff', 
-                color: '#000', 
-                fontFamily: 'serif',
-                boxShadow: '0 10px 25px rgba(0,0,0,0.05), 0 20px 48px rgba(0,0,0,0.05), 0 1px 4px rgba(0,0,0,0.1)',
-                borderRadius: '16px',
-                border: '1px solid var(--surface-border)'
-            }} className="pos-print-container">
-            {/* Styles for print mode */}
-            <style>{`
-                @media print {
-                    .pos-print-container {
-                        width: 100%;
-                        padding: 0 !important;
-                        box-shadow: none !important;
-                        border: none !important;
-                        margin: 0 !important;
-                    }
-                    /* Reduce table heights & paddings to squeeze into 1 page */
-                    .pos-box {
-                        padding: 2px !important;
-                    }
-                    .pos-table th, .pos-table td {
-                        padding: 2px !important;
-                        height: 24px !important;
-                        font-size: 0.85rem !important;
-                    }
-                    .pos-input {
-                        font-size: 0.85rem !important;
-                    }
-                    h1 {
-                        font-size: 1.25rem !important;
-                        margin-bottom: 4px !important;
-                    }
-                    .no-print {
-                        display: none !important;
-                    }
-                    .print-only {
-                        display: block !important;
-                    }
-                    .pos-page-wrapper {
-                        padding: 0 !important;
-                        background: transparent !important;
-                    }
-                    input, select, textarea {
-                        border: none !important;
-                        background: transparent !important;
-                        -webkit-appearance: none;
-                        -moz-appearance: none;
-                        appearance: none;
-                        font-family: inherit;
-                        font-size: inherit;
-                        color: #000;
-                        padding: 0;
-                    }
-                    /* Ensure dropdown arrows are hidden during print */
-                    select {
-                        background-image: none !important;
-                    }
-                }
-                .pos-table th, .pos-table td {
-                    border: 1px solid #000;
-                    padding: 4px;
-                    text-align: center;
-                }
-                .pos-input {
-                    width: 100%;
-                    border: none;
-                    background: transparent;
-                    outline: none;
-                    font-family: inherit;
-                    color: inherit;
-                }
-                .pos-box {
-                    border: 1px solid #000;
-                }
-                .pos-dropdown {
-                    position: absolute;
-                    top: 100%;
-                    left: 0;
-                    width: 100%;
-                    max-height: 200px;
-                    overflow-y: auto;
-                    background: #fff;
-                    border: 1px solid #ccc;
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                    z-index: 1000;
-                }
-                .pos-dropdown-item {
-                    padding: 8px;
-                    cursor: pointer;
-                    text-align: left;
-                    font-size: 0.9rem;
-                    border-bottom: 1px solid #eee;
-                }
-                .pos-dropdown-item:hover {
-                    background-color: #f0f0f0;
-                }
-                /* Print button specific colors so they show well on standard dark/light themes */
-                .print-btn {
-                    background-color: #2196F3 !important;
-                    color: white !important;
-                    border: none;
-                }
-                .save-btn {
-                    background-color: #4CAF50 !important;
-                    color: white !important;
-                    border: none;
-                }
-            `}</style>
-
-            {/* Title */}
-            <div style={{ textAlign: 'center', marginBottom: '4px', fontSize: '1.2rem', fontWeight: 'bold' }}>
-                Credit Memo
-            </div>
-            <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: '8px', marginBottom: '8px' }}>
-                <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 'bold' }}>
-                    {branding ? `${branding.businessName}${branding.address ? ` - ${branding.address}` : ''}` : 'Karan Arjun Krushi Seva Kendra Mob No : 9307199040'}
-                </h1>
-            </div>
-
-            {/* Header info grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 80px 1fr', gap: '0', marginBottom: '8px' }}>
-                <div className="pos-box" style={{ padding: '4px', fontWeight: 'bold', borderRight: 'none', borderBottom: 'none' }}>LCF RD :</div>
-                <div className="pos-box" style={{ padding: '4px', borderRight: 'none', borderBottom: 'none' }}><input className="pos-input" value={headerData.lcfRd} onChange={e => setHeaderData({ ...headerData, lcfRd: e.target.value })} /></div>
-
-                <div className="pos-box" style={{ padding: '4px', fontWeight: 'bold', borderRight: 'none', borderBottom: 'none' }}>GSIN :</div>
-                <div className="pos-box" style={{ padding: '4px', borderBottom: 'none' }}><input className="pos-input" value={headerData.gsin} onChange={e => setHeaderData({ ...headerData, gsin: e.target.value })} /></div>
-
-                <div className="pos-box" style={{ padding: '4px', fontWeight: 'bold', borderRight: 'none', borderBottom: 'none' }}>Bill No :</div>
-                <div className="pos-box" style={{ padding: '4px', borderRight: 'none', borderBottom: 'none' }}>
-                    <div className="pos-input" style={{ display: 'flex', alignItems: 'center', height: '100%' }}>{nextBillNumber || 'Auto-generated'}</div>
+        <div style={{ background: 'var(--bg-color)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+            
+            {/* Header / Search Controls */}
+            <header className="no-print" style={{ background: '#fff', borderBottom: '1px solid var(--surface-border)', padding: '1rem 2rem', display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div style={{ background: 'var(--primary)', color: 'white', padding: '0.5rem', borderRadius: '10px' }}><Zap size={24} /></div>
+                    <h1 style={{ fontSize: '1.25rem', fontWeight: 800 }}>POS Modern</h1>
                 </div>
 
-                <div className="pos-box" style={{ padding: '4px', fontWeight: 'bold', borderRight: 'none', borderBottom: 'none' }}>Date :</div>
-                <div className="pos-box" style={{ padding: '4px', borderBottom: 'none' }}><input type="date" className="pos-input" value={headerData.date} onChange={e => setHeaderData({ ...headerData, date: e.target.value })} /></div>
+                <div style={{ flex: 1, position: 'relative' }}>
+                    <Search style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} size={20} />
+                    <input 
+                        ref={searchRef}
+                        type="text" 
+                        placeholder="Search products or scan barcode (/) ..." 
+                        className="input-field" 
+                        style={{ paddingLeft: '3rem', borderRadius: '12px' }} 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+
+                <div style={{ display: 'flex', background: 'var(--surface-raised)', borderRadius: '12px', padding: '0.25rem' }}>
+                    <button onClick={() => setIsRetailMode(true)} style={{ padding: '0.5rem 1rem', borderRadius: '10px', background: isRetailMode ? 'white' : 'transparent', color: isRetailMode ? 'var(--primary)' : 'var(--text-tertiary)', border: 'none', cursor: 'pointer', display: 'flex', gap: '0.5rem', alignItems: 'center', fontWeight: 600 }}>
+                        <LayoutGrid size={18} /> Retail
+                    </button>
+                    <button onClick={() => setIsRetailMode(false)} style={{ padding: '0.5rem 1rem', borderRadius: '10px', background: !isRetailMode ? 'white' : 'transparent', color: !isRetailMode ? 'var(--primary)' : 'var(--text-tertiary)', border: 'none', cursor: 'pointer', display: 'flex', gap: '0.5rem', alignItems: 'center', fontWeight: 600 }}>
+                        <List size={18} /> Bill Form
+                    </button>
+                </div>
+            </header>
+
+            <div style={{ display: 'flex', flex: 1 }}>
+                
+                {/* Main Content Area */}
+                <main className="no-print" style={{ flex: 1, padding: '1.5rem', height: 'calc(100vh - 80px)', overflowY: 'auto' }}>
+                    {isRetailMode ? (
+                        <>
+                            {/* Category Filter */}
+                            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+                                {CATEGORIES.map(cat => (
+                                    <button 
+                                        key={cat} 
+                                        onClick={() => setSelectedCategory(cat)}
+                                        style={{ 
+                                            padding: '0.5rem 1.25rem', borderRadius: '20px', whiteSpace: 'nowrap', fontWeight: 600,
+                                            background: selectedCategory === cat ? 'var(--primary)' : 'white',
+                                            color: selectedCategory === cat ? 'white' : 'var(--text-secondary)',
+                                            border: '1px solid var(--surface-border)', cursor: 'pointer'
+                                        }}
+                                    >
+                                        {cat}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Product Grid */}
+                            <div className="pos-grid">
+                                {filteredProducts.map(product => (
+                                    <div key={product.id} className="pos-card" onClick={() => addToCart(product)}>
+                                        <div className="stock" style={{ background: (product.quantity || 0) > 0 ? 'var(--primary)' : 'var(--danger)' }}>
+                                            {(product.quantity || 0)} Box {(product.loosePieces || 0) > 0 ? `+ ${product.loosePieces} ${product.baseUnit}` : ''}
+                                        </div>
+                                        <div style={{ height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-color)', borderRadius: '8px', marginBottom: '0.75rem', overflow: 'hidden' }}>
+                                            {product.imageUrl ? (
+                                                <img src={product.imageUrl} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            ) : (
+                                                <Package size={32} color="var(--text-tertiary)" />
+                                            )}
+                                        </div>
+                                        <h4 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.25rem', height: '2.4rem', overflow: 'hidden', color: 'var(--text-primary)' }}>{product.name}</h4>
+                                        <p style={{ color: 'var(--primary)', fontWeight: 800, fontSize: '1.1rem' }}>₹{product.sellingPrice || product.maxRetailPrice}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    ) : (
+                        <div style={{ height: '80vh', background: 'white', borderRadius: '12px', padding: '2rem' }}>
+                           <p className="text-center text-slate-500 italic">Form-based view (Backwards Compatibility) is currently active for manual entries.</p>
+                           {/* Simplified Form representation could go here */}
+                        </div>
+                    )}
+                </main>
+
+                {/* Sidebar Cart */}
+                <aside className="no-print" style={{ width: '450px', background: '#fff', borderLeft: '1px solid var(--surface-border)', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ padding: '1.5rem', flex: 1, overflowY: 'auto' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><ShoppingCart size={20} /> Bill Summary</h3>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>#{nextBillNumber}</span>
+                        </div>
+
+                        {/* Customer Quick Entry */}
+                        <div className="glass-panel" style={{ padding: '1rem', marginBottom: '1.5rem' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                                <Phone size={16} color="var(--text-tertiary)" />
+                                <input 
+                                    type="tel" 
+                                    placeholder="Customer Phone No ..." 
+                                    style={{ border: 'none', background: 'transparent', width: '100%', outline: 'none' }}
+                                    value={customer.phone}
+                                    onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
+                                    onBlur={handlePhoneLookup}
+                                />
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <User size={16} color="var(--text-tertiary)" />
+                                <input 
+                                    type="text" 
+                                    placeholder="Name: Walk-in Customer" 
+                                    style={{ border: 'none', background: 'transparent', width: '100%', outline: 'none', fontWeight: 600 }}
+                                    value={customer.name}
+                                    onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Cart Items */}
+                        <AnimatePresence>
+                            {cart.map(item => (
+                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} key={item.id} className="pos-cart-item">
+                                    <div style={{ flex: 1 }}>
+                                        <h5 style={{ fontSize: '0.95rem', margin: 0 }}>{item.name}</h5>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>₹</span>
+                                            <input 
+                                                type="number"
+                                                value={item.sellingPrice || item.maxRetailPrice || 0}
+                                                onChange={(e) => {
+                                                    const newPrice = Number(e.target.value);
+                                                    setCart(prev => prev.map(c => c.id === item.id ? { ...c, sellingPrice: newPrice, cartTotal: c.cartQuantity * newPrice } : c));
+                                                }}
+                                                style={{ width: '50px', border: 'none', background: 'transparent', fontSize: '0.8rem', fontWeight: 600, color: 'var(--primary)', padding: 0 }}
+                                            />
+                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>/ {item.unit || item.baseUnit}</span>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'var(--bg-color)', borderRadius: '30px', padding: '0.25rem 0.75rem' }}>
+                                        <button onClick={() => updateQty(item.id, -1)} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '0.2rem' }}><Minus size={14} /></button>
+                                        <span style={{ fontWeight: 800, minWidth: '20px', textAlign: 'center' }}>{item.cartQuantity}</span>
+                                        <button onClick={() => updateQty(item.id, 1)} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '0.2rem' }}><Plus size={14} /></button>
+                                    </div>
+                                    <div style={{ width: '80px', textAlign: 'right', fontWeight: 700 }}>₹{Math.round(item.cartTotal)}</div>
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
+
+                        {cart.length === 0 && (
+                            <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--text-tertiary)' }}>
+                                <ShoppingCart size={48} style={{ margin: '0 auto 1rem', opacity: 0.2 }} />
+                                <p>Bill is empty.<br/>Select products to start.</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Checkout Footer */}
+                    <div style={{ padding: '1.5rem', background: 'var(--surface-raised)', borderTop: '1px solid var(--surface-border)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', fontSize: '1.25rem', fontWeight: 800 }}>
+                            <span>To Pay</span>
+                            <span style={{ color: 'var(--primary)' }}>₹{Math.round(cartSubtotal).toLocaleString('en-IN')}</span>
+                        </div>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                            <button onClick={() => handleCheckout('Cash')} disabled={isProcessing || cart.length === 0} className="btn pos-checkout-btn" style={{ background: 'var(--primary)', color: 'white' }}>
+                                <Banknote size={20} /> Cash
+                            </button>
+                            <button onClick={() => handleCheckout('UPI')} disabled={isProcessing || cart.length === 0} className="btn pos-checkout-btn" style={{ background: '#0055ff', color: 'white' }}>
+                                <QrCode size={20} /> UPI
+                            </button>
+                        </div>
+                        <button onClick={() => handleCheckout('Khata')} disabled={isProcessing || cart.length === 0} className="btn pos-checkout-btn" style={{ background: 'var(--secondary)', color: 'var(--secondary-dark)' }}>
+                             Credit / Digital Khata <ChevronRight size={20} />
+                        </button>
+                    </div>
+                </aside>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(150px, 1fr) 3fr', gap: '0', marginBottom: '8px', marginTop: '-8px' }}>
-                <div className="pos-box" style={{ padding: '2px', fontWeight: 'bold', borderRight: 'none', height: '28px', display: 'flex', alignItems: 'center' }}>Customer Signature</div>
-                <div className="pos-box" style={{ padding: '2px', borderBottom: 'none' }}></div>
+            {/* Hidden Traditional Print Layout (Credit Memo) */}
+            <div className="print-only" style={{ display: 'none' }}>
+                <TraditionalPrintLayout 
+                    cart={cart} 
+                    customer={customer} 
+                    branding={branding} 
+                    billNumber={nextBillNumber} 
+                    subtotal={cartSubtotal}
+                />
+            </div>
+        </div>
+    );
+}
 
-                <div className="pos-box" style={{ padding: '2px', fontWeight: 'bold', borderRight: 'none', borderTop: 'none', height: '28px', display: 'flex', alignItems: 'center' }}>Seller Signature</div>
-                <div className="pos-box" style={{ padding: '2px' }}></div>
+function TraditionalPrintLayout({ cart, customer, branding, billNumber, subtotal }: any) {
+    return (
+        <div style={{ padding: '20mm', fontFamily: 'serif', background: '#fff', color: '#000' }}>
+            <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: '10px', marginBottom: '20px' }}>
+                <h3 style={{ margin: 0, fontSize: '24px' }}>Credit Memo</h3>
+                <h1 style={{ margin: '5px 0', fontSize: '32px' }}>{branding?.businessName || 'Karan Arjun Retailer OS'}</h1>
+                <p style={{ margin: 0 }}>{branding?.address} {branding?.licenseNumbers ? `| Lic: ${branding.licenseNumbers}` : ''}</p>
             </div>
 
-            {/* Customer Basic Info */}
-            <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 80px 200px', marginBottom: '8px', alignItems: 'center' }}>
-                <div className="pos-box" style={{ padding: '6px', fontWeight: 'bold', borderRight: 'none', textAlign: 'center' }}>Name</div>
-                <div className="pos-box" style={{ padding: '6px', borderRight: 'none' }}><input className="pos-input" value={headerData.customerName} onChange={e => setHeaderData({ ...headerData, customerName: e.target.value })} /></div>
-                <div className="pos-box" style={{ padding: '6px', fontWeight: 'bold', borderRight: 'none', textAlign: 'center' }}>Mob No :</div>
-                <div className="pos-box" style={{ padding: '6px' }}><input className="pos-input" value={headerData.customerMobile} onBlur={handlePhoneBlur} onChange={e => setHeaderData({ ...headerData, customerMobile: e.target.value })} /></div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', marginBottom: '20px' }}>
+                <div>
+                    <h4 style={{ borderBottom: '1px solid #000', paddingBottom: '5px' }}>Billed To:</h4>
+                    <p><strong>{customer.name}</strong></p>
+                    <p>{customer.phone}</p>
+                    <p>{customer.address}</p>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                    <p><strong>Invoice #:</strong> {billNumber}</p>
+                    <p><strong>Date:</strong> {new Date().toLocaleDateString()}</p>
+                </div>
             </div>
 
-            {/* Products Table */}
-            <table className="pos-table" style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '8px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
                 <thead>
-                    <tr style={{ fontWeight: 'bold', background: '#f9f9f9' }}>
-                        <th style={{ width: '60px' }}>Sr No</th>
-                        {templateFields.map(f => (
-                            <th key={f.id} style={{ width: f.sourceKey === 'productName' ? 'auto' : '100px' }}>
-                                {f.label}
-                            </th>
-                        ))}
+                    <tr style={{ background: '#eee' }}>
+                        <th style={{ border: '1px solid #000', padding: '8px' }}>Sr</th>
+                        <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'left' }}>Item Description</th>
+                        <th style={{ border: '1px solid #000', padding: '8px' }}>Qty</th>
+                        <th style={{ border: '1px solid #000', padding: '8px' }}>Rate</th>
+                        <th style={{ border: '1px solid #000', padding: '8px' }}>Total</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {rows.map((row, idx) => (
-                        <tr key={idx}>
-                            <td>{idx + 1}</td>
-                            {templateFields.map(field => {
-                                if (field.sourceKey === 'productName') {
-                                    return (
-                                        <td key={field.id} style={{ textAlign: 'left' }}>
-                                            <div style={{ position: 'relative', display: 'flex' }}>
-                                                <input
-                                                    className="pos-input"
-                                                    value={row.productName}
-                                                    onChange={(e) => {
-                                                        const val = e.target.value;
-                                                        handleRowChange(idx, 'productName', val);
-                                                        if (val.length > 0) setActiveRowIndex(idx);
-                                                        else setActiveRowIndex(null);
-                                                    }}
-                                                    onFocus={() => row.productName.length > 0 && setActiveRowIndex(idx)}
-                                                    onBlur={() => setTimeout(() => setActiveRowIndex(null), 200)}
-                                                    style={{ width: '100%', boxSizing: 'border-box' }}
-                                                    placeholder="Search product..."
-                                                />
-                                                {activeRowIndex === idx && (
-                                                    <div className="pos-dropdown no-print">
-                                                        {products
-                                                            .filter(p => p.name.toLowerCase().includes(row.productName.toLowerCase()))
-                                                            .slice(0, 50) // limit items to avoid rendering 3000 elements
-                                                            .map(p => (
-                                                                <div 
-                                                                    key={p.id} 
-                                                                    className="pos-dropdown-item"
-                                                                    onMouseDown={() => {
-                                                                        handleRowChange(idx, 'productId', p.id);
-                                                                    }}
-                                                                >
-                                                                    {p.name}
-                                                                </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </td>
-                                    );
-                                }
-                                if (field.sourceKey === 'unit') {
-                                    return <td key={field.id}><input className="pos-input" style={{ textAlign: 'center' }} value={row.packing} onChange={e => handleRowChange(idx, 'packing', e.target.value)} /></td>;
-                                }
-                                if (field.sourceKey === 'mrp') {
-                                    return <td key={field.id}><input type="number" className="pos-input" style={{ textAlign: 'center' }} value={row.rate} onChange={e => handleRowChange(idx, 'rate', e.target.value)} /></td>;
-                                }
-                                if (field.sourceKey === 'quantity') {
-                                    return <td key={field.id}><input type="number" className="pos-input" style={{ textAlign: 'center' }} value={row.quantity} onChange={e => handleRowChange(idx, 'quantity', e.target.value)} /></td>;
-                                }
-                                if (field.sourceKey === 'amount') {
-                                    return <td key={field.id} style={{ textAlign: 'center' }}>{row.total || 0}</td>;
-                                }
-                                if (field.sourceKey === 'notes') {
-                                    return <td key={field.id}><input className="pos-input" style={{ textAlign: 'center' }} value={row.notes || ''} onChange={e => handleRowChange(idx, 'notes', e.target.value)} /></td>;
-                                }
-                                return <td key={field.id}></td>;
-                            })}
+                    {cart.map((item: any, i: number) => (
+                        <tr key={i}>
+                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{i + 1}</td>
+                            <td style={{ border: '1px solid #000', padding: '8px' }}>{item.name}</td>
+                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{item.cartQuantity} {item.baseUnit}</td>
+                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>₹{item.sellingPrice || item.maxRetailPrice}</td>
+                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>₹{Math.round(item.cartTotal)}</td>
                         </tr>
                     ))}
-                    {/* Grand Total Row */}
-                    <tr>
-                        <td colSpan={templateFields.length} style={{ textAlign: 'left', fontWeight: 'bold' }}>Grand Total</td>
-                        <td style={{ fontWeight: 'bold', textAlign: 'center' }}>{grandTotal}</td>
-                    </tr>
+                    {/* Fill empty rows for traditional look */}
+                    {Array.from({ length: Math.max(0, 10 - cart.length) }).map((_, i) => (
+                        <tr key={`empty-${i}`}>
+                            <td style={{ border: '1px solid #000', padding: '8px', height: '30px' }}></td>
+                            <td style={{ border: '1px solid #000', padding: '8px' }}></td>
+                            <td style={{ border: '1px solid #000', padding: '8px' }}></td>
+                            <td style={{ border: '1px solid #000', padding: '8px' }}></td>
+                            <td style={{ border: '1px solid #000', padding: '8px' }}></td>
+                        </tr>
+                    ))}
                 </tbody>
+                <tfoot>
+                    <tr>
+                        <td colSpan={4} style={{ border: '1px solid #000', padding: '8px', textAlign: 'right', fontWeight: 'bold' }}>Grand Total</td>
+                        <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', fontWeight: 'bold', fontSize: '1.2rem' }}>₹{Math.round(subtotal)}</td>
+                    </tr>
+                </tfoot>
             </table>
 
-            {/* Footer Form */}
-            <div style={{ border: '1px solid #000', borderBottom: 'none' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr' }}>
-                    <div style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000', padding: '6px', fontWeight: 'bold', textAlign: 'center' }}>From</div>
-                    <div style={{ padding: '6px', borderBottom: '1px solid #000', fontWeight: 'bold' }}>Karan Arjun Krushi Seva Kendra Mob No : 9307199040</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '40px' }}>
+                <div style={{ textAlign: 'center', width: '150px' }}>
+                    <div style={{ height: '40px', borderBottom: '1px solid #000', marginBottom: '5px' }}></div>
+                    <p>Customer Signature</p>
                 </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 100px 200px' }}>
-                    <div style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000', padding: '6px', fontWeight: 'bold', textAlign: 'center' }}>To</div>
-                    <div style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000', padding: '6px' }}><input className="pos-input" value={headerData.customerName} onChange={e => setHeaderData({ ...headerData, customerName: e.target.value })} placeholder="Match with top Name" /></div>
-                    <div style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000', padding: '6px', fontWeight: 'bold', textAlign: 'center' }}>Mob No</div>
-                    <div style={{ padding: '6px', borderBottom: '1px solid #000' }}><input className="pos-input" value={headerData.customerMobile} onBlur={handlePhoneBlur} onChange={e => setHeaderData({ ...headerData, customerMobile: e.target.value })} placeholder="Match with top Mob No" /></div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 100px 200px' }}>
-                    <div style={{ borderRight: '1px solid #000', padding: '6px', fontWeight: 'bold', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Address</div>
-                    <div style={{ borderRight: '1px solid #000', padding: '6px' }}>
-                        <textarea className="pos-input" rows={2} value={headerData.address} onChange={e => setHeaderData({ ...headerData, address: e.target.value })} style={{ resize: 'none' }} />
+                {branding?.upiId && (
+                    <div style={{ textAlign: 'center' }}>
+                        <UpiQrCode upiId={branding.upiId} payeeName={branding.businessName} amount={subtotal} size={80} />
+                        <p style={{ fontSize: '10px', marginTop: '5px' }}>Scan to Pay</p>
                     </div>
-                    <div>
-                        <div style={{ height: '50%', borderBottom: '1px solid #000', borderRight: '1px solid #000' }}></div>
-                        <div style={{ height: '50%', borderRight: '1px solid #000', padding: '6px', fontWeight: 'bold', textAlign: 'center' }}>Pin</div>
-                    </div>
-                    <div>
-                        <div style={{ height: '50%', borderBottom: '1px solid #000' }}></div>
-                        <div style={{ height: '50%', padding: '6px' }}><input className="pos-input" value={headerData.pin} onChange={e => setHeaderData({ ...headerData, pin: e.target.value })} /></div>
-                    </div>
+                )}
+                <div style={{ textAlign: 'center', width: '150px' }}>
+                    <div style={{ height: '40px', borderBottom: '1px solid #000', marginBottom: '5px' }}></div>
+                    <p>Authorised Signatory</p>
                 </div>
             </div>
-            
-            <div style={{ borderTop: '1px solid #000', marginBottom: '8px' }}></div>
-            
-            {/* Note text */}
-            <div style={{ fontSize: '0.8rem', fontWeight: 'bold', textAlign: 'center' }}>
-                Note : The product is delivered on the consumer responsibility. Sold product won't be taken back.
-            </div>
-
-            {/* UPI QR Code — print only */}
-            {branding?.upiId && (
-                <div className="print-only" style={{ display: 'none', marginTop: '12px', borderTop: '1px solid #000', paddingTop: '10px', flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
-                    <div style={{ fontSize: '0.78rem', color: '#333' }}>
-                        <strong>Pay via UPI</strong><br />
-                        Scan QR or use UPI ID:<br />
-                        <strong>{branding.upiId}</strong><br />
-                        <span style={{ fontSize: '0.7rem', color: '#666' }}>Amount: ₹{grandTotal.toLocaleString('en-IN')}</span>
-                    </div>
-                    <UpiQrCode
-                        upiId={branding.upiId}
-                        payeeName={branding.businessName || ''}
-                        amount={grandTotal}
-                        transactionNote={nextBillNumber}
-                        size={100}
-                    />
-                </div>
-            )}
-
-            <div style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-tertiary)', marginTop: '1rem' }} className="no-print">
-                <strong>Keyboard Shortcuts:</strong> <kbd>F2</kbd> Search Items | <kbd>Ctrl+P</kbd> Print Bill | <kbd>Ctrl+S</kbd> Save Bill
-            </div>
-
-            {/* Action Buttons (HIDDEN IN PRINT) */}
-            <div className="no-print" style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '1rem' }}>
-                <button
-                    onClick={() => handleSave(true)}
-                    disabled={isProcessing}
-                    className="btn print-btn"
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 2rem', fontSize: '1.1rem', borderRadius: '8px' }}
-                >
-                    {isProcessing ? <Loader2 className="animate-spin" /> : <Printer size={20} />} Print Form (Ctrl+P)
-                </button>
-                <button
-                    onClick={() => handleSave(false)}
-                    disabled={isProcessing}
-                    className="btn save-btn"
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 2rem', fontSize: '1.1rem', borderRadius: '8px' }}
-                >
-                    {isProcessing ? <Loader2 className="animate-spin" /> : <Save size={20} />} Save Bill (Ctrl+S)
-                </button>
-            </div>
-        </div>
+            <p style={{ textAlign: 'center', fontSize: '10px', marginTop: '30px', color: '#666' }}>
+                Computer Generated Invoice - No Signature Required
+            </p>
         </div>
     );
 }
