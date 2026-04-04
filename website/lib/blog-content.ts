@@ -1,15 +1,180 @@
-export interface BlogPost {
-    slug: string;
-    title: string;
-    excerpt: string;
-    date: string;
-    readTime: string;
-    author: string;
-    categories: string[];
-    content: string; // We'll use simple HTML/string for now, or markdown if needed later.
-}
+import { BlogPost } from "./blog-service";
 
 export const blogPosts: BlogPost[] = [
+    {
+        slug: "why-privacy-is-the-missing-feature-in-indian-finance",
+        title: "Why Privacy is the #1 Missing Feature in Indian Finance Apps",
+        excerpt: "Indian fintech is booming, but your data is being sold to the highest bidder. Discover why Fiinny's zero-knowledge architecture is the only way to track money in 2024.",
+        date: "April 3, 2026",
+        readTime: "5 min read",
+        author: "Arjun Tanpure",
+        categories: ["Privacy", "Indian Fintech", "Security"],
+        coverImage: "/assets/blog/privacy-security.png",
+        seoTitle: "Financial Privacy in India | Why it's Missing | Fiinny",
+        seoDescription: "Exposing how Indian finance apps harvest your data and why Fiinny's zero-knowledge architecture is the only secure way to track expenses.",
+        keywords: ["financial privacy India", "safe expense tracker", "zero-knowledge fintech"],
+        content: `
+            <p class="lead text-xl mb-8 font-medium text-slate-700">In the last 5 years, India has seen a revolution in digital payments. But alongside the convenience of UPI and credit cards, we've invited a silent intruder into our pockets: data brokers.</p>
+            
+            <h2 class="text-3xl font-black mb-6 mt-12 text-slate-900 tracking-tight">The Price of 'Free' Tracking</h2>
+            <p class="mb-6 leading-relaxed text-slate-600">Most \"free\" expense trackers in India today aren't actually free. You pay with your data. Every time you grant an app access to your SMS or bank statements, your spending habits, income levels, and even your location are being harvested. This data is then sold to credit card companies, insurance brokers, and predatory lenders who bombard you with \"pre-approved\" loans you never asked for.</p>
+
+            <div class="bg-teal-50/50 p-8 rounded-[2rem] border border-teal-100 my-10 relative overflow-hidden">
+                <div class="absolute -top-10 -right-10 w-40 h-40 bg-teal-500/5 rounded-full blur-3xl" />
+                <h3 class="text-xl font-bold mb-4 text-teal-900 relative z-10">THE PROBLEM: THE SMS PERMISSION GAP</h3>
+                <p class="text-slate-600 relative z-10 font-medium">When an app asks for \"SMS Permission\" to track expenses, they often upload your entire message history to a central server. This is where the privacy breach happens. Your private conversations, OTPs (if not handled carefully), and financial history become part of a massive database.</p>
+            </div>
+
+            <h2 class="text-3xl font-black mb-6 mt-12 text-slate-900 tracking-tight">Fiinny’s Architecture: Local-First, Zero-Knowledge</h2>
+            <p class="mb-6 text-slate-600 font-medium">At Fiinny, we decided to do things differently. We built what we call <strong>Zero-Knowledge Architecture</strong>. Here’s how it works:</p>
+
+            <div class="grid md:grid-cols-2 gap-6 my-10">
+                <div class="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm shadow-slate-200/40">
+                    <h4 class="font-bold text-teal-700 mb-2">On-Device Parsing</h4>
+                    <p class="text-sm text-slate-500 font-medium">Your bank SMS are read and categorized <strong>only on your phone</strong>. The raw messages never leave your device.</p>
+                </div>
+                <div class="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm shadow-slate-200/40">
+                    <h4 class="font-bold text-teal-700 mb-2">ISO-Aligned Security</h4>
+                    <p class="text-sm text-slate-500 font-medium">We follow strict ISO security protocols to ensure your financial identity is encrypted with keys that only you hold.</p>
+                </div>
+            </div>
+
+            <h2 class="text-3xl font-black mb-6 mt-12 text-slate-900 tracking-tight">Why This Matters for India</h2>
+            <p class="mb-6 text-slate-600">As India moves towards a digital-first economy, the value of your financial data will only grow. Protecting it isn't just about avoiding spam calls; it's about owning your financial identity. Whether you are tracking a small chai-tapri UPI payment or a large equity investment, you deserve to do it without an audience.</p>
+
+            <div class="mt-16 p-8 bg-slate-900 rounded-[2.5rem] text-white text-center">
+                <h3 class="text-2xl font-bold mb-4">Start Tracking with Privacy</h3>
+                <p class="text-slate-400 mb-8 max-w-lg mx-auto font-medium">Join thousands of users who have switched to a tracker that respects their data. No cloud-based harvesting, just pure financial utility.</p>
+                <a href="/login" class="inline-flex items-center justify-center px-8 py-3.5 text-base font-bold text-slate-900 bg-white rounded-full hover:bg-teal-50 transition-all hover:scale-105 active:scale-95">Download Fiinny Today</a>
+            </div>
+        `
+    },
+    {
+        slug: "ghost-subscription-audit",
+        title: "Stop the Leak: The 5-Minute Ghost Subscription Audit",
+        excerpt: "Almost everyone pays for a streaming service or app they don't use. Discover how to find and kill these 'ghost' costs to save $500+ this year.",
+        date: "April 4, 2026",
+        readTime: "4 min read",
+        author: "Fiinny Editorial",
+        categories: ["Saving", "Personal Finance", "Productivity"],
+        coverImage: "/assets/blog/ghost-subscriptions.png",
+        seoTitle: "How to Cancel Ghost Subscriptions and Save Money | Fiinny",
+        seoDescription: "Step-by-step guide to identifying and cancelling unused subscriptions draining your bank account.",
+        keywords: ["ghost subscriptions", "cancel unused apps", "save money hacks", "subscription audit"],
+        content: `
+            <p class="lead text-xl mb-8 font-medium text-slate-700">You probably have a small hole in your pocket. It’s $10 here, $15 there—recurring charges for apps you used once and forgot to delete. We call them 'Ghost Subscriptions'.</p>
+            
+            <h2 class="text-3xl font-black mb-6 mt-12 text-slate-900 tracking-tight">The $1,200 Leak</h2>
+            <p class="mb-6 leading-relaxed text-slate-600">Research shows the average millennial pays for 4-5 subscriptions they haven't used in three months. That's nearly $100 a month—or $1,200 a year. Imagine what you could do with that money: a vacation, a new tech setup, or boosting your emergency fund.</p>
+
+            <h2 class="text-3xl font-black mb-6 mt-12 text-slate-900 tracking-tight">The Audit Checklist</h2>
+            <div class="bg-slate-50 p-8 rounded-2xl border border-slate-100 my-8">
+                <ul class="space-y-4">
+                    <li class="flex items-start"><span class="font-bold text-teal-600 mr-2">01.</span> <strong>Keyword Search:</strong> Look for "recurring" or "monthly" in your bank history.</li>
+                    <li class="flex items-start"><span class="font-bold text-teal-600 mr-2">02.</span> <strong>The Forgotten App:</strong> Check your Apple/Google Play 'Subscriptions' settings.</li>
+                    <li class="flex items-start"><span class="font-bold text-teal-600 mr-2">03.</span> <strong>Automated Detection:</strong> Use Fiinny to see all recurring transactions in one dashboard.</li>
+                </ul>
+            </div>
+
+            <h2 class="text-3xl font-black mb-6 mt-12 text-slate-900 tracking-tight">How Fiinny Helps</h2>
+            <p class="mb-6 text-slate-600 font-medium">Fiinny scans your transactions on-device and highlights recurring leaks. It doesn’t just show you what you spent—it shows you what you're *about* to spend next month. Kill the ghosts and keep your cash.</p>
+        `
+    },
+    {
+        slug: "automation-vs-manual-tracking",
+        title: "The Automation Era: Why Manual Spreadsheets are Dead",
+        excerpt: "Stop spending 20 hours a month on manual data entry. Learn how automation and SMS-to-Insight tech are revolutionizing personal finance in 2026.",
+        date: "April 5, 2026",
+        readTime: "6 min read",
+        author: "Arjun Tanpure",
+        categories: ["Automation", "Productivity", "Tech"],
+        coverImage: "/assets/blog/automation.png",
+        seoTitle: "Automation vs Manual Budgeting: Why Spreadsheets are Dead | Fiinny",
+        seoDescription: "Exposing why manual budgeting fails and how SMS-driven automation is the key to financial consistency and absolute privacy.",
+        keywords: ["automatic budgeting", "manual tracking vs automation", "SMS expense tracker"],
+        content: `
+            <p class="lead text-xl mb-8 font-medium text-slate-700">Most people fail at budgeting within 30 days. Why? Because manual tracking is a second job that nobody wants. In 2026, automation isn't just a luxury—it's the only way to build a habit that sticks.</p>
+            
+            <h2 class="text-3xl font-black mb-6 mt-12 text-slate-900 tracking-tight">The 30-Day Burnout</h2>
+            <p class="mb-6 leading-relaxed text-slate-600">The cycle is familiar: You download a fancy spreadsheet, you enter every coffee for three days, and then... life happens. By day 30, you've deleted the file. Manual tracking requires a level of discipline that human beings simply weren't designed for.</p>
+
+            <h2 class="text-3xl font-black mb-6 mt-12 text-slate-900 tracking-tight">The Solution: Invisible Tracking</h2>
+            <div class="grid md:grid-cols-2 gap-6 my-10">
+                <div class="p-8 bg-teal-50 rounded-3xl border border-teal-100">
+                    <h4 class="font-bold text-teal-900 mb-3">SMS-to-Insight</h4>
+                    <p class="text-slate-600 text-sm">Every time you pay via UPI or card, your bank sends an SMS. Fiinny's on-device AI reads this instantly—categorizing the expense before you've even left the shop.</p>
+                </div>
+                <div class="p-8 bg-slate-50 rounded-3xl border border-slate-200">
+                    <h4 class="font-bold text-slate-900 mb-3">Zero Effort</h4>
+                    <p class="text-slate-600 text-sm">With automation, your 'Available Balance' is actually your real balance, not a guess you made three days ago.</p>
+                </div>
+            </div>
+        `
+    },
+    {
+        slug: "50-30-20-rule-modern-guide",
+        title: "The 50/30/20 Rule: A 2026 Reality Check",
+        excerpt: "The world's most famous budgeting rule just got an update. Learn how to apply the 50/30/20 framework to a high-inflation, modern economy.",
+        date: "April 6, 2026",
+        readTime: "5 min read",
+        author: "Fiinny Team",
+        categories: ["Wealth", "Basics", "Philosophy"],
+        coverImage: "/assets/blog/budgeting-rule.png",
+        seoTitle: "Modern 50 30 20 Budgeting Rule for 2026 | Fiinny",
+        seoDescription: "How to use the 50 30 20 budgeting framework to balance needs, wants, and savings in today's high-rent economy with Fiinny's automated tracking.",
+        keywords: ["50 30 20 rule", "how to budget", "financial planning hacks"],
+        content: `
+            <p class="lead text-xl mb-8 font-medium text-slate-700">The 50/30/20 rule is simple: 50% Needs, 30% Wants, 20% Savings. But in a 2026 economy where rent is sky-high, the old definitions need a reality check.</p>
+            
+            <div class="space-y-6 my-12">
+                <div class="flex items-center gap-6 p-6 bg-white rounded-3xl border border-slate-100 shadow-sm">
+                    <div class="w-16 h-16 rounded-full bg-teal-500 flex items-center justify-center text-white font-black">50%</div>
+                    <div>
+                        <h4 class="font-bold text-slate-900">Needs (The Foundation)</h4>
+                        <p class="text-slate-500 text-sm">Rent, Groceries, and Basic Utilities. If it keeps you safe and working, it's a Need.</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-6 p-6 bg-white rounded-3xl border border-slate-100 shadow-sm">
+                    <div class="w-16 h-16 rounded-full bg-indigo-500 flex items-center justify-center text-white font-black">30%</div>
+                    <div>
+                        <h4 class="font-bold text-slate-900">Wants (The Lifestyle)</h4>
+                        <p class="text-slate-500 text-sm">Dining out, Travel, and that extra latte. This is your "Enjoy Life" fund.</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-6 p-6 bg-white rounded-3xl border border-slate-100 shadow-sm">
+                    <div class="w-16 h-16 rounded-full bg-emerald-500 flex items-center justify-center text-white font-black">20%</div>
+                    <div>
+                        <h4 class="font-bold text-slate-900">Future (Savings)</h4>
+                        <p class="text-slate-500 text-sm">Emergency funds and Debt payments. Your future self will thank you.</p>
+                    </div>
+                </div>
+            </div>
+
+            <p class="mb-6 text-slate-600 font-medium">Fiinny visualizes this split for you. Our auto-categorization tells you exactly where you stand, making it easy to see if your 'Wants' are eating into your 'Future'.</p>
+        `
+    },
+    {
+        slug: "digital-nomad-finance-guide",
+        title: "Financial Freedom for Digital Nomads: Global Tracking",
+        excerpt: "Traveling the world while working? Discover why a private, non-bank-tethered expense tracker is essential for the modern nomadic lifestyle.",
+        date: "April 7, 2026",
+        readTime: "7 min read",
+        author: "Arjun Tanpure",
+        categories: ["Lifestyle", "Global", "Security"],
+        coverImage: "/assets/blog/digital-nomad.png",
+        seoTitle: "Best Expense Tracker for Digital Nomads 2026 | Fiinny",
+        seoDescription: "Managing cross-border finances and currency tracking privately as a digital nomad with Fiinny's secure and on-device platform.",
+        keywords: ["digital nomad budgeting", "international expense tracking", "nomadic lifestyle finance"],
+        content: `
+            <p class="lead text-xl mb-8 font-medium text-slate-700">Digital nomads live a lifestyle of freedom—but their finances are often a chaotic mess of multiple banks, currencies, and zero privacy.</p>
+            
+            <h2 class="text-3xl font-black mb-6 mt-12 text-slate-900 tracking-tight">The Borderless Challenge</h2>
+            <p class="mb-6 leading-relaxed text-slate-600">When your money is spread across an Indian account, a US account, and a Revolut card, tracking your actual net worth becomes impossible. Most apps breaking the moment you cross a border or switch a currency.</p>
+
+            <h2 class="text-3xl font-black mb-6 mt-12 text-slate-900 tracking-tight">Why Fiinny is Different</h2>
+            <p class="mb-6 text-slate-600 font-medium">Because Fiinny is focused on on-device logic, it’s the perfect tool for someone spending in multiple currencies with total privacy. Own your financial identity, wherever the Wi-Fi takes you.</p>
+        `
+    },
     {
         slug: "why-managing-money-shouldnt-feel-like-work",
         title: "Managing money shouldn’t feel like work.",
@@ -18,65 +183,28 @@ export const blogPosts: BlogPost[] = [
         readTime: "3 min read",
         author: "Fiinny Team",
         categories: ["Philosophy", "Product"],
+        coverImage: "/assets/blog/automation.png",
+        seoTitle: "Managing Money Should be Effortless | Fiinny Philosophy",
+        seoDescription: "Why Fiinny was built to reduce the effort of personal tracking and splitting bills, giving you clarity without the clutter.",
+        keywords: ["finance app philosophy", "effortless expense tracking", "minimalist budget app"],
         content: `
-            <p class="lead text-xl mb-8">Yet most finance apps today are cluttered, restrictive, or built around limits — limits on how many expenses you can add, how many friends you can split with, or how much insight you can actually see without interruptions.</p>
+            <p class="lead text-xl mb-8 font-medium text-slate-700">Yet most finance apps today are cluttered, restrictive, or built around limits — limits on how many expenses you can add, how many friends you can split with, or how much insight you can actually see without interruptions.</p>
             
-            <h2 class="text-2xl font-bold mb-4 mt-8">Fiinny was built to fix that.</h2>
-            <p class="mb-6">Fiinny is a modern expense tracker and bill-splitting app designed to reduce daily effort and bring clarity to personal and shared finances. Whether you’re tracking everyday spending, splitting expenses with friends or partners, or reviewing monthly trends, Fiinny keeps everything simple, fast, and stress-free.</p>
+            <h2 class="text-3xl font-black mb-6 mt-12 text-slate-900 tracking-tight">Fiinny was built to fix that.</h2>
+            <p class="mb-6 leading-relaxed text-slate-600">Fiinny is a modern expense tracker and bill-splitting app designed to reduce daily effort and bring clarity to personal and shared finances. Whether you’re tracking everyday spending, splitting expenses with friends or partners, or reviewing monthly trends, Fiinny keeps everything simple, fast, and stress-free.</p>
 
             <div class="bg-slate-50 p-8 rounded-2xl border border-slate-100 my-8">
                 <h3 class="text-xl font-bold mb-4">THE PROBLEM WITH MOST FINANCE APPS</h3>
                 <ul class="space-y-2">
                     <li class="flex items-start"><span class="mr-2 text-rose-500">•</span> Too many manual steps for basic tracking</li>
                     <li class="flex items-start"><span class="mr-2 text-rose-500">•</span> Duplicate entry for personal and shared expenses</li>
-                    <li class="flex items-start"><span class="mr-2 text-rose-500">•</span> Monthly insights that ignore recent days</li>
                     <li class="flex items-start"><span class="mr-2 text-rose-500">•</span> Limits on expenses, groups, or transactions</li>
                     <li class="flex items-start"><span class="mr-2 text-rose-500">•</span> Ads and prompts blocking core usage</li>
-                    <li class="flex items-start"><span class="mr-2 text-rose-500">•</span> Sharing that feels complicated and incomplete</li>
                 </ul>
             </div>
 
-            <h2 class="text-2xl font-bold mb-6">Fiinny solves these problems at the core.</h2>
-
-            <div class="space-y-8">
-                <div>
-                    <h3 class="text-xl font-bold text-teal-600 mb-2">SMART & EFFORTLESS TRACKING</h3>
-                    <p>Fiinny is designed to minimize daily effort. Add expenses and income in seconds through a clean, fast interface focused on clarity, not complexity. No unnecessary steps, no clutter — tracking fits naturally into your routine.</p>
-                </div>
-
-                <div>
-                    <h3 class="text-xl font-bold text-teal-600 mb-2">AUTO SYNC & SMART CONTEXT</h3>
-                    <p>Fiinny supports automatic and assisted tracking flows to help you stay consistent without micromanaging entries. Your expenses stay organized with context, making patterns easier to understand without extra work.</p>
-                </div>
-
-                <div>
-                    <h3 class="text-xl font-bold text-teal-600 mb-2">SPLIT BILLS DIRECTLY FROM EXPENSES</h3>
-                    <p>Unlike traditional apps that require separate or duplicate entries, Fiinny lets you split bills directly from the expense screen. Simply swipe right on any expense, choose a friend or group, and it’s done. No re-adding expenses, no switching screens — personal tracking and shared expenses work together seamlessly.</p>
-                </div>
-
-                <div>
-                    <h3 class="text-xl font-bold text-teal-600 mb-2">REAL MONTHLY INSIGHTS — INCLUDING RECENT DAYS</h3>
-                    <p>Fiinny’s monthly analysis always includes the most recent days of spending, even near month-end. This ensures your insights reflect your real financial behavior, not partial data or delayed updates.</p>
-                </div>
-
-                <div>
-                    <h3 class="text-xl font-bold text-teal-600 mb-2">UNLIMITED EXPENSES, NO ARTIFICIAL BLOCKS</h3>
-                    <p>Track as many expenses as you want and split as many transactions as you need. Fiinny does not impose hidden caps or restrict essential features. Add, manage, and share expenses freely — without interruptions.</p>
-                </div>
-            </div>
-
-            <hr class="my-10 border-slate-100" />
-
-            <h3 class="text-xl font-bold mb-4">WHO FIINNY IS FOR</h3>
-            <ul class="space-y-2 mb-8 list-disc pl-5">
-                <li>People tired of manual expense tracking</li>
-                <li>Users switching from restrictive bill-splitting apps</li>
-                <li>Couples and groups managing shared finances</li>
-                <li>Anyone who wants clarity, not clutter, in their money</li>
-            </ul>
-
-            <p class="font-bold text-lg">Fiinny isn’t about forcing habits.</p>
-            <p>It’s about reducing effort, increasing visibility, and giving you peace of mind.</p>
+            <h3 class="text-xl font-bold text-teal-600 mb-2">SMART & EFFORTLESS TRACKING</h3>
+            <p>Fiinny is designed to minimize daily effort. Add expenses and income in seconds through a clean, fast interface focused on clarity, not complexity.</p>
         `
     }
 ];

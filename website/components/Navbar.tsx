@@ -47,19 +47,27 @@ export default function Navbar() {
     return (
         <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
             <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-                <Link href={user ? "/dashboard" : "/"} className="flex items-center space-x-2 group">
-                    <div className="relative w-8 h-8 transition-transform group-hover:scale-110">
-                        <Image
-                            src="/assets/images/logo_icon.png"
-                            alt="Fiinny"
-                            fill
-                            className="object-contain"
-                        />
+                <div className="flex items-center space-x-8">
+                    <Link href={user ? "/dashboard" : "/"} className="flex items-center space-x-2 group">
+                        <div className="relative w-8 h-8 transition-transform group-hover:scale-110">
+                            <Image
+                                src="/assets/images/logo_icon.png"
+                                alt="Fiinny"
+                                fill
+                                className="object-contain"
+                            />
+                        </div>
+                        <span className="text-2xl font-bold bg-gradient-to-r from-teal-600 to-emerald-500 bg-clip-text text-transparent">
+                            Fiinny
+                        </span>
+                    </Link>
+
+                    <div className="hidden md:flex items-center space-x-6 border-l border-slate-100 pl-8">
+                        <Link href="/blog" className={`text-sm font-bold transition-colors ${pathname === '/blog' ? 'text-teal-600' : 'text-slate-500 hover:text-teal-600'}`}>
+                            Blog
+                        </Link>
                     </div>
-                    <span className="text-2xl font-bold bg-gradient-to-r from-teal-600 to-emerald-500 bg-clip-text text-transparent">
-                        Fiinny
-                    </span>
-                </Link>
+                </div>
 
                 <div className="flex items-center space-x-4">
                     {!loading && (

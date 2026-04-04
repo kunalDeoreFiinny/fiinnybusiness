@@ -16,6 +16,8 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
+import { blogPosts } from "./blog-content";
+
 export interface BlogPost {
     id?: string;
     slug: string;
@@ -34,26 +36,72 @@ export interface BlogPost {
     keywords?: string[];
 
     // Internal
-    createdAt?: Timestamp;
-    updatedAt?: Timestamp;
-    published?: boolean;
+    createdAt?: any;
+    updatedAt?: any;
 }
 
 const BLOG_COLLECTION = "posts";
 
+/**
+ * Sanitizes a post to ensure it can be passed from Server to Client components.
+ * Specifically handles Firebase Timestamps.
+ */
+const sanitizePost = (post: any): BlogPost => {
+    const sanitized = { ...post };
+    if (sanitized.createdAt && typeof sanitized.createdAt.toDate === 'function') {
+        sanitized.createdAt = sanitized.createdAt.toMillis();
+    }
+    if (sanitized.updatedAt && typeof sanitized.updatedAt.toDate === 'function') {
+        sanitized.updatedAt = sanitized.updatedAt.toMillis();
+    }
+    return sanitized as BlogPost;
+};
+
 export const BlogService = {
-    // Get all posts (ordered by creation time, newest first)
+    // Get all posts (local + optional firestore if needed later)
     async getPosts(): Promise<BlogPost[]> {
         try {
+            // Priority 1: High-Authority Local Content
+            const localPosts = [...blogPosts];
+            
+            // Priority 2: Federated Firestore Content (Admin-added)
             const q = query(collection(db, BLOG_COLLECTION), orderBy("createdAt", "desc"));
             const querySnapshot = await getDocs(q);
-            return querySnapshot.docs.map(doc => ({
+            const remotePosts = querySnapshot.docs.map(doc => sanitizePost({
                 id: doc.id,
                 ...doc.data()
-            } as BlogPost));
+            }));
+
+            // Merge & De-duplicate: Local posts take priority on top
+            const allPosts = [...localPosts, ...remotePosts];
+            const seenSlugs = new Set();
+            return allPosts.filter(post => {
+                if (seenSlugs.has(post.slug)) return false;
+                seenSlugs.add(post.slug);
+                return true;
+            });
         } catch (error) {
             console.error("Error fetching posts:", error);
-            return [];
+            return [...blogPosts];
+        }
+    },
+
+    // Get single post by slug
+    async getPostBySlug(slug: string): Promise<BlogPost | null> {
+        try {
+            const localPost = blogPosts.find(p => p.slug === slug);
+            if (localPost) return localPost;
+
+            const q = query(collection(db, BLOG_COLLECTION), where("slug", "==", slug));
+            const querySnapshot = await getDocs(q);
+            if (!querySnapshot.empty) {
+                const doc = querySnapshot.docs[0];
+                return sanitizePost({ id: doc.id, ...doc.data() });
+            }
+            return null;
+        } catch (error) {
+            console.error("Error fetching post by slug:", error);
+            return null;
         }
     },
 
@@ -63,25 +111,11 @@ export const BlogService = {
             const docRef = doc(db, BLOG_COLLECTION, id);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
-                return { id: docSnap.id, ...docSnap.data() } as BlogPost;
+                return sanitizePost({ id: docSnap.id, ...docSnap.data() });
             }
             return null;
         } catch (error) {
             console.error("Error fetching post by ID:", error);
-            return null;
-        }
-    },
-
-    // Get single post by slug (for public view)
-    async getPostBySlug(slug: string): Promise<BlogPost | null> {
-        try {
-            const q = query(collection(db, BLOG_COLLECTION), where("slug", "==", slug));
-            const querySnapshot = await getDocs(q);
-            if (querySnapshot.empty) return null;
-            const doc = querySnapshot.docs[0];
-            return { id: doc.id, ...doc.data() } as BlogPost;
-        } catch (error) {
-            console.error("Error fetching post by slug:", error);
             return null;
         }
     },
@@ -103,9 +137,6 @@ export const BlogService = {
             ...post,
             updatedAt: Timestamp.now()
         };
-        // prevent overwriting createdAt if passed by mistake, though Partial handles it.
-        delete (updateData as any).createdAt;
-
         await updateDoc(docRef, updateData);
     },
 

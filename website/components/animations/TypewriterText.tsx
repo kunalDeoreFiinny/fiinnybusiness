@@ -67,7 +67,7 @@ export default function TypewriterText({
     };
 
     return (
-        <motion.h2
+        <motion.h1
             initial="hidden"
             whileInView="visible"
             // Trigger earlier if fast scrolling (-10% vs -20%)
@@ -90,6 +90,6 @@ export default function TypewriterText({
                     ))}
                 </span>
             ))}
-        </motion.h2>
+        </motion.h1>
     );
 }

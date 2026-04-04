@@ -1209,6 +1209,46 @@ function MainContent() {
           </motion.div>
         )}
       </AnimatePresence>
+      {/* Bot-Friendly Text Section for SEO (Visually minimalist but indexed) */}
+      <footer className="py-12 bg-slate-50 border-t border-slate-100 mt-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center md:text-left">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 items-start opacity-60 hover:opacity-100 transition-opacity">
+            <div className="space-y-4">
+              <h3 className="font-bold text-slate-900">What is Fiinny?</h3>
+              <p className="text-sm text-slate-600 leading-relaxed font-medium">
+                Fiinny is a privacy-first, ISO-aligned personal finance management application built in Hyderabad, India. 
+                Our mission is to help Indian users track expenses, split bills, and manage taxes with zero manual effort and zero knowledge architecture. 
+                Your data is yours alone.
+              </p>
+            </div>
+            <div className="space-y-4">
+              <h3 className="font-bold text-slate-900">Why Choose Fiinny?</h3>
+              <ul className="text-sm text-slate-600 space-y-2 font-medium">
+                <li>• Automated Expense Tracking via Secure SMS Analysis</li>
+                <li>• Instant Bill Splitting for Friends, Roommates, and Couples</li>
+                <li>• Local-First Privacy Architecture (No data selling)</li>
+                <li>• Comprehensive Tax Planning & ITR Autopilot</li>
+              </ul>
+            </div>
+            <div className="space-y-4">
+              <h3 className="font-bold text-slate-900">Resources</h3>
+              <ul className="text-sm text-slate-600 space-y-2 font-medium">
+                <li>
+                  <Link href="/blog" className="hover:text-teal-600 transition-colors flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5" />
+                    Official Blog
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div className="mt-12 pt-8 border-t border-slate-200">
+            <p className="text-[10px] text-slate-400 font-mono text-center uppercase tracking-widest">
+              Fiinny Inc. &copy; 2024. Engineering Financial Clarity in Hyderabad.
+            </p>
+          </div>
+        </div>
+      </footer>
       <AiOverlay />
     </div>
   );
