@@ -98,4 +98,32 @@ class BudgetService {
 
     return enriched;
   }
+
+  /// Recursively fetches budgets and computes rollover limits up to 12 months back.
+  Future<List<BudgetModel>> getEnrichedBudgetsWithRollover(
+      String userId, int month, int year, List<ExpenseItem> allExpenses, {int depth = 0}) async {
+    if (depth > 12) return []; // Limit recursion
+
+    final budgets = await getBudgetsForMonth(userId, month, year);
+    final enriched = enrichBudgetsWithExpenses(budgets, allExpenses, month, year);
+
+    final rolloverBudgets = enriched.where((b) => b.isRollover).toList();
+    if (rolloverBudgets.isNotEmpty) {
+      int prevMonth = month == 1 ? 12 : month - 1;
+      int prevYear = month == 1 ? year - 1 : year;
+      
+      final prevBudgets = await getEnrichedBudgetsWithRollover(
+        userId, prevMonth, prevYear, allExpenses, depth: depth + 1
+      );
+      
+      for (var b in rolloverBudgets) {
+        final matchingPrev = prevBudgets.where((p) => p.category == b.category).toList();
+        if (matchingPrev.isNotEmpty) {
+           b.rolloverAmount = matchingPrev.first.amountRemaining;
+        }
+      }
+    }
+
+    return enriched;
+  }
 }

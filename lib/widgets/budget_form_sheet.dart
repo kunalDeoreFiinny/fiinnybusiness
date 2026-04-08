@@ -44,6 +44,7 @@ class _BudgetFormSheetState extends State<BudgetFormSheet> {
   
   String _selectedCategory = 'Overall';
   bool _isSaving = false;
+  bool _isRollover = false;
 
   @override
   void initState() {
@@ -56,6 +57,7 @@ class _BudgetFormSheetState extends State<BudgetFormSheet> {
          _categories.add(widget.existingBudget!.category);
          _selectedCategory = widget.existingBudget!.category;
       }
+      _isRollover = widget.existingBudget!.isRollover;
     }
   }
 
@@ -81,13 +83,15 @@ class _BudgetFormSheetState extends State<BudgetFormSheet> {
             category: _selectedCategory, 
             limitAmount: amt, 
             month: widget.month, 
-            year: widget.year
+            year: widget.year,
+            isRollover: _isRollover,
          );
          await _budgetService.addBudget(widget.userId, newBudget);
       } else {
-         final update = widget.existingBudget!.copyWith(
+          final update = widget.existingBudget!.copyWith(
             category: _selectedCategory,
             limitAmount: amt,
+            isRollover: _isRollover,
          );
          await _budgetService.updateBudget(widget.userId, update);
       }
@@ -197,7 +201,18 @@ class _BudgetFormSheetState extends State<BudgetFormSheet> {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 16),
+            SwitchListTile(
+              title: const Text('Carryover Leftovers', style: TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: const Text('Move remaining amount to next month', style: TextStyle(fontSize: 12)),
+              value: _isRollover,
+              activeColor: Fx.mintDark,
+              contentPadding: EdgeInsets.zero,
+              onChanged: (val) {
+                setState(() => _isRollover = val);
+              },
+            ),
+            const SizedBox(height: 24),
             if (_isSaving)
               const Center(child: CircularProgressIndicator(color: Fx.mintDark))
             else ...[

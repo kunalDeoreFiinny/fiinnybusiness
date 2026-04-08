@@ -187,8 +187,13 @@ void main() {
     AdService.updateConsent(authorized: AdConfig.authorized);
 
     FlutterError.onError = (details) {
+      final errStr = details.exceptionAsString();
+      if (errStr.contains('Invalid image data') || errStr.contains('Unable to load asset')) {
+        debugPrint('Ignored expected image/asset error: $errStr');
+        return;
+      }
       FlutterError.presentError(details);
-      tracer.add('FlutterError: ${details.exceptionAsString()}');
+      tracer.add('FlutterError: $errStr');
       if (kReleaseMode && !kIsWeb) {
         unawaited(FirebaseCrashlytics.instance.recordFlutterError(details));
       }
@@ -240,8 +245,13 @@ Future<void> _boot(StartupTracer tracer, {required bool attAllowed}) async {
     unawaited(AdService.initLater());
 
     FlutterError.onError = (FlutterErrorDetails details) {
+      final errStr = details.exceptionAsString();
+      if (errStr.contains('Invalid image data') || errStr.contains('Unable to load asset')) {
+        debugPrint('Ignored expected image/asset error: $errStr');
+        return;
+      }
       FlutterError.presentError(details);
-      tracer.add('FlutterError: ${details.exceptionAsString()}');
+      tracer.add('FlutterError: $errStr');
       if (kReleaseMode && !kIsWeb) {
         FirebaseCrashlytics.instance.recordFlutterError(details);
       }

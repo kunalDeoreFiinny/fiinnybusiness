@@ -15,6 +15,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getTenantCollection, getTenantDoc } from '../utils/tenantPath';
 import { fetchInvoiceTemplate, fetchInvoiceBranding } from '../services/invoiceTemplateService';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 interface Product {
     id: string;
@@ -22,6 +23,7 @@ interface Product {
     maxRetailPrice: number;
     retailerPrice: number;
     sellingPrice: number;
+    purchasePrice?: number;
     boxCapacity: number;
     baseUnit: string;
     unit?: string;
@@ -30,6 +32,7 @@ interface Product {
     gstPct?: number;
     imageUrl?: string;
     category?: string;
+    type?: string;
     barcode?: string;
 }
 
@@ -41,6 +44,7 @@ interface CartItem extends Product {
 const CATEGORIES = ['All', 'Kirana', 'Beverages', 'Personal Care', 'Dairy', 'Snacks'];
 
 export default function POSPage() {
+    const { t } = useTranslation();
     const { tenantId } = useAuth();
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
@@ -55,7 +59,7 @@ export default function POSPage() {
     // Cart State
     const [cart, setCart] = useState<CartItem[]>([]);
     const [customer, setCustomer] = useState({
-        name: 'Walk-in Customer',
+        name: t('pos.walk_in', 'Walk-in Customer'),
         phone: '',
         address: '',
         pin: ''
@@ -77,7 +81,8 @@ export default function POSPage() {
                     ...data,
                     quantity: data.quantity ?? (data as any).stock ?? 0,
                     baseUnit: data.baseUnit ?? data.unit ?? 'pcs',
-                    loosePieces: data.loosePieces ?? 0
+                    loosePieces: data.loosePieces ?? 0,
+                    type: data.type || ''
                 } as Product;
             });
             setProducts(productsList);
@@ -172,7 +177,7 @@ export default function POSPage() {
             const billNumber = await generateBillNumber();
             const orderData = {
                 orderNumber: billNumber,
-                retailerName: customer.name || 'Walk-in Customer',
+                retailerName: customer.name || t('pos.walk_in', 'Walk-in Customer'),
                 phoneNumber: customer.phone,
                 address: customer.address,
                 pin: customer.pin,
@@ -230,7 +235,7 @@ export default function POSPage() {
             setTimeout(() => {
                 window.print();
                 setCart([]);
-                setCustomer({ name: 'Walk-in Customer', phone: '', address: '', pin: '' });
+                setCustomer({ name: t('pos.walk_in', 'Walk-in Customer'), phone: '', address: '', pin: '' });
                 setIsRetailMode(true);
                 setIsProcessing(false);
             }, 500);
@@ -238,10 +243,16 @@ export default function POSPage() {
         } catch (e) { console.error(e); setIsProcessing(false); }
     };
 
-    const filteredProducts = products.filter(p => 
-        (selectedCategory === 'All' || p.category === selectedCategory.toLowerCase()) &&
-        (p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.barcode === searchQuery)
-    );
+    // Auto-hide onboarding dummy products if the user has added their own products
+    const realProductsExist = products.some(p => p.purchasePrice !== 0 || !(p as any).sku?.startsWith('SKU-'));
+
+    const filteredProducts = products.filter(p => {
+        const isDummy = p.purchasePrice === 0 && (p as any).sku?.startsWith('SKU-');
+        if (realProductsExist && isDummy) return false;
+
+        return (selectedCategory === 'All' || (p.type || '').toLowerCase() === selectedCategory.toLowerCase()) &&
+        (p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.barcode === searchQuery);
+    });
 
     if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-emerald-600" size={48} /></div>;
 
@@ -252,7 +263,7 @@ export default function POSPage() {
             <header className="no-print" style={{ background: '#fff', borderBottom: '1px solid var(--surface-border)', padding: '1rem 2rem', display: 'flex', alignItems: 'center', gap: '2rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <div style={{ background: 'var(--primary)', color: 'white', padding: '0.5rem', borderRadius: '10px' }}><Zap size={24} /></div>
-                    <h1 style={{ fontSize: '1.25rem', fontWeight: 800 }}>POS Modern</h1>
+                    <h1 style={{ fontSize: '1.25rem', fontWeight: 800 }}>{t('pos.title', 'POS Billing')}</h1>
                 </div>
 
                 <div style={{ flex: 1, position: 'relative' }}>
@@ -260,7 +271,7 @@ export default function POSPage() {
                     <input 
                         ref={searchRef}
                         type="text" 
-                        placeholder="Search products or scan barcode (/) ..." 
+                        placeholder={t('pos.search_placeholder', 'Search products or scan barcode (/) ...')} 
                         className="input-field" 
                         style={{ paddingLeft: '3rem', borderRadius: '12px' }} 
                         value={searchQuery}
@@ -270,10 +281,10 @@ export default function POSPage() {
 
                 <div style={{ display: 'flex', background: 'var(--surface-raised)', borderRadius: '12px', padding: '0.25rem' }}>
                     <button onClick={() => setIsRetailMode(true)} style={{ padding: '0.5rem 1rem', borderRadius: '10px', background: isRetailMode ? 'white' : 'transparent', color: isRetailMode ? 'var(--primary)' : 'var(--text-tertiary)', border: 'none', cursor: 'pointer', display: 'flex', gap: '0.5rem', alignItems: 'center', fontWeight: 600 }}>
-                        <LayoutGrid size={18} /> Retail
+                        <LayoutGrid size={18} /> {t('pos.retail_mode', 'Retail')}
                     </button>
                     <button onClick={() => setIsRetailMode(false)} style={{ padding: '0.5rem 1rem', borderRadius: '10px', background: !isRetailMode ? 'white' : 'transparent', color: !isRetailMode ? 'var(--primary)' : 'var(--text-tertiary)', border: 'none', cursor: 'pointer', display: 'flex', gap: '0.5rem', alignItems: 'center', fontWeight: 600 }}>
-                        <List size={18} /> Bill Form
+                        <List size={18} /> {t('pos.bill_form', 'Bill Form')}
                     </button>
                 </div>
             </header>
@@ -334,7 +345,7 @@ export default function POSPage() {
                 <aside className="no-print" style={{ width: '450px', background: '#fff', borderLeft: '1px solid var(--surface-border)', display: 'flex', flexDirection: 'column' }}>
                     <div style={{ padding: '1.5rem', flex: 1, overflowY: 'auto' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><ShoppingCart size={20} /> Bill Summary</h3>
+                            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><ShoppingCart size={20} /> {t('pos.bill_summary', 'Bill Summary')}</h3>
                             <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>#{nextBillNumber}</span>
                         </div>
 
@@ -344,7 +355,7 @@ export default function POSPage() {
                                 <Phone size={16} color="var(--text-tertiary)" />
                                 <input 
                                     type="tel" 
-                                    placeholder="Customer Phone No ..." 
+                                    placeholder={t('pos.customer_phone_placeholder', 'Customer Phone No ...')}
                                     style={{ border: 'none', background: 'transparent', width: '100%', outline: 'none' }}
                                     value={customer.phone}
                                     onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
@@ -355,7 +366,7 @@ export default function POSPage() {
                                 <User size={16} color="var(--text-tertiary)" />
                                 <input 
                                     type="text" 
-                                    placeholder="Name: Walk-in Customer" 
+                                    placeholder={t('pos.walk_in', 'Name: Walk-in Customer')}
                                     style={{ border: 'none', background: 'transparent', width: '100%', outline: 'none', fontWeight: 600 }}
                                     value={customer.name}
                                     onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
@@ -396,7 +407,7 @@ export default function POSPage() {
                         {cart.length === 0 && (
                             <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--text-tertiary)' }}>
                                 <ShoppingCart size={48} style={{ margin: '0 auto 1rem', opacity: 0.2 }} />
-                                <p>Bill is empty.<br/>Select products to start.</p>
+                                <p dangerouslySetInnerHTML={{ __html: t('pos.empty_cart', 'Bill is empty.<br/>Select products to start.') }}></p>
                             </div>
                         )}
                     </div>
@@ -404,27 +415,27 @@ export default function POSPage() {
                     {/* Checkout Footer */}
                     <div style={{ padding: '1.5rem', background: 'var(--surface-raised)', borderTop: '1px solid var(--surface-border)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', fontSize: '1.25rem', fontWeight: 800 }}>
-                            <span>To Pay</span>
+                            <span>{t('pos.to_pay', 'To Pay')}</span>
                             <span style={{ color: 'var(--primary)' }}>₹{Math.round(cartSubtotal).toLocaleString('en-IN')}</span>
                         </div>
                         
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                             <button onClick={() => handleCheckout('Cash')} disabled={isProcessing || cart.length === 0} className="btn pos-checkout-btn" style={{ background: 'var(--primary)', color: 'white' }}>
-                                <Banknote size={20} /> Cash
+                                <Banknote size={20} /> {t('pos.cash_payment', 'Cash')}
                             </button>
                             <button onClick={() => handleCheckout('UPI')} disabled={isProcessing || cart.length === 0} className="btn pos-checkout-btn" style={{ background: '#0055ff', color: 'white' }}>
-                                <QrCode size={20} /> UPI
+                                <QrCode size={20} /> {t('pos.upi_payment', 'UPI')}
                             </button>
                         </div>
                         <button onClick={() => handleCheckout('Khata')} disabled={isProcessing || cart.length === 0} className="btn pos-checkout-btn" style={{ background: 'var(--secondary)', color: 'var(--secondary-dark)' }}>
-                             Credit / Digital Khata <ChevronRight size={20} />
+                             {t('pos.khata_payment', 'Credit / Digital Khata')} <ChevronRight size={20} />
                         </button>
                     </div>
                 </aside>
             </div>
 
             {/* Hidden Traditional Print Layout (Credit Memo) */}
-            <div className="print-only" style={{ display: 'none' }}>
+            <div className="print-only">
                 <TraditionalPrintLayout 
                     cart={cart} 
                     customer={customer} 

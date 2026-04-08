@@ -31,9 +31,11 @@ class BudgetModel {
   final int year;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final bool isRollover;
 
   // Transient state for UI
   double spentAmount = 0.0;
+  double rolloverAmount = 0.0; // Brought over from last month
 
   BudgetModel({
     required this.id,
@@ -43,15 +45,18 @@ class BudgetModel {
     required this.year,
     this.createdAt,
     this.updatedAt,
+    this.isRollover = false,
   });
 
+  double get effectiveLimit => limitAmount + rolloverAmount;
+
   double get progress =>
-      limitAmount <= 0 ? 0.0 : (spentAmount / limitAmount).clamp(0.0, 1.0);
+      effectiveLimit <= 0 ? 0.0 : (spentAmount / effectiveLimit).clamp(0.0, 1.0);
 
   double get amountRemaining =>
-      (limitAmount - spentAmount) <= 0 ? 0.0 : (limitAmount - spentAmount);
+      (effectiveLimit - spentAmount) <= 0 ? 0.0 : (effectiveLimit - spentAmount);
 
-  bool get isExceeded => spentAmount > limitAmount;
+  bool get isExceeded => spentAmount > effectiveLimit;
 
   factory BudgetModel.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final json = doc.data() ?? {};
@@ -63,6 +68,7 @@ class BudgetModel {
       year: json['year'] as int? ?? DateTime.now().year,
       createdAt: _toDate(json['createdAt']),
       updatedAt: _toDate(json['updatedAt']),
+      isRollover: json['isRollover'] == true,
     );
   }
 
@@ -75,6 +81,7 @@ class BudgetModel {
       year: json['year'] as int? ?? DateTime.now().year,
       createdAt: _toDate(json['createdAt']),
       updatedAt: _toDate(json['updatedAt']),
+      isRollover: json['isRollover'] == true,
     );
   }
 
@@ -84,6 +91,7 @@ class BudgetModel {
       'limitAmount': limitAmount,
       'month': month,
       'year': year,
+      'isRollover': isRollover,
       'updatedAt': FieldValue.serverTimestamp(),
       'createdAt': createdAt != null
           ? Timestamp.fromDate(createdAt!)
@@ -101,6 +109,7 @@ class BudgetModel {
     int? year,
     DateTime? createdAt,
     DateTime? updatedAt,
+    bool? isRollover,
   }) {
     return BudgetModel(
       id: id ?? this.id,
@@ -110,6 +119,7 @@ class BudgetModel {
       year: year ?? this.year,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      isRollover: isRollover ?? this.isRollover,
     );
   }
 }

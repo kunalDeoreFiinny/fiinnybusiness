@@ -282,7 +282,13 @@ class _B2BAccountStatementScreenState extends State<B2BAccountStatementScreen> {
     if (kIsWeb) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('PDF Download not fully supported on Web.')));
     } else {
-      await Printing.sharePdf(bytes: bytes, filename: 'Statement_${widget.customerName.replaceAll(" ", "_")}.pdf');
+      try {
+        await Printing.sharePdf(bytes: bytes, filename: 'Statement_${widget.customerName.replaceAll(" ", "_")}.pdf');
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not share PDF: $e')));
+        }
+      }
     }
   }
 

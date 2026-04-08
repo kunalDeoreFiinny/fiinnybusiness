@@ -4,8 +4,10 @@ import '../models/budget_model.dart';
 
 import '../services/budget_service.dart';
 import '../services/expense_service.dart';
+import '../services/income_service.dart';
 import '../themes/tokens.dart';
 import '../widgets/budget_form_sheet.dart';
+import '../widgets/budget_tree_map.dart';
 
 class BudgetingScreen extends StatefulWidget {
   final String userId;
@@ -19,9 +21,12 @@ class BudgetingScreen extends StatefulWidget {
 class _BudgetingScreenState extends State<BudgetingScreen> {
   final _budgetService = BudgetService();
   final _expenseService = ExpenseService();
+  final _incomeService = IncomeService();
   bool _isLoading = true;
   
   List<BudgetModel> _budgets = [];
+  double _totalIncome = 0.0;
+  double _totalAllocated = 0.0;
 
   late int _currentMonth;
   late int _currentYear;
@@ -41,15 +46,27 @@ class _BudgetingScreenState extends State<BudgetingScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final budgets = await _budgetService.getBudgetsForMonth(widget.userId, _currentMonth, _currentYear);
-      // We only need expenses for the current selected month to calculate progress.
-      // Easiest is to get all expenses and filter (since getExpenses is cached or fast enough).
       final allExpenses = await _expenseService.getExpenses(widget.userId);
+      final enriched = await _budgetService.getEnrichedBudgetsWithRollover(
+          widget.userId, _currentMonth, _currentYear, allExpenses);
+          
+      // Fetch Income for zero-based budgeting top bar
+      final startOfMonth = DateTime(_currentYear, _currentMonth, 1);
+      final endOfMonth = DateTime(_currentYear, _currentMonth + 1, 1);
+      final incomes = await _incomeService.getIncomesInDateRange(
+          widget.userId, start: startOfMonth, end: endOfMonth);
+
+      double tInc = incomes.fold(0.0, (sum, i) => sum + i.amount);
       
-      final enriched = _budgetService.enrichBudgetsWithExpenses(budgets, allExpenses, _currentMonth, _currentYear);
-      
+      // Calculate total allocated (Only count specific categories, if 'Overall' exists, it's just a general pool, but usually Envelope system adds them all up)
+      // If user has 'Overall' and 'Food', 'Overall' usually represents the global limit. YNAB envelops specific limits.
+      // We'll sum up all budgets except 'Overall' to avoid double counting if they made an Overall budget + sub-budgets.
+      double tAlloc = enriched.where((b) => b.category.toLowerCase() != 'overall').fold(0.0, (sum, b) => sum + b.limitAmount);
+
       setState(() {
         _budgets = enriched;
+        _totalIncome = tInc;
+        _totalAllocated = tAlloc;
         _isLoading = false;
       });
     } catch (e) {
@@ -120,6 +137,14 @@ class _BudgetingScreenState extends State<BudgetingScreen> {
       body: Column(
         children: [
           _buildMonthSelector(),
+          if (!_isLoading) ...[
+            _buildZeroBasedHeader(),
+            BudgetTreeMap(
+              budgets: _budgets,
+              totalIncome: _totalIncome,
+              totalAllocated: _totalAllocated,
+            ),
+          ],
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator(color: Fx.mintDark))
@@ -153,6 +178,61 @@ class _BudgetingScreenState extends State<BudgetingScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildZeroBasedHeader() {
+    final leftToBudget = _totalIncome - _totalAllocated;
+    final isNegative = leftToBudget < 0;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
+        border: Border.all(color: isNegative ? Fx.bad.withValues(alpha: 0.3) : Colors.grey.shade200)
+      ),
+      child: Column(
+        children: [
+          Text(
+            isNegative ? "Overbudgeted" : "Ready to Assign",
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isNegative ? Fx.bad : Colors.grey.shade600),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _inrFormat.format(leftToBudget.abs()),
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: isNegative ? Fx.bad : Fx.mintDark,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Monthly Income", style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                  Text(_inrFormat.format(_totalIncome), style: const TextStyle(fontWeight: FontWeight.bold)),
+                ]
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text("Allocated Envelopes", style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                  Text(_inrFormat.format(_totalAllocated), style: const TextStyle(fontWeight: FontWeight.bold)),
+                ]
+              )
+            ]
+          )
+        ]
+      )
     );
   }
 
@@ -220,10 +300,20 @@ class _BudgetingScreenState extends State<BudgetingScreen> {
                         b.category,
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
-                      Text(
-                        _inrFormat.format(b.limitAmount),
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            _inrFormat.format(b.effectiveLimit),
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          ),
+                          if (b.rolloverAmount > 0)
+                            Text(
+                              "+ ${_inrFormat.format(b.rolloverAmount)} rolled over",
+                              style: const TextStyle(fontSize: 10, color: Fx.mintDark, fontWeight: FontWeight.bold),
+                            )
+                        ],
+                      )
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -248,7 +338,7 @@ class _BudgetingScreenState extends State<BudgetingScreen> {
                       ),
                       Text(
                         isExceeded 
-                           ? "Exceeded by ${_inrFormat.format(b.spentAmount - b.limitAmount)}"
+                           ? "Exceeded by ${_inrFormat.format(b.spentAmount - b.effectiveLimit)}"
                            : "Left: ${_inrFormat.format(b.amountRemaining)}",
                         style: TextStyle(
                             color: isExceeded ? Fx.bad : Colors.grey[600],
