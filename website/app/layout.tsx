@@ -6,6 +6,7 @@ import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AiProvider } from "@/components/ai/AiContext";
+import { LanguageProvider } from "@/app/i18n/LanguageContext";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -130,12 +131,54 @@ export default function RootLayout({
             }
           `}
         </Script>
+        <Script id="fiinny-faq-schema" type="application/ld+json">
+          {`
+            {
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              "mainEntity": [
+                {
+                  "@type": "Question",
+                  "name": "Is Fiinny free?",
+                  "acceptedAnswer": { "@type": "Answer", "text": "Yes. Fiinny is free forever for individual users. Premium plans are available for advanced features like Tax Autopilot and unlimited groups." }
+                },
+                {
+                  "@type": "Question",
+                  "name": "Does Fiinny read my OTPs?",
+                  "acceptedAnswer": { "@type": "Answer", "text": "No. Fiinny only reads bank transaction SMS messages (e.g. 'Rs 500 debited from your account'). OTP messages are never read or stored." }
+                },
+                {
+                  "@type": "Question",
+                  "name": "How does SMS expense tracking work?",
+                  "acceptedAnswer": { "@type": "Answer", "text": "Our on-device ML model processes your bank SMS messages locally on your phone. Transaction data never leaves your device. No cloud upload. No data selling." }
+                },
+                {
+                  "@type": "Question",
+                  "name": "Is Fiinny available on iOS?",
+                  "acceptedAnswer": { "@type": "Answer", "text": "Yes. Fiinny is available on both iOS (App Store) and Android (Play Store). Search for Fiinny or use the download links at fiinny.com/download." }
+                },
+                {
+                  "@type": "Question",
+                  "name": "Does Fiinny sell my financial data?",
+                  "acceptedAnswer": { "@type": "Answer", "text": "Never. Our business model is software subscriptions, not data monetization. Your financial habits are yours alone. We are privacy-first by architecture." }
+                },
+                {
+                  "@type": "Question",
+                  "name": "Can I use Fiinny to file my ITR?",
+                  "acceptedAnswer": { "@type": "Answer", "text": "Yes. Fiinny's Tax Autopilot feature fetches your Form 26AS via official Income Tax Department APIs, calculates the best tax regime, and generates a ready-to-upload ITR JSON." }
+                }
+              ]
+            }
+          `}
+        </Script>
         <AuthProvider>
-          <ThemeProvider>
-            <AiProvider>
-              {children}
-            </AiProvider>
-          </ThemeProvider>
+          <LanguageProvider>
+            <ThemeProvider>
+              <AiProvider>
+                {children}
+              </AiProvider>
+            </ThemeProvider>
+          </LanguageProvider>
         </AuthProvider>
       </body>
     </html>

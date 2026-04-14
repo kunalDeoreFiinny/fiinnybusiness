@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { BlogService, BlogPost } from '@/lib/blog-service';
-import { Plus, Edit, Trash2, ExternalLink, Search, Filter } from 'lucide-react';
+import { Plus, Edit, Trash2, ExternalLink, Search, Filter, FileText } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function PortalBlogList() {

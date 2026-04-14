@@ -9,11 +9,11 @@ export default function PortalUserList() {
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
     const [showAddModal, setShowAddModal] = useState(false);
-    const [newEmployee, setNewEmployee] = useState({
+    const [newEmployee, setNewEmployee] = useState<{ username: string; password: string; name: string; role: 'admin' | 'editor' }>({
         username: '',
         password: '',
         name: '',
-        role: 'editor' as const
+        role: 'editor'
     });
 
     const fetchEmployees = async () => {
