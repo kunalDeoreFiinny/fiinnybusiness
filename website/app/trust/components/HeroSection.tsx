@@ -58,16 +58,21 @@ export default function HeroSection() {
                         {/* Refractive Sheen */}
                         <div className="absolute inset-0 bg-gradient-to-tr from-white/40 to-transparent opacity-50 pointer-events-none" />
 
-                        {/* Main Shield Asset */}
+                        {/* Main Shield Asset — inline SVG, no external file needed */}
                         <div className="relative w-full h-full flex items-center justify-center p-8 md:p-12">
-                            <Image
-                                src="/glass-shield.png"
-                                alt="Futuristic Glass Shield"
-                                width={800}
-                                height={450}
-                                className="object-contain drop-shadow-2xl transition-transform duration-700 group-hover:scale-105 group-hover:rotate-1"
-                                priority
-                            />
+                            <svg viewBox="0 0 200 220" className="w-full max-w-[400px] object-contain drop-shadow-2xl transition-transform duration-700 group-hover:scale-105 group-hover:rotate-1" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <defs>
+                                <linearGradient id="shieldGrad" x1="0" y1="0" x2="1" y2="1">
+                                  <stop offset="0%" stopColor="#0d9488" stopOpacity="0.9" />
+                                  <stop offset="100%" stopColor="#0891b2" stopOpacity="0.8" />
+                                </linearGradient>
+                              </defs>
+                              <path d="M100 10 L180 45 L180 100 C180 150 140 190 100 210 C60 190 20 150 20 100 L20 45 Z" fill="url(#shieldGrad)" opacity="0.15" stroke="url(#shieldGrad)" strokeWidth="2"/>
+                              <path d="M100 25 L165 54 L165 100 C165 142 132 176 100 194 C68 176 35 142 35 100 L35 54 Z" fill="url(#shieldGrad)" opacity="0.2" stroke="url(#shieldGrad)" strokeWidth="1.5"/>
+                              <path d="M100 40 L150 63 L150 100 C150 134 124 162 100 178 C76 162 50 134 50 100 L50 63 Z" fill="white" opacity="0.6" stroke="url(#shieldGrad)" strokeWidth="1"/>
+                              <path d="M80 108 L95 123 L122 96" stroke="#0d9488" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
+                              <circle cx="100" cy="109" r="28" stroke="#0d9488" strokeWidth="1.5" opacity="0.3"/>
+                            </svg>
                         </div>
                     </div>
                 </motion.div>

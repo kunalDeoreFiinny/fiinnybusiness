@@ -93,7 +93,7 @@ export default function RootLayout({
               "offers": {
                 "@type": "Offer",
                 "price": "0",
-                "priceCurrency": "USD"
+                "priceCurrency": "INR"
               },
               "description": "Fiinny is a privacy-first personal finance tracker that helps you auto-track expenses from SMS, split bills, and gain total financial control. Your data is encrypted and processed on-device.",
               "author": {

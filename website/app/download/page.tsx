@@ -54,7 +54,9 @@ export default function DownloadPage() {
 
                         {/* iOS Card */}
                         <motion.a
-                            href="#"
+                            href="https://apps.apple.com/in/app/fiinny-expense-split-money/id6751309482"
+                            target="_blank"
+                            rel="noopener noreferrer"
                             whileHover={{ y: -5 }}
                             className="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col items-center gap-6 w-full max-w-xs group transition-all hover:shadow-2xl hover:border-slate-200"
                         >
@@ -65,14 +67,16 @@ export default function DownloadPage() {
                                 <h3 className="text-xl font-bold text-slate-900">App Store</h3>
                                 <p className="text-slate-400 font-medium text-sm">Download for iOS</p>
                             </div>
-                            <div className="px-6 py-3 rounded-full bg-slate-900 text-white font-bold text-sm w-full group-hover:bg-teal-600 transition-colors">
+                            <div className="px-6 py-3 rounded-full bg-slate-900 text-white font-bold text-sm w-full group-hover:bg-teal-600 transition-colors text-center">
                                 Download
                             </div>
                         </motion.a>
 
                         {/* Android Card */}
                         <motion.a
-                            href="#"
+                            href="https://play.google.com/store/apps/details?id=com.KaranArjunTechnologies.lifemap"
+                            target="_blank"
+                            rel="noopener noreferrer"
                             whileHover={{ y: -5 }}
                             className="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col items-center gap-6 w-full max-w-xs group transition-all hover:shadow-2xl hover:border-slate-200"
                         >
@@ -83,7 +87,7 @@ export default function DownloadPage() {
                                 <h3 className="text-xl font-bold text-slate-900">Play Store</h3>
                                 <p className="text-slate-400 font-medium text-sm">Download for Android</p>
                             </div>
-                            <div className="px-6 py-3 rounded-full bg-slate-900 text-white font-bold text-sm w-full group-hover:bg-teal-600 transition-colors">
+                            <div className="px-6 py-3 rounded-full bg-slate-900 text-white font-bold text-sm w-full group-hover:bg-teal-600 transition-colors text-center">
                                 Download
                             </div>
                         </motion.a>

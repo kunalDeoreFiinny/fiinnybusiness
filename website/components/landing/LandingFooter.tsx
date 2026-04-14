@@ -22,8 +22,8 @@ export default function LandingFooter() {
         <div className="grid md:grid-cols-4 gap-12 border-t border-slate-800/50 pt-20 mb-12">
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-emerald-500 flex items-center justify-center">
-                <span className="font-black text-slate-950 text-xs">F</span>
+              <div className="relative w-8 h-8 rounded-full overflow-hidden">
+                <img src="/assets/images/logo_icon.png" alt="Fiinny" className="w-full h-full object-cover" />
               </div>
               <span className="text-2xl font-black text-white tracking-tight">Fiinny</span>
             </div>

@@ -3,36 +3,21 @@
 import React from 'react';
 import Link from 'next/link';
 import { Mail, MapPin, MessageSquare, Clock } from 'lucide-react';
-
-// Navbar Component (Duplicate from Trust Page for consistency if not global, 
-// using a simplified version here or assuming Layout handles it. 
-// Adding a simple internal nav for standalone look matching screenshot)
-const ContactNavbar = () => (
-    <nav className="w-full bg-white border-b border-slate-100 py-4 px-6 md:px-12 flex justify-between items-center">
-        <Link href="/" className="flex items-center gap-2 group">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-teal-600 text-white font-bold text-lg">F</div>
-            <span className="text-xl font-bold text-slate-900 tracking-tight">Fiinny</span>
-        </Link>
-        <div className="hidden md:flex gap-8 text-sm font-medium text-slate-600">
-            <Link href="/" className="hover:text-teal-600">Home</Link>
-            <Link href="/about" className="hover:text-teal-600">About</Link>
-            <Link href="/contact" className="text-teal-600">Contact</Link>
-        </div>
-    </nav>
-);
+import Navbar from '@/components/Navbar';
+import LandingFooter from '@/components/landing/LandingFooter';
 
 export default function ContactPage() {
     return (
         <div className="min-h-screen bg-white text-slate-900 font-sans">
-            <ContactNavbar />
+            <Navbar />
 
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 pt-36 md:pt-40">
 
                 {/* Header Section */}
                 <div className="text-center max-w-3xl mx-auto mb-20 animate-fade-in-up">
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-50 border border-teal-100 text-teal-600 text-xs font-bold uppercase tracking-wider mb-6">
                         <MessageSquare size={12} />
-                        <span>Support & Inquiries</span>
+                        <span>Support &amp; Inquiries</span>
                     </div>
                     <h1 className="text-4xl md:text-5xl font-black tracking-tight text-slate-900 mb-6">
                         Contact our <span className="text-teal-600">Engineering Team.</span>
@@ -127,7 +112,7 @@ export default function ContactPage() {
 
                                 <button
                                     type="button"
-                                    className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-xl transition-all active:scale-[0.98] shadow-lg shadow-slate-900/10"
+                                    className="w-full bg-slate-900 hover:bg-teal-600 text-white font-bold py-4 rounded-xl transition-all active:scale-[0.98] shadow-lg shadow-slate-900/10"
                                 >
                                     Send Message
                                 </button>
@@ -138,11 +123,7 @@ export default function ContactPage() {
                 </div>
             </main>
 
-            <footer className="py-8 text-center border-t border-slate-100">
-                <p className="text-sm text-slate-400">
-                    &copy; 2026 Fiinny. Built with care in Hyderabad.
-                </p>
-            </footer>
+            <LandingFooter />
         </div>
     );
 }

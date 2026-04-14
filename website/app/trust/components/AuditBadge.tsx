@@ -50,10 +50,10 @@ export default function AuditBadge() {
                                     <Hash size={14} className="text-teal-500" />
                                     <span>ID: TAC-FIINNY-25</span>
                                 </div>
-                                <Link href="#" className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border border-slate-200 hover:text-teal-600 hover:border-teal-200 transition-colors">
-                                    <FileText size={14} className="text-teal-500" />
-                                    <span>View Audit Summary (PDF)</span>
-                                </Link>
+                                <span className="flex items-center gap-1.5 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-200 text-amber-700">
+                                    <FileText size={14} className="text-amber-500" />
+                                    <span>Audit Report — Coming Q3 2026</span>
+                                </span>
                             </div>
                         </div>
 

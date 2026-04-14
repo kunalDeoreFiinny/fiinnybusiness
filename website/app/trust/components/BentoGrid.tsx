@@ -45,13 +45,23 @@ export default function BentoGrid() {
                 >
                     <div className="mt-auto flex-shrink-0 relative w-full aspect-square bg-white rounded-2xl border border-slate-100 flex items-center justify-center p-6 overflow-hidden">
                         <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,transparent)]" />
-                        <Image
-                            src="/local-processor.png"
-                            alt="Local Processor"
-                            width={200}
-                            height={200}
-                            className="object-contain relative z-10 group-hover:scale-110 transition-transform duration-700 hover:rotate-3"
-                        />
+                        <svg viewBox="0 0 120 120" className="w-32 h-32 object-contain relative z-10 group-hover:scale-110 transition-transform duration-700 hover:rotate-3" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect x="30" y="30" width="60" height="60" rx="8" fill="#0d9488" opacity="0.1" stroke="#0d9488" strokeWidth="1.5"/>
+                          <rect x="40" y="40" width="40" height="40" rx="4" fill="#0d9488" opacity="0.15" stroke="#0d9488" strokeWidth="1"/>
+                          <rect x="50" y="50" width="20" height="20" rx="2" fill="#0d9488" opacity="0.4"/>
+                          <line x1="20" y1="50" x2="30" y2="50" stroke="#0d9488" strokeWidth="1.5" strokeLinecap="round"/>
+                          <line x1="20" y1="60" x2="30" y2="60" stroke="#0d9488" strokeWidth="1.5" strokeLinecap="round"/>
+                          <line x1="20" y1="70" x2="30" y2="70" stroke="#0d9488" strokeWidth="1.5" strokeLinecap="round"/>
+                          <line x1="90" y1="50" x2="100" y2="50" stroke="#0d9488" strokeWidth="1.5" strokeLinecap="round"/>
+                          <line x1="90" y1="60" x2="100" y2="60" stroke="#0d9488" strokeWidth="1.5" strokeLinecap="round"/>
+                          <line x1="90" y1="70" x2="100" y2="70" stroke="#0d9488" strokeWidth="1.5" strokeLinecap="round"/>
+                          <line x1="50" y1="20" x2="50" y2="30" stroke="#0d9488" strokeWidth="1.5" strokeLinecap="round"/>
+                          <line x1="60" y1="20" x2="60" y2="30" stroke="#0d9488" strokeWidth="1.5" strokeLinecap="round"/>
+                          <line x1="70" y1="20" x2="70" y2="30" stroke="#0d9488" strokeWidth="1.5" strokeLinecap="round"/>
+                          <line x1="50" y1="90" x2="50" y2="100" stroke="#0d9488" strokeWidth="1.5" strokeLinecap="round"/>
+                          <line x1="60" y1="90" x2="60" y2="100" stroke="#0d9488" strokeWidth="1.5" strokeLinecap="round"/>
+                          <line x1="70" y1="90" x2="70" y2="100" stroke="#0d9488" strokeWidth="1.5" strokeLinecap="round"/>
+                        </svg>
                         <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur px-3 py-2 rounded-lg border border-teal-100 text-teal-700 text-[10px] font-mono shadow-sm flex justify-between items-center">
                             <span>STATUS</span>
                             <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse" /> ON DEVICE</span>
