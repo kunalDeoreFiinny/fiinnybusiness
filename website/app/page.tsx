@@ -59,10 +59,6 @@ function MainContent() {
 
       <HeroSection />
 
-      <div id="features">
-        <FloatingFeatureStack onSelectFeature={setSelectedId} />
-      </div>
-
       <ProblemSection />
 
       <BentoFeatures onSelectFeature={setSelectedId} />

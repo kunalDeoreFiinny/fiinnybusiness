@@ -102,7 +102,7 @@ export default function LandingFooter() {
           </div>
           <div className="mt-12 pt-8 border-t border-slate-900">
             <p className="text-[10px] text-slate-600 font-mono text-center uppercase tracking-widest">
-              Fiinny Inc. &copy; 2024. Engineering Financial Clarity in Hyderabad.
+              Fiinny Inc. &copy; {new Date().getFullYear()}. Engineering Financial Clarity in Hyderabad.
             </p>
           </div>
         </div>
