@@ -33,10 +33,19 @@ export const partnerConverter = {
     },
     fromFirestore: (snap: DocumentSnapshot) => {
         const data = snap.data() as any;
+        // addedOn may be absent on legacy or newly-written docs — guard defensively
+        const rawAddedOn = data.addedOn;
+        const addedOn: Date =
+            rawAddedOn && typeof rawAddedOn.toDate === 'function'
+                ? rawAddedOn.toDate()
+                : rawAddedOn instanceof Date
+                    ? rawAddedOn
+                    : new Date(); // fallback to now
+
         return {
             ...data,
             id: snap.id,
-            addedOn: (data.addedOn as Timestamp).toDate(),
+            addedOn,
             permissions: data.permissions || {},
             // Runtime fields initialized to zero/null
             todayCredit: 0,

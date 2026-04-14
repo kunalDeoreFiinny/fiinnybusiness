@@ -22,6 +22,8 @@ export class FxService {
     }
 
     async init(): Promise<void> {
+        // Only run in browser — skip during SSR/build
+        if (typeof window === 'undefined') return;
         this.loadFromCache();
         if (this.shouldFetch()) {
             await this.fetchRates();
@@ -51,22 +53,24 @@ export class FxService {
     }
 
     private async fetchRates(): Promise<void> {
+        // Guard: only run client-side
+        if (typeof window === 'undefined') return;
         try {
-            const res = await fetch(`${this.baseUrl}/latest?from=USD`);
+            const res = await fetch(`${this.baseUrl}/latest?from=USD`, {
+                signal: AbortSignal.timeout(5000), // 5s timeout
+            });
             if (res.ok) {
                 const data = await res.json();
-                this.rates = data.rates;
+                this.rates = { ...this.rates, ...data.rates }; // merge with fallbacks
                 this.rates['USD'] = 1.0; // Base
                 this.lastFetch = Date.now();
 
-                if (typeof window !== 'undefined') {
-                    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.rates));
-                    localStorage.setItem(this.TIMESTAMP_KEY, this.lastFetch.toString());
-                }
-                console.log('FxService: Rates updated');
+                localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.rates));
+                localStorage.setItem(this.TIMESTAMP_KEY, this.lastFetch.toString());
             }
-        } catch (e) {
-            console.error('FxService fetch failed', e);
+        } catch {
+            // Network unavailable or API down — use fallback rates silently
+            this.lastFetch = Date.now(); // prevent retry storm
         }
     }
 
