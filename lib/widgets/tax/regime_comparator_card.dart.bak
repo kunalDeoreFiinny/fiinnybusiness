@@ -1,0 +1,188 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import '../../fiinny_brain/tax_engine.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_text_styles.dart';
+
+class RegimeComparatorCard extends StatelessWidget {
+  final TaxCalculationResult oldRegimeResult;
+  final TaxCalculationResult newRegimeResult;
+  final VoidCallback onSelectOld;
+  final VoidCallback onSelectNew;
+  final String currentSelection; // 'old' or 'new'
+
+  const RegimeComparatorCard({
+    Key? key,
+    required this.oldRegimeResult,
+    required this.newRegimeResult,
+    required this.onSelectOld,
+    required this.onSelectNew,
+    required this.currentSelection,
+  }) : super(key: key);
+
+  String _formatCurrency(double amount) {
+    if (amount == 0) return '₹0';
+    final format =
+        NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
+    return format.format(amount);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double savings =
+        (oldRegimeResult.netTaxPayable - newRegimeResult.netTaxPayable).abs();
+    final String recommendedRegime =
+        oldRegimeResult.netTaxPayable < newRegimeResult.netTaxPayable
+            ? 'old'
+            : 'new';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface, // Assuming a surface color exists
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  'Fiinny Recommended: ${recommendedRegime == 'old' ? 'Old Regime' : 'New Regime'}',
+                  style: const TextStyle(
+                    color: Colors.greenAccent,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Smart Tax Comparison',
+            style: AppTextStyles.h2
+                .copyWith(color: Colors.white), // Using existing text styles
+          ),
+          const SizedBox(height: 4),
+          Text(
+            savings > 0
+                ? 'You save ${_formatCurrency(savings)} by choosing the ${recommendedRegime == 'old' ? 'Old' : 'New'} Regime.'
+                : 'Both regimes result in the same tax liability.',
+            style:
+                TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: _buildRegimeColumn(
+                  title: 'Old Regime',
+                  result: oldRegimeResult,
+                  isSelected: currentSelection == 'old',
+                  isRecommended: recommendedRegime == 'old',
+                  onTap: onSelectOld,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildRegimeColumn(
+                  title: 'New Regime',
+                  result: newRegimeResult,
+                  isSelected: currentSelection == 'new',
+                  isRecommended: recommendedRegime == 'new',
+                  onTap: onSelectNew,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRegimeColumn({
+    required String title,
+    required TaxCalculationResult result,
+    required bool isSelected,
+    required bool isRecommended,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.blue.withOpacity(0.15) : Colors.black26,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color:
+                isSelected ? Colors.blueAccent : Colors.white.withOpacity(0.1),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                color: isSelected ? Colors.blueAccent : Colors.white70,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _formatCurrency(result.netTaxPayable),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Tax Payable',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.5),
+                fontSize: 11,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Divider(color: Colors.white12),
+            const SizedBox(height: 16),
+            _buildRow('Taxable Income', _formatCurrency(result.taxableIncome)),
+            const SizedBox(height: 8),
+            _buildRow(
+                'Total Deductions', _formatCurrency(result.totalDeductions)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 11),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+              color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+        ),
+      ],
+    );
+  }
+}

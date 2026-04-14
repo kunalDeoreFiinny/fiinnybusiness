@@ -1,0 +1,27 @@
+{
+  "status": "success",
+  "result": [
+    {
+      "projectId": "flutter-ai-playground-23322",
+      "projectNumber": "454878839051",
+      "displayName": "Flutter AI Playground",
+      "name": "projects/flutter-ai-playground-23322",
+      "resources": {
+        "hostingSite": "flutter-ai-playground-23322"
+      },
+      "state": "ACTIVE",
+      "etag": "1_192291ba-e7af-4728-abfd-369c23fbfa2c"
+    },
+    {
+      "projectId": "lifemap-72b21",
+      "projectNumber": "1085936196639",
+      "displayName": "lifemap",
+      "name": "projects/lifemap-72b21",
+      "resources": {
+        "hostingSite": "lifemap-72b21"
+      },
+      "state": "ACTIVE",
+      "etag": "1_515f281e-8710-4bb2-b55c-8be74cff95c4"
+    }
+  ]
+}

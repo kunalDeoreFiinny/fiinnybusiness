@@ -1,0 +1,276 @@
+import 'package:flutter/material.dart';
+import '../../models/transaction_model.dart';
+import '../../models/tax_profile_model.dart';
+import '../../fiinny_brain/tax_engine.dart';
+import '../../widgets/tax/regime_comparator_card.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_text_styles.dart';
+import 'package:intl/intl.dart';
+
+class TaxCenterScreen extends StatefulWidget {
+  final List<TransactionModel> transactions;
+  final TaxProfileModel profile;
+
+  const TaxCenterScreen({
+    Key? key,
+    required this.transactions,
+    required this.profile,
+  }) : super(key: key);
+
+  @override
+  State<TaxCenterScreen> createState() => _TaxCenterScreenState();
+}
+
+class _TaxCenterScreenState extends State<TaxCenterScreen> {
+  late TaxCalculationResult oldRegimeResult;
+  late TaxCalculationResult newRegimeResult;
+  late Map<String, double> aggregatedDeductions;
+
+  String selectedRegime = 'new';
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _calculateTaxes();
+  }
+
+  void _calculateTaxes() async {
+    // Simulate slight loading for feel of "calculating"
+    await Future.delayed(const Duration(milliseconds: 600));
+
+    // For FY 2023-24 (April 2023 to March 2024)
+    final fyStart = DateTime(
+        DateTime.now().year - (DateTime.now().month < 4 ? 1 : 0), 4, 1);
+
+    aggregatedDeductions =
+        TaxEngine.aggregateTaxData(widget.transactions, fyStart);
+    oldRegimeResult =
+        TaxEngine.calculateOldRegime(widget.profile, aggregatedDeductions);
+    newRegimeResult = TaxEngine.calculateNewRegime(widget.profile);
+
+    // Auto-select the better regime
+    selectedRegime =
+        oldRegimeResult.netTaxPayable < newRegimeResult.netTaxPayable
+            ? 'old'
+            : 'new';
+
+    if (mounted) {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  String _formatCurrency(double amount) {
+    if (amount == 0) return '₹0';
+    final format =
+        NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
+    return format.format(amount);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black, // Dark theme base
+      appBar: AppBar(
+        title: const Text('Tax Autopilot'),
+        backgroundColor: Colors.black,
+        elevation: 0,
+      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSummaryHeader(),
+                  const SizedBox(height: 32),
+                  RegimeComparatorCard(
+                    oldRegimeResult: oldRegimeResult,
+                    newRegimeResult: newRegimeResult,
+                    currentSelection: selectedRegime,
+                    onSelectOld: () => setState(() => selectedRegime = 'old'),
+                    onSelectNew: () => setState(() => selectedRegime = 'new'),
+                  ),
+                  const SizedBox(height: 32),
+                  _buildDeductionsList(),
+                  const SizedBox(height: 32),
+                  _buildActionButtons(),
+                  const SizedBox(height: 48), // Bottom padding
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _buildSummaryHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Financial Year 2023-24',
+          style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Your Tax Overview',
+          style: AppTextStyles.h1.copyWith(color: Colors.white),
+        ),
+        const SizedBox(height: 24),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.blue.shade900, Colors.black],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.blue.withOpacity(0.3)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Gross Salary',
+                    style: TextStyle(
+                        color: Colors.white.withOpacity(0.7), fontSize: 13),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatCurrency(widget.profile.declaredSalary),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              Container(
+                width: 1,
+                height: 40,
+                color: Colors.white.withOpacity(0.2),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Deductions Found',
+                    style: TextStyle(
+                        color: Colors.white.withOpacity(0.7), fontSize: 13),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatCurrency(selectedRegime == 'old'
+                        ? oldRegimeResult.totalDeductions
+                        : newRegimeResult.totalDeductions),
+                    style: const TextStyle(
+                        color: Colors.greenAccent,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDeductionsList() {
+    final activeResult =
+        selectedRegime == 'old' ? oldRegimeResult : newRegimeResult;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Deduction Breakdown',
+          style: AppTextStyles.h2.copyWith(color: Colors.white),
+        ),
+        const SizedBox(height: 16),
+        ...activeResult.deductionBreakdown.entries
+            .map((e) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          e.key,
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 16),
+                        ),
+                        Text(
+                          _formatCurrency(e.value),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                ))
+            .toList(),
+      ],
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Column(
+      children: [
+        SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton(
+            onPressed: () {
+              // TODO: Open ITR JSON Generation Flow
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blueAccent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            child: const Text(
+              'Download ITR-1 JSON',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: OutlinedButton(
+            onPressed: () {
+              // TODO: Open Deduction Verification Flow
+            },
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: Colors.white.withOpacity(0.2)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            child: const Text(
+              'Verify Deductions',
+              style: TextStyle(color: Colors.white, fontSize: 16),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}

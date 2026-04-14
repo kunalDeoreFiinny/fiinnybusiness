@@ -1,0 +1,75 @@
+import 'dart:convert';
+import '../models/tax_profile_model.dart';
+import '../fiinny_brain/tax_engine.dart';
+
+class ItrGeneratorService {
+  /// Generates the basic ITR-1 JSON schema structure required by the Income Tax offline utility.
+  ///
+  /// Note: This is a simplified structural representation for the MVP.
+  /// A complete official JSON requires hundreds of specific nodes (e.g., ITR1_Form, PersonalInfo).
+  static String generateItr1Json(
+      TaxProfileModel profile, TaxCalculationResult calculatedTax) {
+    // Determine which regime we are filing under based on what we calculated is better
+    // or what the user selected. Defaulting to new regime in this mocked example.
+    final String optedRegime = profile.regimePreference == 'new' ? 'Y' : 'N';
+
+    final Map<String, dynamic> itrJson = {
+      "ITR": {
+        "ITR1_Form": {
+          "FormName": "ITR-1",
+          "AssessmentYear": "2024", // FY 23-24 -> AY 24-25
+          "SchemaVer": "1.0",
+          "PersonalInfo": {
+            "AssesseeName": {
+              "FirstName": "Assessee",
+              "SurName": profile.employerName ?? "Name",
+            },
+            "PAN": profile.pan,
+            "DOB": profile.dateOfBirth.toIso8601String().split('T')[0],
+            "EmployerCategory": "OTH", // Others (Private Sector)
+            "OptOutNewRegime": optedRegime == 'new'
+                ? "N"
+                : "Y", // "Y" means opting out of new regime (so using Old)
+          },
+          "IncomeDeductions": {
+            "GrossSalary": calculatedTax.grossSalary,
+            "StandardDeduction":
+                calculatedTax.deductionBreakdown["Standard Deduction"] ??
+                    50000.0,
+            "IncomeFromSalary": calculatedTax.grossSalary -
+                (calculatedTax.deductionBreakdown["Standard Deduction"] ??
+                    50000.0),
+          },
+          "TaxComputation": {
+            "TotalIncome": calculatedTax.taxableIncome,
+            "TaxPayableOnTotalInc": calculatedTax.taxAmount,
+            "Rebate87A": 0, // Simplified
+            "HealthAndEducationCess": calculatedTax.cess,
+            "TotalTaxPayable": calculatedTax.netTaxPayable,
+          },
+          // Deductions are only included if OptOutNewRegime == "Y" (Old Regime)
+          "Deductions": optedRegime == 'Y'
+              ? {
+                  "Section80C": calculatedTax.deductionBreakdown["80C"] ?? 0,
+                  "Section80D": {
+                    "HealthInsurancePremium":
+                        calculatedTax.deductionBreakdown["80D"] ?? 0,
+                  }
+                }
+              : {},
+          "Verification": {
+            "Declaration": {
+              "AssesseeVerName": "Assessee Name",
+              "FatherName": "Father Name",
+              "AssesseeVerPAN": profile.pan,
+              "Place": "City",
+              "Date": DateTime.now().toIso8601String().split('T')[0],
+            }
+          }
+        }
+      }
+    };
+
+    return jsonEncode(itrJson);
+  }
+}

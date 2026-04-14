@@ -37,6 +37,9 @@ export default function AdminBlogList() {
                     <span className="text-teal-600">Blog</span>
                 </div>
                 <div className="flex gap-4">
+                    <Link href="/admin/loan-audit" className="text-sm font-medium text-slate-500 hover:text-teal-700">
+                        Loan Audit Leads
+                    </Link>
                     <Link href="/" className="text-sm font-medium text-slate-500 hover:text-slate-800">
                         Go to Site
                     </Link>

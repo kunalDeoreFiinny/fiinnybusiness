@@ -46,7 +46,7 @@ if (keystorePropertiesFile != null) {
 }
 
 android {
-    namespace = "com.KaranArjunTechnologies.lifemap"
+    namespace = "com.fiinny.app"
     compileSdk = 36
     ndkVersion = "28.2.13676358"
 
@@ -61,7 +61,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.KaranArjunTechnologies.lifemap"
+        applicationId = "com.fiinny.app"
         minSdk = 24
         targetSdk = 35
         versionCode = flutter.versionCode

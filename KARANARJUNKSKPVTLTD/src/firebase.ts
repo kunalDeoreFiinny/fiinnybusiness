@@ -7,13 +7,13 @@ import { getPerformance } from "firebase/performance";
 import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
 
 export const firebaseConfig = {
-    apiKey: "AIzaSyAaQ8tB11OBJyqGXEl55oeyQnVrOLrBrxE",
-    authDomain: "karanarjun-pvt-ltd.firebaseapp.com",
-    projectId: "karanarjun-pvt-ltd",
-    storageBucket: "karanarjun-pvt-ltd.firebasestorage.app",
-    messagingSenderId: "832154675525",
-    appId: "1:832154675525:web:aadc29d24e4c962f85362c",
-    measurementId: "G-70B3CNJVQM"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase

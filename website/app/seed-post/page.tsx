@@ -94,6 +94,7 @@ export default function SeedPostPage() {
                 date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
                 readTime: "3 min read",
                 categories: ["Financial Wellness", "Psychology"],
+                published: true,
                 seoTitle: "Why ambiguity is killing your peace of mind | Fiinny Blog",
                 seoDescription: "Discover the Ostrich Effect in finance: why ignoring your bank balance increases anxiety and how clarity brings peace of mind with Fiinny.",
             };
@@ -174,6 +175,7 @@ export default function SeedPostPage() {
                 date: "December 27, 2025",
                 readTime: "3 min read",
                 categories: ["Philosophy", "Product"],
+                published: true,
                 seoTitle: "Managing money shouldn’t feel like work | Fiinny Philosophy",
                 seoDescription: "Fiinny isn’t about forcing habits. It’s about reducing effort, increasing visibility, and giving you peace of mind. Discover the Fiinny difference.",
             };

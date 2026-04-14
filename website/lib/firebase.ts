@@ -6,12 +6,12 @@ import { getStorage } from 'firebase/storage';
 
 // Using existing Firebase project from Flutter app
 const firebaseConfig = {
-    apiKey: "AIzaSyABuimmTbHwrxY-w7xhRrf-LWOu4gLVfnk",
-    authDomain: "lifemap-72b21.firebaseapp.com",
-    projectId: "lifemap-72b21",
-    storageBucket: "lifemap-72b21.firebasestorage.app",
-    messagingSenderId: "1085936196639",
-    appId: "1:1085936196639:web:b74ffa7e9ded49e616492a",
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
 import { getMessaging, isSupported } from 'firebase/messaging';

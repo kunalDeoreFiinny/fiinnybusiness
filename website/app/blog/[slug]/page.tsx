@@ -10,12 +10,13 @@ import BlogAd from "@/components/blog/BlogAd";
 interface PageProps {
     params: Promise<{
         slug: string;
-    }>
+    }>;
 }
 
 export async function generateStaticParams() {
     try {
-        const posts = await BlogService.getPosts();
+        // Only generate static pages for published posts
+        const posts = await BlogService.getPosts(false);
         return posts.map((post) => ({
             slug: post.slug,
         }));
@@ -27,8 +28,9 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
     const { slug } = await params;
+    
     try {
-        const post = await BlogService.getPostBySlug(slug);
+        const post = await BlogService.getPostBySlug(slug, false);
         if (!post) return { title: 'Post Not Found | Fiinny' };
 
         return {
@@ -48,7 +50,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function BlogPostPage({ params }: PageProps) {
     const { slug } = await params;
-    const post = await BlogService.getPostBySlug(slug);
+
+    const post = await BlogService.getPostBySlug(slug, false);
 
     if (!post) {
         return (
@@ -148,15 +151,44 @@ export default async function BlogPostPage({ params }: PageProps) {
                         </div>
                     </div>
 
-                    {post.coverImage && (
-                        <div className="relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl shadow-slate-200/50 group">
-                            <Image
-                                src={post.coverImage}
-                                alt={post.title}
-                                fill
-                                className="object-cover group-hover:scale-105 transition-transform duration-1000"
-                                priority
-                            />
+                    {(post.videoUrl || post.coverImage) && (
+                        <div className="relative aspect-video w-full rounded-[2.5rem] overflow-hidden shadow-2xl shadow-slate-200/50 group bg-slate-900 border-4 border-slate-900 flex items-center justify-center">
+                            {post.videoUrl ? (
+                                (() => {
+                                    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+                                    const match = post.videoUrl.match(regExp);
+                                    const ytId = (match && match[2].length === 11) ? match[2] : null;
+
+                                    if (ytId) {
+                                        return (
+                                            <iframe 
+                                                className="w-full h-full"
+                                                src={`https://www.youtube.com/embed/${ytId}`} 
+                                                title="YouTube video player" 
+                                                frameBorder="0" 
+                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                                allowFullScreen
+                                            ></iframe>
+                                        );
+                                    } else {
+                                        return (
+                                            <video 
+                                                controls 
+                                                className="w-full h-full object-contain"
+                                                src={post.videoUrl}
+                                            />
+                                        );
+                                    }
+                                })()
+                            ) : (
+                                <Image
+                                    src={post.coverImage!}
+                                    alt={post.title}
+                                    fill
+                                    className="object-cover group-hover:scale-105 transition-transform duration-1000"
+                                    priority
+                                />
+                            )}
                         </div>
                     )}
                 </header>

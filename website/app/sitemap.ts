@@ -1,7 +1,6 @@
 import { MetadataRoute } from 'next';
 import { BlogService } from '@/lib/blog-service';
 
-export const dynamic = 'force-dynamic';
 export const revalidate = 86400; // Daily revalidation
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -32,6 +31,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         },
         {
             url: `${baseUrl}/tax`,
+            lastModified: new Date(),
+            changeFrequency: 'weekly' as const,
+            priority: 0.8,
+        },
+        {
+            url: `${baseUrl}/loan-audit`,
             lastModified: new Date(),
             changeFrequency: 'weekly' as const,
             priority: 0.8,

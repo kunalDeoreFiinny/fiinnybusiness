@@ -16,8 +16,6 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-import { blogPosts } from "./blog-content";
-
 export interface BlogPost {
     id?: string;
     slug: string;
@@ -25,10 +23,12 @@ export interface BlogPost {
     excerpt: string;
     content: string; // HTML content
     coverImage?: string;
+    videoUrl?: string; // Support for MP4 or YouTube links
     author: string;
     date: string; // Display date string e.g. "December 27, 2025"
     readTime: string;
     categories: string[];
+    published: boolean;
 
     // SEO Fields
     seoTitle?: string;
@@ -54,49 +54,63 @@ const sanitizePost = (post: any): BlogPost => {
     if (sanitized.updatedAt && typeof sanitized.updatedAt.toDate === 'function') {
         sanitized.updatedAt = sanitized.updatedAt.toMillis();
     }
+    if (sanitized.published === undefined) {
+        sanitized.published = true;
+    }
     return sanitized as BlogPost;
 };
 
 export const BlogService = {
-    // Get all posts (local + optional firestore if needed later)
-    async getPosts(): Promise<BlogPost[]> {
+    // Get all posts
+    async getPosts(includeDrafts: boolean = false): Promise<BlogPost[]> {
         try {
-            // Priority 1: High-Authority Local Content
-            const localPosts = [...blogPosts];
-            
-            // Priority 2: Federated Firestore Content (Admin-added)
-            const q = query(collection(db, BLOG_COLLECTION), orderBy("createdAt", "desc"));
+            // Fetch all posts. We sort in memory to avoid needing composite indexes.
+            const q = query(collection(db, BLOG_COLLECTION));
             const querySnapshot = await getDocs(q);
-            const remotePosts = querySnapshot.docs.map(doc => sanitizePost({
+            
+            let remotePosts = querySnapshot.docs.map(doc => sanitizePost({
                 id: doc.id,
                 ...doc.data()
             }));
 
-            // Merge & De-duplicate: Local posts take priority on top
-            const allPosts = [...localPosts, ...remotePosts];
+            // Filter out drafts if necessary
+            if (!includeDrafts) {
+                remotePosts = remotePosts.filter(post => post.published);
+            }
+
+            // Sort by descending date
+            remotePosts.sort((a, b) => {
+                const timeA = a.createdAt || 0;
+                const timeB = b.createdAt || 0;
+                return timeB - timeA;
+            });
+
+            // Merge & De-duplicate: Ensure slugs are unique
             const seenSlugs = new Set();
-            return allPosts.filter(post => {
+            return remotePosts.filter(post => {
                 if (seenSlugs.has(post.slug)) return false;
                 seenSlugs.add(post.slug);
                 return true;
             });
         } catch (error) {
             console.error("Error fetching posts:", error);
-            return [...blogPosts];
+            return [];
         }
     },
 
     // Get single post by slug
-    async getPostBySlug(slug: string): Promise<BlogPost | null> {
+    async getPostBySlug(slug: string, showDraft: boolean = false): Promise<BlogPost | null> {
         try {
-            const localPost = blogPosts.find(p => p.slug === slug);
-            if (localPost) return localPost;
-
             const q = query(collection(db, BLOG_COLLECTION), where("slug", "==", slug));
             const querySnapshot = await getDocs(q);
             if (!querySnapshot.empty) {
                 const doc = querySnapshot.docs[0];
-                return sanitizePost({ id: doc.id, ...doc.data() });
+                const post = sanitizePost({ id: doc.id, ...doc.data() });
+                
+                // If it's a draft and we aren't allowed to see drafts, return null
+                if (!post.published && !showDraft) return null;
+                
+                return post;
             }
             return null;
         } catch (error) {

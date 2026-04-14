@@ -1,0 +1,182 @@
+import 'package:flutter/material.dart';
+import '../../models/transaction_model.dart';
+import '../../theme/app_colors.dart';
+import 'package:intl/intl.dart';
+
+class DeductionVerificationSheet extends StatefulWidget {
+  final List<TransactionModel> suspectedDeductions;
+  final Function(List<TransactionModel>) onVerified;
+
+  const DeductionVerificationSheet({
+    Key? key,
+    required this.suspectedDeductions,
+    required this.onVerified,
+  }) : super(key: key);
+
+  @override
+  State<DeductionVerificationSheet> createState() =>
+      _DeductionVerificationSheetState();
+}
+
+class _DeductionVerificationSheetState
+    extends State<DeductionVerificationSheet> {
+  late List<TransactionModel> remaining;
+  List<TransactionModel> approved = [];
+
+  @override
+  void initState() {
+    super.initState();
+    remaining = List.from(widget.suspectedDeductions);
+  }
+
+  String _formatCurrency(double amount) {
+    if (amount == 0) return '₹0';
+    final format =
+        NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
+    return format.format(amount);
+  }
+
+  void _handleSwipe(bool isApproved) {
+    if (remaining.isEmpty) return;
+
+    setState(() {
+      final txn = remaining.removeAt(0);
+      if (isApproved) {
+        approved.add(txn);
+      }
+    });
+
+    if (remaining.isEmpty) {
+      widget.onVerified(approved);
+      Navigator.pop(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (remaining.isEmpty) {
+      return Container(
+        height: 300,
+        decoration: const BoxDecoration(
+          color: Colors.black, // Dark theme
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.check_circle, color: Colors.green, size: 64),
+              SizedBox(height: 16),
+              Text(
+                'All Deductions Verified!',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final currentTxn = remaining.first;
+
+    return Container(
+      height: 400,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade900,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Verify Deductions',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold),
+              ),
+              Text(
+                '${widget.suspectedDeductions.length - remaining.length + 1} / ${widget.suspectedDeductions.length}',
+                style: TextStyle(
+                    color: Colors.white.withOpacity(0.5), fontSize: 14),
+              )
+            ],
+          ),
+          const SizedBox(height: 32),
+
+          // The Card
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.blue.withOpacity(0.3)),
+              ),
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    'Did you pay this as Rent/Insurance?',
+                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    _formatCurrency(currentTxn.amount),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    currentTxn.note ?? currentTxn.category,
+                    style: const TextStyle(color: Colors.white, fontSize: 18),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    DateFormat('dd MMM yyyy').format(currentTxn.date),
+                    style: TextStyle(
+                        color: Colors.white.withOpacity(0.5), fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 32),
+
+          // Action Buttons
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              FloatingActionButton(
+                onPressed: () => _handleSwipe(false),
+                backgroundColor: Colors.red.withOpacity(0.2),
+                foregroundColor: Colors.redAccent,
+                elevation: 0,
+                child: const Icon(Icons.close),
+              ),
+              FloatingActionButton(
+                onPressed: () => _handleSwipe(true),
+                backgroundColor: Colors.green.withOpacity(0.2),
+                foregroundColor: Colors.greenAccent,
+                elevation: 0,
+                child: const Icon(Icons.check),
+              ),
+            ],
+          )
+        ],
+      ),
+    );
+  }
+}

@@ -1,0 +1,17 @@
+﻿[
+    {
+        "label":  "English",
+        "code":  "en",
+        "nativeLabel":  "English"
+    },
+    {
+        "label":  "Hindi",
+        "code":  "hi",
+        "nativeLabel":  "हिंदी"
+    },
+    {
+        "label":  "Marathi",
+        "code":  "mr",
+        "nativeLabel":  "मराठी"
+    }
+]

@@ -47,10 +47,10 @@ export const metadata: Metadata = {
     title: "Fiinny - Privacy-First Expense Tracker",
     description: "Master your money with India's most secure personal finance app.",
     images: ["/hero-global.png"],
-    creator: "@ATanpure44542",
+    creator: "@fiinnyapp",
   },
   verification: {
-    google: "your-google-verification-code", // Placeholder for when you get yours
+    google: process.env.NEXT_PUBLIC_GOOGLE_VERIFICATION || "your-google-verification-code",
     other: {
       "msvalidate.01": "63528BE2F8B1E121FA552EB1015935CE",
     },
@@ -97,16 +97,16 @@ export default function RootLayout({
               },
               "description": "Fiinny is a privacy-first personal finance tracker that helps you auto-track expenses from SMS, split bills, and gain total financial control. Your data is encrypted and processed on-device.",
               "author": {
-                  "@type": "Organization",
-                  "name": "Fiinny",
-                  "location": {
-                      "@type": "Place",
-                      "address": {
-                        "@type": "PostalAddress",
-                        "addressLocality": "Hyderabad",
-                        "addressCountry": "IN"
-                      }
+                "@type": "Organization",
+                "name": "Fiinny",
+                "location": {
+                  "@type": "Place",
+                  "address": {
+                    "@type": "PostalAddress",
+                    "addressLocality": "Hyderabad",
+                    "addressCountry": "IN"
                   }
+                }
               }
             }
           `}
@@ -122,18 +122,11 @@ export default function RootLayout({
               "sameAs": [
                 "https://www.instagram.com/fiinnyapp/",
                 "https://www.linkedin.com/company/fiinny-inc/",
-                "https://twitter.com/ATanpure44542",
+                "https://twitter.com/fiinnyapp",
                 "https://apps.apple.com/in/app/fiinny-expense-split-money/id6751309482",
-                "https://play.google.com/store/apps/details?id=com.KaranArjunTechnologies.lifemap"
+                "https://play.google.com/store/apps/details?id=com.fiinny.app"
               ],
-              "description": "Fiinny is the privacy-first financial operating system for minimalist expense tracking and bill splitting.",
-              "contactPoint": {
-                "@type": "ContactPoint",
-                "telephone": "+91-9999999999",
-                "contactType": "customer service",
-                "areaServed": "IN",
-                "availableLanguage": "en"
-              }
+              "description": "Fiinny is the privacy-first financial operating system for minimalist expense tracking and bill splitting."
             }
           `}
         </Script>

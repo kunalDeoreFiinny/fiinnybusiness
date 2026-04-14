@@ -16,6 +16,7 @@ export { karanArjunAIChat } from "./karanArjunAI.js";
 
 // ✅ Week 6 Monitoring: nightly backup + daily metrics
 export { dailyFirestoreBackup, dailyMetrics } from "./monitoring.js";
+export { submitLoanAuditLead, listLoanAuditLeads } from "./loanAudit.js";
 
 /* ----------------------------- Shared helpers ----------------------------- */
 

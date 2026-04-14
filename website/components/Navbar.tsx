@@ -1,181 +1,72 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { motion } from "framer-motion";
 import { useAuth } from "@/components/AuthProvider";
-import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, LayoutDashboard, User, Palette, ChevronDown } from "lucide-react";
-import { signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
-import { useRouter, usePathname } from "next/navigation";
-import { useState, useRef, useEffect } from "react";
-import { useTheme, Theme } from "@/components/ThemeProvider";
+import { useLanguage } from "@/app/i18n/LanguageContext";
+import { translations } from "@/app/i18n/translations";
 
 export default function Navbar() {
-    const { user, loading } = useAuth();
-    const { theme, setTheme } = useTheme();
-    const router = useRouter();
-    const pathname = usePathname();
-    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const { language } = useLanguage();
+  const t = translations[language];
 
-    const handleLogout = async () => {
-        await signOut(auth);
-        router.push("/");
-    };
+  return (
+    <motion.nav
+      initial={{ y: -100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 100, damping: 20, delay: 0.5 }}
+      className="fixed top-6 left-0 right-0 z-50 flex justify-between items-center px-4 md:px-8 pointer-events-none"
+    >
+      {/* Left Island: Brand */}
+      <div className="pointer-events-auto bg-white/80 backdrop-blur-xl rounded-full border border-white/40 shadow-xl shadow-slate-200/40 px-6 py-3 flex items-center">
+        <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-2 group">
+          <div className="relative w-8 h-8 rounded-full overflow-hidden">
+            <Image src="/assets/images/logo_icon.png" alt="Fiinny" fill className="object-cover" />
+          </div>
+          <span className="text-xl font-black text-teal-950 tracking-tight group-hover:text-teal-700 transition-colors">Fiinny</span>
+        </Link>
+      </div>
 
-    const isDashboard = pathname?.startsWith("/dashboard");
+      {/* Right Island: Navigation & Actions */}
+      <div className="pointer-events-auto bg-white/80 backdrop-blur-xl rounded-full border border-white/40 shadow-xl shadow-slate-200/40 px-6 py-3 flex items-center gap-6 md:gap-8">
+        {/* Desktop Links */}
+        <div className="hidden lg:flex items-center gap-6">
+          <a href="/#features" className="text-sm font-bold text-slate-600 hover:text-teal-700 transition-colors">{t.nav.features}</a>
+          <Link href="/blog" className="text-sm font-bold text-slate-600 hover:text-teal-700 transition-colors">Blog</Link>
+          <Link href="/how-it-works" className="text-sm font-bold text-slate-600 hover:text-teal-700 transition-colors">{t.nav.howItWorks}</Link>
+          <Link href="/loan-audit" className="text-sm font-bold text-slate-600 hover:text-teal-700 transition-colors">Loan Audit</Link>
+          <Link href="/trust" className="text-sm font-bold text-slate-600 hover:text-teal-700 transition-colors">{t.nav.trust}</Link>
+          {!user && <Link href="/subscription" className="text-sm font-bold text-slate-600 hover:text-teal-700 transition-colors">{t.nav.pricing}</Link>}
+        </div>
 
-    // Close dropdown when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsDropdownOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    const themes: { id: Theme; color: string; label: string }[] = [
-        { id: "teal", color: "#0d9488", label: "Teal" },
-        { id: "mint", color: "#10b981", label: "Mint" },
-        { id: "black", color: "#000000", label: "Black" },
-        { id: "white", color: "#ffffff", label: "White" },
-    ];
-
-    return (
-        <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
-            <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-                <div className="flex items-center space-x-8">
-                    <Link href={user ? "/dashboard" : "/"} className="flex items-center space-x-2 group">
-                        <div className="relative w-8 h-8 transition-transform group-hover:scale-110">
-                            <Image
-                                src="/assets/images/logo_icon.png"
-                                alt="Fiinny"
-                                fill
-                                className="object-contain"
-                            />
-                        </div>
-                        <span className="text-2xl font-bold bg-gradient-to-r from-teal-600 to-emerald-500 bg-clip-text text-transparent">
-                            Fiinny
-                        </span>
-                    </Link>
-
-                    <div className="hidden md:flex items-center space-x-6 border-l border-slate-100 pl-8">
-                        <Link href="/blog" className={`text-sm font-bold transition-colors ${pathname === '/blog' ? 'text-teal-600' : 'text-slate-500 hover:text-teal-600'}`}>
-                            Blog
-                        </Link>
-                    </div>
+        {/* Action Button */}
+        <div>
+          {user ? (
+            <Link href="/dashboard" className="flex items-center gap-2">
+              {user.photoURL ? (
+                <Image
+                  src={user.photoURL}
+                  alt="Profile"
+                  width={32}
+                  height={32}
+                  className="w-8 h-8 rounded-full border-2 border-white shadow-sm"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-xs ring-2 ring-white">
+                  {user.email?.charAt(0).toUpperCase() || "U"}
                 </div>
-
-                <div className="flex items-center space-x-4">
-                    {!loading && (
-                        <>
-                            {user ? (
-                                <div className="flex items-center space-x-4">
-                                    {!isDashboard && (
-                                        <Link href="/dashboard">
-                                            <button className="hidden md:flex items-center space-x-2 text-slate-600 hover:text-teal-600 transition-colors font-medium">
-                                                <LayoutDashboard className="w-4 h-4" />
-                                                <span>Dashboard</span>
-                                            </button>
-                                        </Link>
-                                    )}
-
-                                    {/* Profile Dropdown */}
-                                    <div className="relative" ref={dropdownRef}>
-                                        <button
-                                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                            className="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all"
-                                        >
-                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center text-white font-bold text-sm">
-                                                {user.displayName?.[0] || user.phoneNumber?.[0] || "U"}
-                                            </div>
-                                            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
-                                        </button>
-
-                                        <AnimatePresence>
-                                            {isDropdownOpen && (
-                                                <motion.div
-                                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                    transition={{ duration: 0.1 }}
-                                                    className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden py-2"
-                                                >
-                                                    <div className="px-4 py-3 border-b border-slate-50">
-                                                        <p className="text-sm font-bold text-slate-900 truncate">{user.displayName || "User"}</p>
-                                                        <p className="text-xs text-slate-500 truncate">{user.phoneNumber}</p>
-                                                    </div>
-
-                                                    <div className="p-2">
-                                                        <Link href="/dashboard?tab=profile" onClick={() => setIsDropdownOpen(false)}>
-                                                            <button className="w-full flex items-center space-x-3 px-3 py-2 rounded-xl hover:bg-slate-50 text-slate-600 transition-colors text-sm font-medium">
-                                                                <User className="w-4 h-4" />
-                                                                <span>Profile Settings</span>
-                                                            </button>
-                                                        </Link>
-                                                        <Link href="/dashboard/simulator" onClick={() => setIsDropdownOpen(false)}>
-                                                            <button className="w-full flex items-center space-x-3 px-3 py-2 rounded-xl hover:bg-indigo-50 text-indigo-600 transition-colors text-sm font-medium">
-                                                                <LayoutDashboard className="w-4 h-4" />
-                                                                {/* Using LayoutDashboard as placeholder, or could use Sparkles */}
-                                                                <span>Simulator 🔮</span>
-                                                            </button>
-                                                        </Link>
-                                                    </div>
-
-                                                    <div className="px-4 py-2">
-                                                        <div className="flex items-center space-x-2 text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">
-                                                            <Palette className="w-3 h-3" />
-                                                            <span>Theme</span>
-                                                        </div>
-                                                        <div className="grid grid-cols-4 gap-2">
-                                                            {themes.map((t) => (
-                                                                <button
-                                                                    key={t.id}
-                                                                    onClick={() => setTheme(t.id)}
-                                                                    className={`w-full aspect-square rounded-full border-2 flex items-center justify-center transition-all ${theme === t.id ? "border-slate-900 scale-110" : "border-transparent hover:scale-105"}`}
-                                                                    title={t.label}
-                                                                >
-                                                                    <div
-                                                                        className="w-full h-full rounded-full border border-black/10"
-                                                                        style={{ backgroundColor: t.color }}
-                                                                    />
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="border-t border-slate-50 mt-2 p-2">
-                                                        <button
-                                                            onClick={handleLogout}
-                                                            className="w-full flex items-center space-x-3 px-3 py-2 rounded-xl hover:bg-rose-50 text-rose-600 transition-colors text-sm font-medium"
-                                                        >
-                                                            <LogOut className="w-4 h-4" />
-                                                            <span>Sign Out</span>
-                                                        </button>
-                                                    </div>
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-                                    </div>
-                                </div>
-                            ) : (
-                                <Link href="/login">
-                                    <motion.button
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                        className="bg-slate-900 text-white px-6 py-2.5 rounded-full font-bold text-sm hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/20"
-                                    >
-                                        Login
-                                    </motion.button>
-                                </Link>
-                            )}
-                        </>
-                    )}
-                </div>
-            </div>
-        </nav>
-    );
+              )}
+            </Link>
+          ) : (
+            <Link href="/login" className="bg-slate-900 text-white px-6 py-2.5 rounded-full text-sm font-bold hover:bg-slate-800 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-slate-900/20">
+              Get Started
+            </Link>
+          )}
+        </div>
+      </div>
+    </motion.nav>
+  );
 }

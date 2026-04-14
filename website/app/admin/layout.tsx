@@ -1,8 +1,9 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { isAdmin } from '@/lib/admin-config';
 import { Loader2 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -10,11 +11,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const router = useRouter();
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
+        const unsubscribe = onAuthStateChanged(auth, (user: User | null) => {
             if (!user) {
                 // Redirect to login if not authenticated
-                // You might want to add a query param to redirect back after login
                 router.push('/login?redirect=/admin/blog');
+            } else if (!isAdmin(user.email)) {
+                // Check if user is in whitelist
+                console.warn(`Unauthorized access attempt to admin by: ${user.email}`);
+                router.push('/'); // Redirect non-admins to home
             } else {
                 setLoading(false);
             }

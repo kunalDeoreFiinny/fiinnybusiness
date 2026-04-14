@@ -1,0 +1,65 @@
+
+> website@0.1.0 dev
+> next dev --hostname 127.0.0.1 --port 3000
+
+   ▲ Next.js 16.0.3 (Turbopack)
+   - Local:         http://127.0.0.1:3000
+   - Network:       http://127.0.0.1:3000
+
+ ✓ Starting...
+ ✓ Ready in 1497ms
+ ○ Compiling / ...
+ GET / 200 in 3.2s (compile: 1564ms, render: 1676ms)
+ GET / 200 in 401ms (compile: 32ms, render: 369ms)
+ GET /loan-audit 200 in 2.2s (compile: 1859ms, render: 310ms)
+ GET / 200 in 6.9s (compile: 39ms, render: 6.8s)
+ GET / 200 in 4.9s (compile: 374ms, render: 4.5s)
+ GET /loan-audit 200 in 3.2s (compile: 77ms, render: 3.1s)
+ GET /loan-audit 200 in 703ms (compile: 138ms, render: 564ms)
+ GET /loan-audit 200 in 3.5s (compile: 919ms, render: 2.6s)
+ GET / 200 in 2.3s (compile: 118ms, render: 2.2s)
+ GET / 200 in 364ms (compile: 67ms, render: 297ms)
+ GET /loan-audit 200 in 185ms (compile: 13ms, render: 172ms)
+ GET /loan-audit 200 in 185ms (compile: 26ms, render: 159ms)
+ ✓ Compiled in 508ms
+ ✓ Compiled in 700ms
+ ✓ Compiled in 585ms
+ ✓ Compiled in 357ms
+ ✓ Compiled in 542ms
+ ✓ Compiled in 656ms
+ ✓ Compiled in 373ms
+ ✓ Compiled in 258ms
+ ✓ Compiled in 273ms
+ GET /loan-audit 200 in 2.9s (compile: 305ms, render: 2.6s)
+ GET /loan-audit 200 in 264ms (compile: 6ms, render: 258ms)
+ GET /loan-audit 200 in 109ms (compile: 7ms, render: 101ms)
+ ✓ Compiled in 367ms
+ ✓ Compiled in 409ms
+ ✓ Compiled in 245ms
+ GET /loan-audit 200 in 1676ms (compile: 355ms, render: 1320ms)
+ ✓ Compiled in 390ms
+ ✓ Compiled in 498ms
+ ✓ Compiled in 535ms
+ ✓ Compiled in 607ms
+ ✓ Compiled in 431ms
+ ✓ Compiled in 294ms
+ ✓ Compiled in 240ms
+ GET /loan-audit 500 in 1231ms (compile: 277ms, render: 954ms)
+ ✓ Compiled in 264ms
+ GET /loan-audit 500 in 1044ms (compile: 232ms, render: 812ms)
+ ✓ Compiled in 468ms
+ GET /loan-audit 200 in 932ms (compile: 224ms, render: 708ms)
+ ✓ Compiled in 303ms
+ ✓ Compiled in 260ms
+ ✓ Compiled in 525ms
+ ✓ Compiled in 418ms
+ ✓ Compiled in 507ms
+ GET /loan-audit 200 in 3.9s (compile: 250ms, render: 3.7s)
+ GET /loan-audit 200 in 485ms (compile: 12ms, render: 473ms)
+ GET / 200 in 71ms (compile: 41ms, render: 31ms)
+ ○ Compiling /how-it-works ...
+ GET /how-it-works 200 in 6.3s (compile: 6.2s, render: 98ms)
+ GET / 200 in 98ms (compile: 45ms, render: 53ms)
+ GET /how-it-works 200 in 141ms (compile: 32ms, render: 109ms)
+ GET / 200 in 49ms (compile: 26ms, render: 23ms)
+ GET / 200 in 73ms (compile: 37ms, render: 36ms)

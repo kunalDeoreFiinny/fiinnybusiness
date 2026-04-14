@@ -1,0 +1,193 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Outfit:wght@100..900&display=swap');
+@import "tailwindcss";
+
+:root {
+  /* Sophisticated Dark Palette (HSL) */
+  --bg-base: 240 10% 3.9%;
+  --bg-surface: 240 10% 6%;
+  --bg-muted: 240 5% 10%;
+  
+  --primary: 171 77% 48%; /* Emerald/Mint */
+  --primary-foreground: 240 5.9% 10%;
+  
+  --secondary: 240 4.8% 95.9%;
+  --secondary-foreground: 240 5.9% 10%;
+  
+  --accent: 252 100% 70%; /* Electric Indigo */
+  --accent-muted: 252 100% 70% / 0.1;
+  
+  --border: 240 3.7% 15.9%;
+  --border-subtle: 240 3.7% 10%;
+  
+  --text-primary: 0 0% 98%;
+  --text-secondary: 240 5% 64.9%;
+  --text-muted: 240 3.8% 46.1%;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: hsl(var(--bg-base));
+  color: hsl(var(--text-primary));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+
+/* Typography Overhaul */
+h1, h2, h3, h4, .font-display {
+  font-family: 'Outfit', sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.text-editorial {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-weight: 600;
+  font-size: 11px;
+  color: hsl(var(--text-muted));
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(var(--bg-base));
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 999px;
+}
+
+/* Mesh Gradient System */
+.mesh-gradient {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.mesh-gradient::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background-image: 
+    radial-gradient(circle at 80% 20%, hsla(var(--primary), 0.15) 0%, transparent 40%),
+    radial-gradient(circle at 20% 80%, hsla(var(--accent), 0.12) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, hsla(var(--bg-base), 0) 0%, hsl(var(--bg-base)) 100%);
+  filter: blur(80px);
+  animation: mesh-rotate 20s linear infinite;
+}
+
+@keyframes mesh-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Glassmorphism System */
+.glass-panel {
+  background: hsla(240, 5%, 6%, 0.4);
+  backdrop-filter: blur(12px);
+  border: 1px solid hsla(0, 0%, 100%, 0.08);
+  border-radius: 24px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-panel:hover {
+  background: hsla(240, 5%, 8%, 0.5);
+  border-color: hsla(0, 0%, 100%, 0.12);
+  box-shadow: 0 20px 40px -20px rgba(0,0,0,0.5);
+}
+
+/* Bento Grid Utilities */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.bento-item {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Premium Buttons */
+.btn-premium {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border-radius: 999px;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-premium-primary {
+  background: hsl(var(--text-primary));
+  color: hsl(var(--bg-base));
+}
+
+.btn-premium-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px -5px hsla(0, 0%, 100%, 0.3);
+}
+
+.btn-premium-outline {
+  background: transparent;
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--text-primary));
+}
+
+.btn-premium-outline:hover {
+  background: hsl(var(--border));
+  transform: translateY(-2px);
+}
+
+/* Grain Overlay (Refined) */
+.grain-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+}
+
+/* Tech Label Badge */
+.tech-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: hsla(var(--primary), 0.1);
+  color: hsl(var(--primary));
+  border: 1px solid hsla(var(--primary), 0.2);
+}
+
+.tech-badge-indigo {
+  background: hsla(var(--accent), 0.1);
+  color: hsl(var(--accent));
+  border: 1px solid hsla(var(--accent), 0.2);
+}

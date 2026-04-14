@@ -1,4 +1,3 @@
-import { CreateMLCEngine, MLCEngine, InitProgressCallback } from "@mlc-ai/web-llm";
 import { Message } from "../ai_types";
 import { PendingAction } from "../action_service";
 import { TOOLS } from "../tools";
@@ -7,14 +6,17 @@ import { getSystemPrompt } from "../system_prompt";
 // We use a lightweight but capable model (~550MB) - The "Silent Edge"
 const SELECTED_MODEL = "Llama-3.2-1B-Instruct-q4f16_1-MLC";
 
-let engine: MLCEngine | null = null;
+let engine: any = null;
 
 export const initializeWebLLM = async (
     onProgress: (progress: string) => void
 ) => {
     if (engine) return;
 
-    const initProgressCallback: InitProgressCallback = (report) => {
+    // Lazy load the heavy web-llm bundle
+    const { CreateMLCEngine } = await import("@mlc-ai/web-llm");
+
+    const initProgressCallback = (report: any) => {
         onProgress(report.text);
     };
 

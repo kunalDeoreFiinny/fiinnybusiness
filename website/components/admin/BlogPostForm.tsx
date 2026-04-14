@@ -23,10 +23,19 @@ export default function BlogPostForm({ initialData, pageTitle }: BlogPostFormPro
     const [excerpt, setExcerpt] = useState(initialData?.excerpt || '');
     const [coverImage, setCoverImage] = useState(initialData?.coverImage || '');
     const [author, setAuthor] = useState(initialData?.author || 'Fiinny Team');
-    const [readTime, setReadTime] = useState(initialData?.readTime || '3 min read');
+    const [readTime, setReadTime] = useState(initialData?.readTime || '1 min read');
     const [categories, setCategories] = useState(initialData?.categories.join(', ') || '');
+    const [published, setPublished] = useState(initialData?.published ?? true);
     const [seoTitle, setSeoTitle] = useState(initialData?.seoTitle || '');
     const [seoDescription, setSeoDescription] = useState(initialData?.seoDescription || '');
+    const [keywords, setKeywords] = useState(initialData?.keywords?.join(', ') || '');
+
+    // Auto-calculate read time when content changes
+    React.useEffect(() => {
+        const words = content.replace(/<[^>]*>/g, '').trim().split(/\s+/).length;
+        const minutes = Math.ceil(words / 200);
+        setReadTime(`${minutes} min read`);
+    }, [content]);
 
     // Auto-generate slug from title if slug is empty
     const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,8 +59,10 @@ export default function BlogPostForm({ initialData, pageTitle }: BlogPostFormPro
             author,
             readTime,
             categories: categories.split(',').map(c => c.trim()).filter(Boolean),
+            published,
             seoTitle,
             seoDescription,
+            keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
             // Use current date for display date if new, or keep existing
             date: initialData?.date || new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
         };
@@ -72,6 +83,14 @@ export default function BlogPostForm({ initialData, pageTitle }: BlogPostFormPro
         }
     };
 
+    const handlePreview = () => {
+        if (!slug) {
+            alert("Please enter a slug first to preview.");
+            return;
+        }
+        window.open(`/blog/${slug}?preview=true`, '_blank');
+    };
+
     return (
         <form onSubmit={handleSubmit} className="max-w-5xl mx-auto space-y-8 pb-20">
             <div className="flex items-center justify-between sticky top-0 bg-slate-50 py-4 z-10 border-b border-slate-200/50 backdrop-blur-sm -mx-6 px-6">
@@ -81,14 +100,23 @@ export default function BlogPostForm({ initialData, pageTitle }: BlogPostFormPro
                     </Link>
                     <h1 className="text-2xl font-bold text-slate-800">{pageTitle}</h1>
                 </div>
-                <button
-                    type="submit"
-                    disabled={submitting}
-                    className="flex items-center gap-2 bg-teal-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-teal-700 transition-all disabled:opacity-50 shadow-sm hover:shadow-md"
-                >
-                    {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                    Save Post
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={handlePreview}
+                        className="px-4 py-2.5 rounded-lg font-medium text-slate-600 hover:bg-slate-200 transition-colors"
+                    >
+                        Preview Post
+                    </button>
+                    <button
+                        type="submit"
+                        disabled={submitting}
+                        className="flex items-center gap-2 bg-teal-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-teal-700 transition-all disabled:opacity-50 shadow-sm hover:shadow-md"
+                    >
+                        {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                        Save Post
+                    </button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -125,7 +153,19 @@ export default function BlogPostForm({ initialData, pageTitle }: BlogPostFormPro
                 {/* Sidebar */}
                 <div className="space-y-6">
                     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
-                        <h3 className="font-bold text-slate-800 text-lg border-b border-slate-100 pb-2">Publishing Details</h3>
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                            <h3 className="font-bold text-slate-800 text-lg">Publishing</h3>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    checked={published} 
+                                    onChange={(e) => setPublished(e.target.checked)}
+                                    className="sr-only peer" 
+                                />
+                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none ring-0 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
+                                <span className="ms-3 text-sm font-medium text-slate-600 uppercase tracking-wider">{published ? 'Live' : 'Draft'}</span>
+                            </label>
+                        </div>
 
                         <ImageUploader
                             value={coverImage}
@@ -171,8 +211,10 @@ export default function BlogPostForm({ initialData, pageTitle }: BlogPostFormPro
                                     type="text"
                                     value={readTime}
                                     onChange={(e) => setReadTime(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-600 transition-colors"
+                                    className="w-full bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none cursor-not-allowed"
+                                    readOnly
                                 />
+                                <span className="text-[10px] text-slate-400 mt-1 block uppercase italic">Auto-calculated</span>
                             </div>
                         </div>
                     </div>
@@ -197,6 +239,16 @@ export default function BlogPostForm({ initialData, pageTitle }: BlogPostFormPro
                                 rows={3}
                                 className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-600 transition-colors"
                                 placeholder="Defaults to excerpt"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Keywords (comma separated)</label>
+                            <input
+                                type="text"
+                                value={keywords}
+                                onChange={(e) => setKeywords(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-600 transition-colors"
+                                placeholder="finance, trackers, security"
                             />
                         </div>
                     </div>
