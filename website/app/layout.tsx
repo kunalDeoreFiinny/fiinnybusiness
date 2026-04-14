@@ -7,6 +7,8 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AiProvider } from "@/components/ai/AiContext";
 import { LanguageProvider } from "@/app/i18n/LanguageContext";
+import PostHogProvider from "@/components/PostHogProvider";
+import PostHogPageView from "@/components/PostHogPageView";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -173,11 +175,14 @@ export default function RootLayout({
         </Script>
         <AuthProvider>
           <LanguageProvider>
-            <ThemeProvider>
-              <AiProvider>
-                {children}
-              </AiProvider>
-            </ThemeProvider>
+            <PostHogProvider>
+              <ThemeProvider>
+                <AiProvider>
+                  <PostHogPageView />
+                  {children}
+                </AiProvider>
+              </ThemeProvider>
+            </PostHogProvider>
           </LanguageProvider>
         </AuthProvider>
       </body>
