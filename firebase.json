@@ -120,6 +120,18 @@
           "destination": "/index.html"
         }
       ]
+    },
+    {
+      "target": "karanarjun",
+      "source": "karan-arjun-powerplus",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "frameworksBackend": {
+        "region": "asia-south1"
+      }
     }
   ]
 }

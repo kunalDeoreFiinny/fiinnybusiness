@@ -44,6 +44,7 @@ export default function LandingFooter() {
               <li><Link href="/subscription" className="hover:text-teal-400 transition-colors">Pricing</Link></li>
               <li><Link href="/download" className="hover:text-teal-400 transition-colors">Download</Link></li>
               <li><Link href="/changelog" className="hover:text-teal-400 transition-colors">Changelog</Link></li>
+              <li><Link href="/loan-audit" className="hover:text-teal-400 transition-colors">Loan Audit</Link></li>
             </ul>
           </div>
 

@@ -96,6 +96,12 @@ export default function Dashboard() {
     const [userEmail, setUserEmail] = useState<string | null>(null);
     const [insights, setInsights] = useState<Insight[]>([]);
 
+    // Subscription sidebar state
+    const [monthlySubTotal, setMonthlySubTotal] = useState<number>(0);
+    const [subNames, setSubNames] = useState<string[]>([]);
+    const [hasForexAlert, setHasForexAlert] = useState<boolean>(false);
+    const [forexMarkup, setForexMarkup] = useState<number>(0);
+
     // UI states
     const [activeTab, setActiveTab] = useState("overview");
     const [activePeriod, setActivePeriod] = useState("M"); // Month by default
@@ -152,8 +158,6 @@ export default function Dashboard() {
     const handleDeleteTransaction = async (id: string, type: "expense" | "income") => {
         if (!user || (!user.phoneNumber && !user.uid)) return;
         const userId = user.phoneNumber || user.uid;
-
-        if (!confirm("Are you sure?")) return;
 
         try {
             if (type === "expense") await deleteExpense(userId, id);
@@ -308,6 +312,40 @@ export default function Dashboard() {
             setUserEmail(profileData?.email || null);
 
             setContextData({ expenses: convertedExpenses, incomes: convertedIncomes });
+
+            // --- Subscription Detection ---
+            // Look at last 35 days for recurring subscription-like expenses
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - 35);
+            const subKeywords = ['netflix', 'spotify', 'amazon', 'prime', 'youtube', 'hotstar', 'jio', 'apple', 'google', 'microsoft', 'adobe', 'canva', 'slack', 'zoom', 'notion', 'dropbox', 'claude', 'openai', 'subscription', 'plan', 'premium'];
+            const recentSubs = convertedExpenses.filter(e => {
+                const name = (e.description || e.category || '').toLowerCase();
+                return e.date >= cutoff && subKeywords.some(k => name.includes(k));
+            });
+            const subTotal = recentSubs.reduce((s, e) => s + e.amount, 0);
+            const uniqueSubNames = [...new Set(recentSubs.map(e => {
+                const name = e.description || e.category || 'Subscription';
+                return name.charAt(0).toUpperCase() + name.slice(1, 12);
+            }))].slice(0, 3);
+            setMonthlySubTotal(Math.round(subTotal));
+            setSubNames(uniqueSubNames);
+
+            // --- Forex Markup Detection ---
+            const forexTxs = convertedExpenses.filter(e => {
+                const desc = (e.description || '').toLowerCase();
+                const isIntl = e.fx?.currency && e.fx.currency !== (profileData?.currency || 'INR');
+                const hasForexWord = desc.includes('forex') || desc.includes('currency') || desc.includes('international') || desc.includes('foreign');
+                return isIntl || hasForexWord;
+            });
+            if (forexTxs.length > 0) {
+                // Estimate ~2.5% forex markup on international transactions
+                const estimated = Math.round(forexTxs.reduce((s, e) => s + e.amount * 0.025, 0));
+                setHasForexAlert(estimated > 0);
+                setForexMarkup(estimated);
+            } else {
+                setHasForexAlert(false);
+                setForexMarkup(0);
+            }
         } catch (error) {
             console.error("Error loading dashboard data:", error);
         } finally {
@@ -645,22 +683,30 @@ export default function Dashboard() {
                                                     <span className="text-xs font-bold tracking-wider">ACTIVE SUBS</span>
                                                 </div>
                                                 <div className="flex items-baseline gap-1 text-white mb-1">
-                                                    <span className="text-2xl font-bold">₹898</span>
+                                                    <span className="text-2xl font-bold">
+                                                        {monthlySubTotal > 0 ? `₹${monthlySubTotal.toLocaleString('en-IN')}` : '₹0'}
+                                                    </span>
                                                     <span className="text-xs text-slate-400">/mo</span>
                                                 </div>
-                                                <p className="text-xs text-slate-400">Netflix, Spotify +1</p>
+                                                <p className="text-xs text-slate-400">
+                                                    {subNames.length > 0
+                                                        ? subNames.slice(0, 2).join(', ') + (subNames.length > 2 ? ` +${subNames.length - 2}` : '')
+                                                        : 'No subscriptions detected'}
+                                                </p>
                                             </div>
                                         </div>
                                     </Link>
 
-                                    {/* Mock Hidden Charge Alert */}
-                                    <div className="mt-3 bg-red-50 border border-red-100 rounded-xl p-3 flex items-start gap-3">
-                                        <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
-                                        <div>
-                                            <p className="text-xs font-bold text-red-700">Hidden Fee Detected</p>
-                                            <p className="text-[10px] text-red-600 leading-tight">Forex Markup of ₹45 on recent transaction.</p>
+                                    {/* Live Forex Markup Alert — only shown when real forex transactions exist */}
+                                    {hasForexAlert && (
+                                        <div className="mt-3 bg-red-50 border border-red-100 rounded-xl p-3 flex items-start gap-3">
+                                            <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+                                            <div>
+                                                <p className="text-xs font-bold text-red-700">Hidden Fee Detected</p>
+                                                <p className="text-[10px] text-red-600 leading-tight">Est. Forex Markup of ~₹{forexMarkup} on intl transactions.</p>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

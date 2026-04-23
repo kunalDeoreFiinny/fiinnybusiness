@@ -1,7 +1,8 @@
 import { ExpenseItem, IncomeItem } from "@/lib/firestore";
 import { format } from "date-fns";
-import { motion } from "framer-motion";
-import { X, Calendar, Tag, MessageSquare, CreditCard, User, Users, Edit2, Trash2, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, Calendar, Tag, MessageSquare, CreditCard, User, Users, Edit2, Trash2, ArrowDownLeft, ArrowUpRight, AlertTriangle } from "lucide-react";
+import { useState } from "react";
 
 interface TransactionDetailsModalProps {
     isOpen: boolean;
@@ -18,16 +19,14 @@ export default function TransactionDetailsModal({
     onEdit,
     onDelete
 }: TransactionDetailsModalProps) {
+    const [confirmingDelete, setConfirmingDelete] = useState(false);
+
     if (!isOpen || !transaction) return null;
 
     const isIncome = (transaction as any).kind === 'income';
     const isExpense = !isIncome;
 
-    console.log("TransactionDetailsModal: transaction", transaction);
-    console.log("TransactionDetailsModal: isIncome", isIncome);
-
     const handleDelete = () => {
-        console.log("TransactionDetailsModal: handleDelete called");
         onDelete(transaction.id, isIncome ? "income" : "expense");
         onClose();
     };
@@ -137,21 +136,63 @@ export default function TransactionDetailsModal({
                 </div>
 
                 {/* Footer Actions */}
-                <div className="p-6 border-t border-slate-100 bg-slate-50 flex gap-3">
-                    <button
-                        onClick={handleDelete}
-                        className="flex-1 px-4 py-3 bg-red-50 text-red-600 font-semibold rounded-xl hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
-                    >
-                        <Trash2 className="w-4 h-4" />
-                        Delete
-                    </button>
-                    <button
-                        onClick={handleEdit}
-                        className="flex-1 px-4 py-3 bg-teal-600 text-white font-semibold rounded-xl hover:bg-teal-700 transition-colors flex items-center justify-center gap-2"
-                    >
-                        <Edit2 className="w-4 h-4" />
-                        Edit
-                    </button>
+                <div className="border-t border-slate-100 bg-slate-50 overflow-hidden">
+                    <AnimatePresence mode="wait">
+                        {confirmingDelete ? (
+                            <motion.div
+                                key="confirm"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.18 }}
+                                className="p-6 bg-red-50"
+                            >
+                                <div className="flex items-center gap-2 mb-4 text-red-700">
+                                    <AlertTriangle className="w-5 h-5 shrink-0" />
+                                    <p className="text-sm font-bold">Delete this transaction permanently?</p>
+                                </div>
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setConfirmingDelete(false)}
+                                        className="flex-1 px-4 py-3 bg-white border border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors text-sm"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleDelete}
+                                        className="flex-1 px-4 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors flex items-center justify-center gap-2 text-sm"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                        Yes, Delete
+                                    </button>
+                                </div>
+                            </motion.div>
+                        ) : (
+                            <motion.div
+                                key="actions"
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 10 }}
+                                transition={{ duration: 0.18 }}
+                                className="p-6 flex gap-3"
+                            >
+                                <button
+                                    onClick={() => setConfirmingDelete(true)}
+                                    className="flex-1 px-4 py-3 bg-red-50 text-red-600 font-semibold rounded-xl hover:bg-red-100 transition-colors flex items-center justify-center gap-2 text-sm"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    Delete
+                                </button>
+                                <button
+                                    onClick={handleEdit}
+                                    className="flex-1 px-4 py-3 bg-teal-600 text-white font-semibold rounded-xl hover:bg-teal-700 transition-colors flex items-center justify-center gap-2 text-sm"
+                                >
+                                    <Edit2 className="w-4 h-4" />
+                                    Edit
+                                </button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </motion.div>
         </div>
