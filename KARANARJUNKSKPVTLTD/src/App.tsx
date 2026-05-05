@@ -64,6 +64,12 @@ const PaymentLandingPage     = lazy(() => import('./pages/PaymentLandingPage'));
 const AIAdvisorPage          = lazy(() => import('./pages/AIAdvisorPage'));
 const DigitalReceiptPage     = lazy(() => import('./pages/DigitalReceiptPage'));
 const DigitalKhataPage       = lazy(() => import('./pages/DigitalKhataPage'));
+const ModuleMarketplacePage  = lazy(() => import('./pages/ModuleMarketplacePage'));
+const ReturnsPage            = lazy(() => import('./pages/ReturnsPage'));
+const LoyaltyPage            = lazy(() => import('./pages/LoyaltyPage'));
+const CustomerFeedbackPage   = lazy(() => import('./pages/CustomerFeedbackPage'));
+const CustomerFeedbackSubmitPage = lazy(() => import('./pages/CustomerFeedbackSubmitPage'));
+const VCheckoutPage          = lazy(() => import('./pages/VCheckoutPage'));
 
 // Full-page spinner shown while a lazy chunk is loading
 function PageLoader() {
@@ -86,6 +92,10 @@ function Layout({ children }: { children: React.ReactNode, currentTheme: 'light'
 
   const publicPaths = ['/', '/login', '/about', '/privacy', '/terms', '/blog', '/changelog', '/download'];
   if (publicPaths.includes(location.pathname)) return <>{children}</>;
+
+  // Fully standalone public pages — no nav, no sidebar
+  const standalonePathPrefixes = ['/feedback-submit', '/v-checkout/', '/pay/', '/receipt/'];
+  if (standalonePathPrefixes.some(p => location.pathname.startsWith(p))) return <>{children}</>;
 
   // Role-specific portal paths — no sidebar needed, standalone layout
   const portalPaths = ['/retailer-portal', '/manufacturer-portal'];
@@ -132,8 +142,12 @@ function Layout({ children }: { children: React.ReactNode, currentTheme: 'light'
     { path: '/inventory-batches', icon: <Package size={19} />, label: 'Inventory Batches', screenKey: 'inventory' },
     { path: '/barcode', icon: <Activity size={19} />, label: 'Barcode Labels', screenKey: 'inventory' },
     { path: '/pricing', icon: <Star size={19} />, label: '⭐ Upgrade Plan', screenKey: 'analytics' },
+    { path: '/modules', icon: <Package size={19} />, label: '🧩 Module Marketplace', screenKey: 'analytics' },
     { path: '/payment-links', icon: <Link2 size={19} />, label: '💳 Payment Links', screenKey: 'worklist' },
     { path: '/ai-advisor', icon: <Bot size={19} />, label: '🤖 AI Advisor', screenKey: 'analytics' },
+    { path: '/returns', icon: <ReceiptText size={19} />, label: 'Returns & Exchanges', screenKey: 'pos' },
+    { path: '/loyalty', icon: <Star size={19} />, label: 'Loyalty & Memberships', screenKey: 'pos' },
+    { path: '/feedback', icon: <Users size={19} />, label: 'Customer Feedback', screenKey: 'pos' },
     { path: '/rates', icon: <Package size={19} />, label: t('common.inventory'), screenKey: 'inventory' },
     { path: '/order-history', icon: <ReceiptText size={19} />, label: 'Order History', screenKey: 'order_history' },
     { path: '/online-orders', icon: <ShoppingCart size={19} />, label: 'Online Orders', screenKey: 'online_orders' },
@@ -426,7 +440,17 @@ function AppRoutes() {
       <Route path="/pricing" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="analytics"><PricingPage /></ProtectedRoute>} />
       <Route path="/payment-links" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="worklist"><PaymentLinkPage /></ProtectedRoute>} />
       <Route path="/ai-advisor" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="analytics"><AIAdvisorPage /></ProtectedRoute>} />
+      {/* Module system */}
+      <Route path="/modules" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="analytics"><ModuleMarketplacePage /></ProtectedRoute>} />
+
+      {/* POS add-on pages */}
+      <Route path="/returns" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="pos"><ReturnsPage /></ProtectedRoute>} />
+      <Route path="/loyalty" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="pos"><LoyaltyPage /></ProtectedRoute>} />
+      <Route path="/feedback" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="pos"><CustomerFeedbackPage /></ProtectedRoute>} />
+
       {/* Public pages */}
+      <Route path="/feedback-submit" element={<CustomerFeedbackSubmitPage />} />
+      <Route path="/v-checkout/:tenantId/:token" element={<VCheckoutPage />} />
       <Route path="/pay/:token" element={<PaymentLandingPage />} />
       <Route path="/receipt/:tenantId/:receiptId" element={<DigitalReceiptPage />} />
       
