@@ -27,17 +27,11 @@ export const functions = getFunctions(app, 'asia-south1');
 // ✅ Firebase Performance Monitoring (tracks page load, network calls)
 export const perf = getPerformance(app);
 
-// ✅ Firebase App Check (reCAPTCHA v3) — prevents API abuse
-// Token gate on Firestore + Functions so bots can't query your data or run up AI costs
+// ✅ Firebase App Check (reCAPTCHA v3) — only in production
 const isDev = (import.meta as any).env?.DEV;
 const recaptchaKey = (import.meta as any).env?.VITE_RECAPTCHA_KEY;
 
-if (isDev) {
-  // In dev: use debug token bypass (register the printed token in Firebase Console > App Check)
-  (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
-}
-
-if (recaptchaKey) {
+if (!isDev && recaptchaKey) {
   initializeAppCheck(app, {
     provider: new ReCaptchaV3Provider(recaptchaKey),
     isTokenAutoRefreshEnabled: true,

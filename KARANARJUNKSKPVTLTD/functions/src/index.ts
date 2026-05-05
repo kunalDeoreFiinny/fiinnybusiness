@@ -4,3 +4,4 @@ export { karanArjunAIChat } from './karanArjunAI.js';
 export { dailyFirestoreBackup, dailyMetrics } from './monitoring.js';
 export { sendWhatsAppReceipt } from './whatsappReceipts.js';
 export { getSaaSSubscription, createSaaSOrder, verifySaaSPayment } from './payments.js';
+export { getModuleCatalog, createModuleOrder, verifyModulePayment, cancelModule } from './posModules.js';
