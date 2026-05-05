@@ -75,6 +75,7 @@ function PageLoader() {
 }
 
 import ProtectedRoute from './components/ProtectedRoute';
+import HorizontalNavbar from './components/HorizontalNavbar';
 
 function Layout({ children }: { children: React.ReactNode, currentTheme: 'light' | 'dark', toggleTheme: () => void }) {
   const location = useLocation();
@@ -202,6 +203,9 @@ function Layout({ children }: { children: React.ReactNode, currentTheme: 'light'
           </button>
         </div>
       </header>
+
+      {/* Horizontal priority nav */}
+      <HorizontalNavbar />
 
       {/* Main Content */}
       <main className="main-content">{children}</main>
