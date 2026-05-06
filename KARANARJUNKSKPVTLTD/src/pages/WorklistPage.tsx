@@ -19,6 +19,7 @@ import DynamicTable from '../components/DynamicTable';
 import PaymentRemindersPage from './PaymentRemindersPage';
 import OnlineOrdersPage from './OnlineOrdersPage';
 import DispatchBoardPage from './DispatchBoardPage';
+import PurchaseOrdersPage from './PurchaseOrdersPage';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -38,13 +39,14 @@ interface Retailer {
     outstandingAmount?: number;
 }
 
-type ModuleTab = 'partners' | 'payment-reminders' | 'tracking-info' | 'online-orders';
+type ModuleTab = 'partners' | 'payment-reminders' | 'tracking-info' | 'online-orders' | 'purchase-orders';
 
 const MODULE_TABS: { id: ModuleTab; label: string; icon: React.ReactNode }[] = [
     { id: 'partners',          label: 'Partners',          icon: <Building2 size={16} /> },
     { id: 'payment-reminders', label: 'Payment Reminders', icon: <Bell size={16} /> },
     { id: 'tracking-info',     label: 'Tracking Info',     icon: <Truck size={16} /> },
     { id: 'online-orders',     label: 'Online Orders',     icon: <ShoppingCart size={16} /> },
+    { id: 'purchase-orders',     label: 'Purchase Orders',     icon: <ShoppingCart size={16} /> },
 ];
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -108,6 +110,7 @@ export default function WorklistPage() {
             {moduleTab === 'payment-reminders' && <PaymentRemindersPage />}
             {moduleTab === 'tracking-info'     && <DispatchBoardPage />}
             {moduleTab === 'online-orders'     && <OnlineOrdersPage />}
+            {moduleTab === 'purchase-orders'     && <PurchaseOrdersPage/>}
         </div>
     );
 }
@@ -333,7 +336,7 @@ function PartnersTab() {
             {/* Filters Bar */}
             <div className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
                 <div style={{ display: 'flex', gap: '0.35rem' }}>
-                    {([['active', '⏳ Active'], ['history', '✅ Cleared']] as const).map(([val, label]) => (
+                    {([['active', 'Active'], ['history', 'Cleared']] as const).map(([val, label]) => (
                         <button key={val} onClick={() => setPartnerView(val)}
                             style={{ padding: '0.4rem 1rem', borderRadius: '20px', border: `1px solid ${partnerView === val ? 'var(--primary-light)' : 'var(--surface-border)'}`, background: partnerView === val ? 'var(--primary-light)' : 'transparent', color: partnerView === val ? '#fff' : 'var(--text-secondary)', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
                             {label}
