@@ -1,0 +1,229 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis(schema: "public")]
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum ShopStatus {
+  pending_review
+  active
+  suspended
+  rejected
+}
+
+enum LicenseType {
+  pesticide_license
+  fertilizer_license
+  seed_license
+  gst_registration
+  trade_license
+  fssai
+  other
+}
+
+enum ProductCategory {
+  seeds
+  fertilizers
+  pesticides
+  herbicides
+  fungicides
+  micronutrients
+  irrigation_equipment
+  farm_tools
+  animal_feed
+  veterinary_supplies
+  organic_inputs
+  plant_growth_regulators
+  other
+}
+
+enum InventorySource {
+  erp
+  manual
+}
+
+enum ActionType {
+  view
+  call
+  direction
+}
+
+enum SubscriptionPlan {
+  free
+  basic
+  pro
+  enterprise
+}
+
+enum SubscriptionStatus {
+  active
+  expired
+  cancelled
+  trialing
+}
+
+enum UserRole {
+  admin
+  shop_owner
+  farmer
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model Shop {
+  id            String     @id @default(uuid())
+  ownerName     String     @map("owner_name")
+  businessName  String     @map("business_name")
+  gst           String?
+  addressLine   String     @map("address_line")
+  city          String
+  state         String
+  pincode       String
+  // PostGIS geometry — automatically set by DB trigger on lat/lng insert/update
+  location      Unsupported("geometry(Point, 4326)")?
+  lat           Float
+  lng           Float
+  phone         String     @unique
+  firebaseUid   String     @unique @map("firebase_uid")
+  erpApiKeyHash String?    @map("erp_api_key_hash")
+  adminNotes    String?    @map("admin_notes")
+  status        ShopStatus @default(pending_review)
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  licenses      ShopLicense[]
+  inventory     ShopInventory[]
+  views         ShopView[]
+  subscription  Subscription?
+
+  @@index([status])
+  @@map("shops")
+}
+
+model ShopLicense {
+  id            String      @id @default(uuid())
+  shopId        String      @map("shop_id")
+  licenseType   LicenseType @map("license_type")
+  licenseNumber String      @map("license_number")
+  issueDate     DateTime?   @map("issue_date")
+  expiryDate    DateTime?   @map("expiry_date")
+  documentUrl   String      @map("document_url")
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  shop          Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId])
+  @@map("shop_licenses")
+}
+
+model ProductMaster {
+  id           String          @id @default(uuid())
+  name         String
+  brand        String?
+  category     ProductCategory
+  defaultImage String?         @map("default_image")
+  description  String?
+  aliases      String[]
+  isActive     Boolean         @default(true) @map("is_active")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  inventory    ShopInventory[]
+
+  @@unique([name, brand])
+  @@index([category])
+  @@index([name])
+  @@map("products_master")
+}
+
+model ShopInventory {
+  id          String          @id @default(uuid())
+  shopId      String          @map("shop_id")
+  productId   String          @map("product_id")
+  price       Decimal         @db.Decimal(10, 2)
+  mrp         Decimal         @db.Decimal(10, 2)
+  quantity    Int             @default(0)
+  inStock     Boolean         @default(true) @map("in_stock")
+  source      InventorySource @default(manual)
+  lastUpdated DateTime        @default(now()) @updatedAt @map("last_updated")
+
+  shop        Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  product     ProductMaster   @relation(fields: [productId], references: [id])
+
+  @@unique([shopId, productId])
+  @@index([productId, inStock])
+  @@map("shop_inventory")
+}
+
+model UserFarmer {
+  id          String    @id @default(uuid())
+  phone       String    @unique
+  firebaseUid String    @unique @map("firebase_uid")
+  name        String?
+  location    Unsupported("geometry(Point, 4326)")?
+  lat         Float?
+  lng         Float?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  searchLogs  SearchLog[]
+  views       ShopView[]
+
+  @@map("users_farmers")
+}
+
+model SearchLog {
+  id           String      @id @default(uuid())
+  userId       String?     @map("user_id")
+  productId    String      @map("product_id")
+  queryLat     Float       @map("query_lat")
+  queryLng     Float       @map("query_lng")
+  radiusKm     Float       @map("radius_km")
+  resultsCount Int         @map("results_count")
+  timestamp    DateTime    @default(now())
+
+  user         UserFarmer? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([timestamp])
+  @@map("search_logs")
+}
+
+model ShopView {
+  id        String      @id @default(uuid())
+  userId    String?     @map("user_id")
+  shopId    String      @map("shop_id")
+  productId String?     @map("product_id")
+  action    ActionType
+  timestamp DateTime    @default(now())
+
+  user      UserFarmer? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  shop      Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, timestamp])
+  @@map("shop_views")
+}
+
+model Subscription {
+  id         String             @id @default(uuid())
+  shopId     String             @unique @map("shop_id")
+  plan       SubscriptionPlan   @default(free)
+  amount     Decimal?           @db.Decimal(10, 2)
+  startDate  DateTime           @map("start_date")
+  endDate    DateTime?          @map("end_date")
+  status     SubscriptionStatus @default(active)
+  razorpayId String?            @map("razorpay_id")
+  createdAt  DateTime           @default(now()) @map("created_at")
+  updatedAt  DateTime           @updatedAt @map("updated_at")
+
+  shop       Shop               @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@map("subscriptions")
+}
