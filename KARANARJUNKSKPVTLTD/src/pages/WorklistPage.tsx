@@ -1,6 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Download, FileSpreadsheet, Store, Search, Filter, ArrowUpDown, ArrowUpRight, Users, Building2, UserPlus, TrendingUp, AlertCircle, CheckCircle2 } from 'lucide-react';
+import {
+    Download, FileSpreadsheet, Store, Search, Filter, ArrowUpDown,
+    ArrowUpRight, Users, Building2, UserPlus, TrendingUp, AlertCircle,
+    CheckCircle2, Bell, ShoppingCart, Truck,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getDocs, orderBy, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -10,6 +14,13 @@ import { getTenantCollection } from '../utils/tenantPath';
 import UdhariUploadModal from '../components/UdhariUploadModal';
 import { useSchema } from '../contexts/SchemaContext';
 import DynamicTable from '../components/DynamicTable';
+
+// Import sub-pages directly (WorklistPage itself is lazy-loaded by App.tsx)
+import PaymentRemindersPage from './PaymentRemindersPage';
+import OnlineOrdersPage from './OnlineOrdersPage';
+import DispatchBoardPage from './DispatchBoardPage';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Retailer {
     id: string;
@@ -27,7 +38,83 @@ interface Retailer {
     outstandingAmount?: number;
 }
 
+type ModuleTab = 'partners' | 'payment-reminders' | 'tracking-info' | 'online-orders';
+
+const MODULE_TABS: { id: ModuleTab; label: string; icon: React.ReactNode }[] = [
+    { id: 'partners',          label: 'Partners',          icon: <Building2 size={16} /> },
+    { id: 'payment-reminders', label: 'Payment Reminders', icon: <Bell size={16} /> },
+    { id: 'tracking-info',     label: 'Tracking Info',     icon: <Truck size={16} /> },
+    { id: 'online-orders',     label: 'Online Orders',     icon: <ShoppingCart size={16} /> },
+];
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
 export default function WorklistPage() {
+    const [moduleTab, setModuleTab] = useState<ModuleTab>('partners');
+
+    return (
+        <div className="animate-fade-in" style={{ maxWidth: '1400px', margin: '0 auto' }}>
+            {/* ── Tab Bar ── */}
+            <div
+            style={{
+                position: 'sticky',
+                top: '64px', // 👈 adjust based on your main navbar height
+                zIndex: 50,
+                background: 'var(--surface-base)', // 👈 IMPORTANT (avoid overlap issues)
+                display: 'flex',
+                gap: '0.25rem',
+                marginBottom: '1.75rem',
+                borderBottom: '2px solid var(--surface-border)',
+                padding: '0.5rem 0 0 0',
+                overflowX: 'auto',
+            }}
+            >
+                {MODULE_TABS.map(tab => {
+                    const active = moduleTab === tab.id;
+                    return (
+                        <button
+                            key={tab.id}
+                            onClick={() => setModuleTab(tab.id)}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: '0.65rem 1.25rem',
+                                background: 'transparent',
+                                border: 'none',
+                                borderBottom: active
+                                    ? '2px solid var(--primary-light)'
+                                    : '2px solid transparent',
+                                marginBottom: '-2px',
+                                color: active ? 'var(--primary-light)' : 'var(--text-tertiary)',
+                                fontWeight: active ? 700 : 400,
+                                fontSize: '0.9rem',
+                                cursor: 'pointer',
+                                fontFamily: 'inherit',
+                                whiteSpace: 'nowrap',
+                                transition: 'all 0.15s ease',
+                                borderRadius: '0',
+                            }}
+                        >
+                            <span style={{ opacity: active ? 1 : 0.6 }}>{tab.icon}</span>
+                            {tab.label}
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* ── Tab Content ── */}
+            {moduleTab === 'partners'          && <PartnersTab />}
+            {moduleTab === 'payment-reminders' && <PaymentRemindersPage />}
+            {moduleTab === 'tracking-info'     && <DispatchBoardPage />}
+            {moduleTab === 'online-orders'     && <OnlineOrdersPage />}
+        </div>
+    );
+}
+
+// ─── Partners Tab (former WorklistPage content) ───────────────────────────────
+
+function PartnersTab() {
     const navigate = useNavigate();
     const { tenantId } = useAuth();
     const { t } = useTranslation();
@@ -39,7 +126,7 @@ export default function WorklistPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterSize, setFilterSize] = useState('All');
     const [sortBy, setSortBy] = useState('newest');
-    const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
+    const [partnerView, setPartnerView] = useState<'active' | 'history'>('active');
 
     const paymentsFileRef = useRef<HTMLInputElement>(null);
     const followupsFileRef = useRef<HTMLInputElement>(null);
@@ -88,7 +175,7 @@ export default function WorklistPage() {
 
     const processedRetailers = useMemo(() => {
         let result = [...retailers];
-        if (activeTab === 'active') result = result.filter(r => (r as any).hasPendingOrders);
+        if (partnerView === 'active') result = result.filter(r => (r as any).hasPendingOrders);
         else result = result.filter(r => !(r as any).hasPendingOrders);
 
         if (searchTerm) {
@@ -109,7 +196,7 @@ export default function WorklistPage() {
             return sortBy === 'oldest' ? tA - tB : tB - tA;
         });
         return result;
-    }, [retailers, searchTerm, filterSize, sortBy, activeTab]);
+    }, [retailers, searchTerm, filterSize, sortBy, partnerView]);
 
     const handleExportCSV = () => {
         const schema = getSchema('retailers');
@@ -194,12 +281,8 @@ export default function WorklistPage() {
         };
     }, [retailers]);
 
-    const sizeColor = (size?: string) =>
-        size === 'Big' ? '#0ea5e9' : size === 'Medium' ? '#f59e0b' : '#10b981';
-
     return (
-        <div className="animate-fade-in" style={{ maxWidth: '1200px', margin: '0 auto' }}>
-
+        <div>
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
@@ -251,8 +334,8 @@ export default function WorklistPage() {
             <div className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
                 <div style={{ display: 'flex', gap: '0.35rem' }}>
                     {([['active', '⏳ Active'], ['history', '✅ Cleared']] as const).map(([val, label]) => (
-                        <button key={val} onClick={() => setActiveTab(val)}
-                            style={{ padding: '0.4rem 1rem', borderRadius: '20px', border: `1px solid ${activeTab === val ? 'var(--primary-light)' : 'var(--surface-border)'}`, background: activeTab === val ? 'var(--primary-light)' : 'transparent', color: activeTab === val ? '#fff' : 'var(--text-secondary)', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
+                        <button key={val} onClick={() => setPartnerView(val)}
+                            style={{ padding: '0.4rem 1rem', borderRadius: '20px', border: `1px solid ${partnerView === val ? 'var(--primary-light)' : 'var(--surface-border)'}`, background: partnerView === val ? 'var(--primary-light)' : 'transparent', color: partnerView === val ? '#fff' : 'var(--text-secondary)', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
                             {label}
                         </button>
                     ))}
@@ -297,44 +380,6 @@ export default function WorklistPage() {
                 </div>
             ) : (
                 <>
-                    {/* Partner Cards Grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-                        {processedRetailers.map(r => {
-                            const hasPending = (r as any).hasPendingOrders;
-                            const color = sizeColor(r.portfolioSize);
-                            return (
-                                <div key={r.id} className="glass-panel" onClick={() => navigate(`/worklist/${r.id}`)}
-                                    style={{ cursor: 'pointer', padding: '1.25rem', borderLeft: `4px solid ${color}`, transition: 'transform 0.15s, box-shadow 0.15s', position: 'relative', overflow: 'hidden' }}
-                                    onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 8px 24px ${color}22`; }}
-                                    onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
-                                    <span style={{ position: 'absolute', top: '1rem', right: '1rem', background: hasPending ? '#f59e0b22' : '#10b98122', color: hasPending ? '#f59e0b' : '#10b981', padding: '0.15rem 0.6rem', borderRadius: '99px', fontSize: '0.7rem', fontWeight: 700 }}>
-                                        {hasPending ? '⏳ Pending' : '✅ Cleared'}
-                                    </span>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.85rem' }}>
-                                        <div style={{ width: 44, height: 44, borderRadius: '12px', background: `${color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                            <Store size={22} color={color} />
-                                        </div>
-                                        <div style={{ minWidth: 0 }}>
-                                            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name || 'Unnamed Partner'}</h3>
-                                            <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>📍 {r.location || '—'}</p>
-                                        </div>
-                                    </div>
-                                    <div style={{ display: 'flex', fontSize: '0.8rem', color: 'var(--text-secondary)', alignItems: 'center' }}>
-                                        <span>📞 {r.number || '—'}</span>
-                                        <span style={{ marginLeft: 'auto', background: `${color}22`, color, padding: '0.1rem 0.5rem', borderRadius: '6px', fontWeight: 600, fontSize: '0.72rem' }}>
-                                            {r.portfolioSize || 'Small'}
-                                        </span>
-                                    </div>
-                                    <div style={{ marginTop: '0.85rem', display: 'flex', justifyContent: 'flex-end' }}>
-                                        <span style={{ color: 'var(--primary-light)', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                            View Details <ArrowUpRight size={14} />
-                                        </span>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-
                     {/* Collapsible tabular view */}
                     <details style={{ marginTop: '0.5rem' }}>
                         <summary style={{ cursor: 'pointer', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.875rem', padding: '0.5rem 0', userSelect: 'none' }}>
