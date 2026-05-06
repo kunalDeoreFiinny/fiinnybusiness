@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Navbar, { Footer } from './components/Layout';
 import Home from './pages/Home';
@@ -41,6 +41,12 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError:
   }
 }
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  return null;
+}
+
 function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
@@ -62,6 +68,7 @@ export default function App() {
       <AuthProvider>
         <CartProvider>
           <Router>
+            <ScrollToTop />
             <LayoutWrapper>
               <Routes>
                 <Route path="/" element={<Home />} />
