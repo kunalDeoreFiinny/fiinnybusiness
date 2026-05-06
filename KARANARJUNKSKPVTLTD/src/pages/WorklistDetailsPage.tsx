@@ -75,7 +75,7 @@ export default function WorklistDetailsPage() {
     const [retailer, setRetailer] = useState<Retailer | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'notes' | 'orders'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'notes' | 'orders'>('orders');
     const [tasks, setTasks] = useState<Task[]>([]);
     const [notes, setNoteData] = useState<Note[]>([]);
     const [orders, setOrders] = useState<Order[]>([]);
@@ -104,7 +104,6 @@ export default function WorklistDetailsPage() {
 
     // Quick-update inline payment notes per order
     const [orderNotes, setOrderNotes] = useState<Record<string, string>>({});
-    const [orderPayDates, setOrderPayDates] = useState<Record<string, string>>({});
 
     // New Note Form States
     const [newNoteTalkedTo, setNewNoteTalkedTo] = useState('');
@@ -492,7 +491,7 @@ export default function WorklistDetailsPage() {
             {/* Financial Overview Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
                 <div className="glass-panel" style={{ padding: '1.5rem', borderLeft: '4px solid var(--secondary)' }}>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>{t('common.total_sales')}</div>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Total Sales</div>
                     <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>₹{Number(retailer.totalSales || 0).toLocaleString()}</div>
                 </div>
                 <div className="glass-panel" style={{ padding: '1.5rem', borderLeft: '4px solid var(--primary)' }}>
@@ -597,10 +596,10 @@ export default function WorklistDetailsPage() {
             {/* Tabs Navigation */}
             <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--surface-border)', marginBottom: '2rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
                 {[
-                    { id: 'overview', label: t('common.overview'), icon: User },
+                    { id: 'orders', label: 'B2B Orders', icon: ShoppingCart, count: salesOrders.length },
+                    { id: 'overview', label: 'Overview', icon: User },
                     { id: 'tasks', label: t('worklist_details.tasks'), icon: CheckSquare, count: tasks.length },
-                    { id: 'notes', label: t('worklist_details.notes'), icon: FileText, count: notes.length },
-                    { id: 'orders', label: 'B2B Orders', icon: ShoppingCart, count: salesOrders.length }
+                    { id: 'notes', label: t('worklist_details.notes'), icon: FileText, count: notes.length }
                 ].map(tab => (
                     <button
                         key={tab.id}
@@ -815,125 +814,240 @@ export default function WorklistDetailsPage() {
                             </div>
                         )}
 
-                        {/* Sales Orders */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '3rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                        {/* Sales Orders Table */}
+                        <div style={{ marginBottom: '3rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                                 <h3 style={{ fontSize: '1.15rem', margin: 0 }}>Sales Orders ({salesOrders.length})</h3>
-                                <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>Click any order to edit or regenerate invoice</span>
+                                <span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>Edit status &amp; payment inline → Save remarks</span>
                             </div>
+
                             {salesOrders.length === 0 ? (
                                 <div className="glass-panel" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
                                     <ShoppingCart size={40} color="var(--surface-border)" style={{ margin: '0 auto 1rem', display: 'block' }} />
                                     <p style={{ margin: 0 }}>No sales orders yet for this partner.</p>
                                     <p style={{ margin: '0.5rem 0 0', fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>Use the buttons above to create one.</p>
                                 </div>
-                            ) : salesOrders.map((so: any) => {
-                                const statusColor: Record<string, string> = { confirmed: '#10b981', draft: '#f59e0b', dispatched: '#38bdf8', cancelled: '#ef4444' };
-                                const color = statusColor[so.status?.toLowerCase()] || '#94a3b8';
-                                const date = so.createdAt?.toDate ? new Date(so.createdAt.toDate()).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'2-digit' }) : '—';
-                                const outstanding = Math.max(0, (Number(so.grandTotal) || 0) - (Number(so.amountPaid) || 0));
-                                return (
-                                    <div key={so.id} className="glass-panel" style={{ padding: '1.25rem', borderLeft: `4px solid ${color}`, transition: 'box-shadow 0.15s' }}
-                                        onMouseOver={e => e.currentTarget.style.boxShadow = `0 4px 20px ${color}22`}
-                                        onMouseOut={e => e.currentTarget.style.boxShadow = 'none'}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-                                            {/* Left: order info */}
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.4rem' }}>
-                                                    <span style={{ fontWeight: 700, color: 'var(--primary-light)', fontSize: '1rem' }}>{so.orderNumber || so.invoiceNumber || so.id.slice(-8).toUpperCase()}</span>
-                                                    <span style={{ background: `${color}22`, color, padding: '0.15rem 0.6rem', borderRadius: '99px', fontSize: '0.72rem', fontWeight: 700 }}>
-                                                        {so.status?.toUpperCase() || 'DRAFT'}
-                                                    </span>
-                                                    {so.invoiceType === 'B2B_GST' && (
-                                                        <span style={{ background: '#8b5cf622', color: '#8b5cf6', padding: '0.15rem 0.5rem', borderRadius: '99px', fontSize: '0.7rem', fontWeight: 600 }}>GST Invoice</span>
-                                                    )}
-                                                </div>
-                                                <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                                                    <span>📅 {date}</span>
-                                                    <span>📦 {so.lineItems?.length || (so.items?.length) || 0} items</span>
-                                                    {so.paymentStatus && <span>💳 {so.paymentStatus}</span>}
-                                                </div>
-                                            </div>
-                                            {/* Right: amounts */}
-                                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                                                <div style={{ fontWeight: 800, fontSize: '1.15rem', color: 'var(--secondary)' }}>₹{Number(so.grandTotal || so.netAmount || so.totalAmount || 0).toLocaleString()}</div>
-                                                {outstanding > 0 && (
-                                                    <div style={{ fontSize: '0.78rem', color: '#ef4444', fontWeight: 600 }}>Outstanding: ₹{outstanding.toLocaleString()}</div>
-                                                )}
-                                                {outstanding === 0 && (so.amountPaid > 0) && (
-                                                    <div style={{ fontSize: '0.78rem', color: '#10b981', fontWeight: 600 }}>✅ Fully Paid</div>
-                                                )}
-                                            </div>
-                                        </div>
-                                        {/* Quick-update status dropdowns + payment date + notes */}
-                                        <div style={{ marginTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                                            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                                                <label style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', fontWeight: 600, whiteSpace: 'nowrap' }}>Quick update:</label>
-                                                <select value={so.status || 'pending'} onChange={e => updateOrderStatus(so.id, 'status', e.target.value, so)}
-                                                    style={{ fontSize: '0.78rem', padding: '0.25rem 0.5rem', borderRadius: '8px', border: '1px solid var(--surface-border)', background: 'var(--surface-raised)', color: 'var(--text-primary)', cursor: 'pointer' }}>
-                                                    <option value="draft">📋 Draft</option>
-                                                    <option value="confirmed">✅ Confirmed</option>
-                                                    <option value="in_transit">🚛 In Transit</option>
-                                                    <option value="dispatched">📦 Dispatched</option>
-                                                    <option value="delivered">🏠 Delivered</option>
-                                                    <option value="cancelled">❌ Cancelled</option>
-                                                    <option value="pending">⏳ Pending</option>
-                                                </select>
-                                                <select value={so.paymentStatus || 'Pending'} onChange={e => updateOrderStatus(so.id, 'paymentStatus', e.target.value, so)}
-                                                    style={{ fontSize: '0.78rem', padding: '0.25rem 0.5rem', borderRadius: '8px', border: '1px solid var(--surface-border)', background: so.paymentStatus === 'Paid' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.08)', color: so.paymentStatus === 'Paid' ? '#10b981' : '#ef4444', cursor: 'pointer' }}>
-                                                    <option value="Pending">💳 Payment Pending</option>
-                                                    <option value="Paid">✅ Payment Done</option>
-                                                    <option value="Partial">🔶 Partial</option>
-                                                </select>
-                                                <select value={so.modeOfPayment || ''} onChange={e => updateOrderStatus(so.id, 'modeOfPayment', e.target.value, so)}
-                                                    style={{ fontSize: '0.78rem', padding: '0.25rem 0.5rem', borderRadius: '8px', border: '1px solid var(--surface-border)', background: 'var(--surface-raised)', color: 'var(--text-primary)', cursor: 'pointer' }}>
-                                                    <option value="">-- Mode --</option>
-                                                    <option value="Cash">💵 Cash</option>
-                                                    <option value="UPI">📱 UPI</option>
-                                                    <option value="Cheque">🏦 Cheque</option>
-                                                    <option value="15 Days">⏱ 15 Days</option>
-                                                    <option value="30 Days">⏱ 30 Days</option>
-                                                    <option value="45 Days">⏱ 45 Days</option>
-                                                    <option value="Credit">💳 Credit</option>
-                                                </select>
-                                                {/* Payment Date */}
-                                                <input type="date" value={orderPayDates[so.id] ?? (so.paymentDate || '')}
-                                                    onChange={e => setOrderPayDates(prev => ({ ...prev, [so.id]: e.target.value }))}
-                                                    title="Payment Date"
-                                                    style={{ fontSize: '0.78rem', padding: '0.25rem 0.5rem', borderRadius: '8px', border: '1px solid var(--surface-border)', background: 'var(--surface-raised)', color: 'var(--text-primary)', cursor: 'pointer' }} />
-                                            </div>
-                                            {/* Notes */}
-                                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                                <input type="text" placeholder="Payment notes / remarks…" value={orderNotes[so.id] ?? (so.paymentNotes || '')}
-                                                    onChange={e => setOrderNotes(prev => ({ ...prev, [so.id]: e.target.value }))}
-                                                    style={{ flex: 1, fontSize: '0.78rem', padding: '0.3rem 0.6rem', borderRadius: '8px', border: '1px solid var(--surface-border)', background: 'var(--surface-raised)', color: 'var(--text-primary)' }} />
-                                                <button className="btn btn-secondary"
-                                                    style={{ fontSize: '0.75rem', padding: '0.3rem 0.75rem', whiteSpace: 'nowrap' }}
-                                                    onClick={async () => {
-                                                        await updateDoc(getTenantDoc(db, tenantId!, 'salesOrders', so.id), {
-                                                            paymentDate: orderPayDates[so.id] ?? so.paymentDate ?? '',
-                                                            paymentNotes: orderNotes[so.id] ?? so.paymentNotes ?? '',
-                                                        });
-                                                    }}>💾 Save</button>
-                                            </div>
-                                        </div>
-                                        {/* Action buttons */}
-                                        <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--surface-border)', flexWrap: 'wrap' }}>
-                                            <button className="btn btn-secondary"
-                                                onClick={() => so.invoiceType === 'B2B_GST'
-                                                    ? navigate(`/b2b-invoice?orderId=${so.id}&retailerId=${id}`)
-                                                    : navigate(`/sales-order/${so.id}`)}
-                                                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 1rem', fontSize: '0.82rem' }}>
-                                                <FilePen size={14} /> Edit Order
-                                            </button>
-                                            <button className="btn btn-secondary" onClick={() => navigate(`/b2b-invoice?orderId=${so.id}&retailerId=${id}`)}
-                                                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 1rem', fontSize: '0.82rem' }}>
-                                                <Printer size={14} /> View / Print Invoice
-                                            </button>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                            ) : (
+                                <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid var(--surface-border)' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1080px' }}>
+                                        <thead>
+                                            <tr style={{ background: 'var(--surface-raised)' }}>
+                                                {['Order No', 'Type', 'Order Status', 'Payment', 'Mode', 'Items', 'Amount', 'Outstanding', 'Credit Days', 'Date', 'Remarks', 'Actions'].map(h => (
+                                                    <th key={h} style={{
+                                                        position: 'sticky', top: 0, zIndex: 5,
+                                                        padding: '0.6rem 0.75rem',
+                                                        textAlign: 'left',
+                                                        fontSize: '0.66rem',
+                                                        fontWeight: 700,
+                                                        color: 'var(--text-tertiary)',
+                                                        textTransform: 'uppercase',
+                                                        letterSpacing: '0.06em',
+                                                        borderBottom: '2px solid var(--surface-border)',
+                                                        background: 'var(--surface-raised)',
+                                                        whiteSpace: 'nowrap',
+                                                    }}>{h}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {salesOrders.map((so: any, idx: number) => {
+                                                const statusColors: Record<string, string> = {
+                                                    confirmed: '#10b981', draft: '#f59e0b', dispatched: '#38bdf8',
+                                                    in_transit: '#38bdf8', delivered: '#10b981', cancelled: '#ef4444', pending: '#94a3b8',
+                                                };
+                                                const sColor = statusColors[so.status?.toLowerCase()] || '#94a3b8';
+                                                const grandTotal = Number(so.grandTotal || so.netAmount || so.totalAmount || 0);
+                                                const outstanding = Math.max(0, grandTotal - (Number(so.amountPaid) || 0));
+                                                const itemCount = so.lineItems?.length || so.items?.length || 0;
+                                                const isGST = so.invoiceType === 'B2B_GST';
+                                                const date = so.createdAt?.toDate
+                                                    ? new Date(so.createdAt.toDate()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' })
+                                                    : '—';
+                                                const creditMatch = (so.modeOfPayment as string | undefined)?.match(/^(\d+)\s*Days?$/i);
+                                                const creditDays = creditMatch ? `${creditMatch[1]}d` : '—';
+                                                const rowBg = idx % 2 === 0 ? 'transparent' : 'hsla(0,0%,100%,0.018)';
+                                                const cellStyle: React.CSSProperties = {
+                                                    padding: '0.55rem 0.75rem',
+                                                    borderBottom: '1px solid var(--surface-border)',
+                                                    verticalAlign: 'middle',
+                                                };
+
+                                                return (
+                                                    <tr key={so.id} style={{ background: rowBg, transition: 'background 0.12s' }}
+                                                        onMouseOver={e => (e.currentTarget.style.background = 'hsla(152,60%,40%,0.045)')}
+                                                        onMouseOut={e => (e.currentTarget.style.background = rowBg)}
+                                                    >
+                                                        {/* Order No */}
+                                                        <td style={cellStyle}>
+                                                            <span style={{ fontWeight: 700, color: 'var(--primary-light)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                                                                {so.orderNumber || so.invoiceNumber || so.id.slice(-8).toUpperCase()}
+                                                            </span>
+                                                        </td>
+
+                                                        {/* Invoice Type */}
+                                                        <td style={cellStyle}>
+                                                            <span style={{
+                                                                background: isGST ? '#8b5cf622' : 'hsla(0,0%,100%,0.06)',
+                                                                color: isGST ? '#8b5cf6' : 'var(--text-tertiary)',
+                                                                padding: '0.18rem 0.45rem', borderRadius: '99px',
+                                                                fontSize: '0.66rem', fontWeight: 600, whiteSpace: 'nowrap',
+                                                            }}>
+                                                                {isGST ? 'GST' : 'Sales'}
+                                                            </span>
+                                                        </td>
+
+                                                        {/* Order Status — inline select */}
+                                                        <td style={{ ...cellStyle, minWidth: '120px' }}>
+                                                            <select
+                                                                value={so.status || 'draft'}
+                                                                onChange={e => updateOrderStatus(so.id, 'status', e.target.value, so)}
+                                                                style={{
+                                                                    width: '100%', fontSize: '0.74rem', padding: '0.22rem 0.4rem',
+                                                                    borderRadius: '7px', border: `1px solid ${sColor}55`,
+                                                                    background: `${sColor}18`, color: sColor,
+                                                                    cursor: 'pointer', fontWeight: 600,
+                                                                }}
+                                                            >
+                                                                <option value="draft">Draft</option>
+                                                                <option value="confirmed">Confirmed</option>
+                                                                <option value="in_transit">In Transit</option>
+                                                                <option value="dispatched">Dispatched</option>
+                                                                <option value="delivered">Delivered</option>
+                                                                <option value="cancelled">Cancelled</option>
+                                                                <option value="pending">Pending</option>
+                                                            </select>
+                                                        </td>
+
+                                                        {/* Payment Status — inline select */}
+                                                        <td style={{ ...cellStyle, minWidth: '110px' }}>
+                                                            <select
+                                                                value={so.paymentStatus || 'Pending'}
+                                                                onChange={e => updateOrderStatus(so.id, 'paymentStatus', e.target.value, so)}
+                                                                style={{
+                                                                    width: '100%', fontSize: '0.74rem', padding: '0.22rem 0.4rem',
+                                                                    borderRadius: '7px',
+                                                                    border: '1px solid',
+                                                                    borderColor: so.paymentStatus === 'Paid' ? '#10b98144' : so.paymentStatus === 'Partial' ? '#f59e0b44' : '#ef444444',
+                                                                    background: so.paymentStatus === 'Paid' ? 'rgba(16,185,129,0.1)' : so.paymentStatus === 'Partial' ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.08)',
+                                                                    color: so.paymentStatus === 'Paid' ? '#10b981' : so.paymentStatus === 'Partial' ? '#f59e0b' : '#ef4444',
+                                                                    cursor: 'pointer', fontWeight: 600,
+                                                                }}
+                                                            >
+                                                                <option value="Pending">Pending</option>
+                                                                <option value="Paid">Paid</option>
+                                                                <option value="Partial">Partial</option>
+                                                            </select>
+                                                        </td>
+
+                                                        {/* Payment Mode — inline select */}
+                                                        <td style={{ ...cellStyle, minWidth: '100px' }}>
+                                                            <select
+                                                                value={so.modeOfPayment || ''}
+                                                                onChange={e => updateOrderStatus(so.id, 'modeOfPayment', e.target.value, so)}
+                                                                style={{
+                                                                    width: '100%', fontSize: '0.74rem', padding: '0.22rem 0.4rem',
+                                                                    borderRadius: '7px', border: '1px solid var(--surface-border)',
+                                                                    background: 'var(--surface-raised)', color: 'var(--text-primary)', cursor: 'pointer',
+                                                                }}
+                                                            >
+                                                                <option value="">—</option>
+                                                                <option value="Cash">Cash</option>
+                                                                <option value="UPI">UPI</option>
+                                                                <option value="Cheque">Cheque</option>
+                                                                <option value="15 Days">15 Days</option>
+                                                                <option value="30 Days">30 Days</option>
+                                                                <option value="45 Days">45 Days</option>
+                                                                <option value="Credit">Credit</option>
+                                                            </select>
+                                                        </td>
+
+                                                        {/* Items Count */}
+                                                        <td style={{ ...cellStyle, textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
+                                                            {itemCount}
+                                                        </td>
+
+                                                        {/* Amount */}
+                                                        <td style={{ ...cellStyle, whiteSpace: 'nowrap' }}>
+                                                            <span style={{ fontWeight: 700, color: 'var(--secondary)', fontSize: '0.88rem' }}>
+                                                                ₹{grandTotal.toLocaleString()}
+                                                            </span>
+                                                        </td>
+
+                                                        {/* Outstanding */}
+                                                        <td style={{ ...cellStyle, whiteSpace: 'nowrap' }}>
+                                                            {outstanding > 0
+                                                                ? <span style={{ fontWeight: 600, color: '#ef4444', fontSize: '0.8rem' }}>₹{outstanding.toLocaleString()}</span>
+                                                                : <span style={{ color: '#10b981', fontWeight: 600, fontSize: '0.78rem' }}>✓ Clear</span>
+                                                            }
+                                                        </td>
+
+                                                        {/* Credit Days */}
+                                                        <td style={{ ...cellStyle, textAlign: 'center', color: creditDays === '—' ? 'var(--text-tertiary)' : 'var(--secondary)', fontWeight: creditDays === '—' ? 400 : 600, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                                                            {creditDays}
+                                                        </td>
+
+                                                        {/* Date */}
+                                                        <td style={{ ...cellStyle, color: 'var(--text-tertiary)', fontSize: '0.76rem', whiteSpace: 'nowrap' }}>
+                                                            {date}
+                                                        </td>
+
+                                                        {/* Remarks — inline input */}
+                                                        <td style={{ ...cellStyle, minWidth: '160px' }}>
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Remarks…"
+                                                                value={orderNotes[so.id] ?? (so.paymentNotes || '')}
+                                                                onChange={e => setOrderNotes(prev => ({ ...prev, [so.id]: e.target.value }))}
+                                                                style={{
+                                                                    width: '100%', fontSize: '0.74rem',
+                                                                    padding: '0.22rem 0.5rem', borderRadius: '6px',
+                                                                    border: '1px solid var(--surface-border)',
+                                                                    background: 'var(--surface-raised)', color: 'var(--text-primary)',
+                                                                }}
+                                                            />
+                                                        </td>
+
+                                                        {/* Actions */}
+                                                        <td style={{ ...cellStyle, whiteSpace: 'nowrap' }}>
+                                                            <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
+                                                                <button
+                                                                    className="btn btn-secondary"
+                                                                    title="Save remarks"
+                                                                    style={{ fontSize: '0.7rem', padding: '0.22rem 0.55rem' }}
+                                                                    onClick={async () => {
+                                                                        await updateDoc(getTenantDoc(db, tenantId!, 'salesOrders', so.id), {
+                                                                            paymentDate: so.paymentDate ?? '',
+                                                                            paymentNotes: orderNotes[so.id] ?? so.paymentNotes ?? '',
+                                                                        });
+                                                                    }}
+                                                                >Save</button>
+                                                                <button
+                                                                    className="btn btn-secondary"
+                                                                    title="Edit Order"
+                                                                    style={{ padding: '0.22rem 0.4rem' }}
+                                                                    onClick={() => so.invoiceType === 'B2B_GST'
+                                                                        ? navigate(`/b2b-invoice?orderId=${so.id}&retailerId=${id}`)
+                                                                        : navigate(`/sales-order/${so.id}`)}
+                                                                >
+                                                                    <FilePen size={13} />
+                                                                </button>
+                                                                <button
+                                                                    className="btn btn-secondary"
+                                                                    title="View / Print Invoice"
+                                                                    style={{ padding: '0.22rem 0.4rem' }}
+                                                                    onClick={() => navigate(`/b2b-invoice?orderId=${so.id}&retailerId=${id}`)}
+                                                                >
+                                                                    <Printer size={13} />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </div>
 
                         {/* Legacy Orders */}
