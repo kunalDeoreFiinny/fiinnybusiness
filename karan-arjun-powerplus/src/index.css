@@ -1,0 +1,75 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Noto+Serif:wght@400;700&display=swap');
+@import "tailwindcss";
+@theme {
+  --font-sans: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Noto Serif", ui-serif, Georgia, serif;
+
+  /* Premium Dark Green Palette */
+  --color-primary: #0A1913;
+  --color-primary-container: #123023;
+  --color-on-primary-container: #A7CBB6;
+  
+  /* Vibrant Gold Accent */
+  --color-secondary: #B48D00;
+  --color-secondary-container: #FACC15;
+  --color-on-secondary-container: #423200;
+
+  --color-tertiary: #042E1B;
+  --color-tertiary-container: #0D5A37;
+  --color-on-tertiary-container: #8DE0B3;
+
+  --color-surface: #FAFCFB;
+  --color-surface-container: #F1F5F3;
+  --color-surface-container-low: #F6F8F7;
+  --color-surface-container-lowest: #ffffff;
+  --color-on-surface: #111A16;
+  --color-on-surface-variant: #3F4944;
+  
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
+  --radius-3xl: 3rem;
+
+  --animate-blob: blob 7s infinite;
+  --animate-float: float 6s ease-in-out infinite;
+
+  @keyframes blob {
+    0% { transform: translate(0px, 0px) scale(1); }
+    33% { transform: translate(30px, -50px) scale(1.1); }
+    66% { transform: translate(-20px, 20px) scale(0.9); }
+    100% { transform: translate(0px, 0px) scale(1); }
+  }
+
+  @keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+    100% { transform: translateY(0px); }
+  }
+}
+
+@layer base {
+  @media (min-width: 1024px) {
+    html {
+      /* Globally scale down the UI to exactly match 75% browser zoom on desktop */
+      zoom: 0.75;
+    }
+  }
+  @media (max-width: 1023px) {
+    html {
+      /* Native proportional scaling for mobile */
+      font-size: 85%;
+    }
+  }
+  body {
+    @apply bg-surface text-on-surface font-sans antialiased selection:bg-secondary-container selection:text-on-secondary-container;
+  }
+}
+
+/* Glassmorphism Utilities */
+@layer utilities {
+  .glass-panel {
+    @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_8px_32px_rgba(10,25,19,0.08)];
+  }
+  .glass-panel-dark {
+    @apply bg-primary/80 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.2)];
+  }
+}
