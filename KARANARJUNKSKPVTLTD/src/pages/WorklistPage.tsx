@@ -55,14 +55,20 @@ export default function WorklistPage() {
     return (
         <div className="animate-fade-in" style={{ maxWidth: '1400px', margin: '0 auto' }}>
             {/* ── Tab Bar ── */}
-            <div style={{
+            <div
+            style={{
+                position: 'sticky',
+                top: '64px', // 👈 adjust based on your main navbar height
+                zIndex: 50,
+                background: 'var(--surface-base)', // 👈 IMPORTANT (avoid overlap issues)
                 display: 'flex',
                 gap: '0.25rem',
                 marginBottom: '1.75rem',
                 borderBottom: '2px solid var(--surface-border)',
-                paddingBottom: '0',
+                padding: '0.5rem 0 0 0',
                 overflowX: 'auto',
-            }}>
+            }}
+            >
                 {MODULE_TABS.map(tab => {
                     const active = moduleTab === tab.id;
                     return (
