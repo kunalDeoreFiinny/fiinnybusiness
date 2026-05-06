@@ -381,16 +381,11 @@ function PartnersTab() {
             ) : (
                 <>
                     {/* Collapsible tabular view */}
-                    <details style={{ marginTop: '0.5rem' }}>
-                        <summary style={{ cursor: 'pointer', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.875rem', padding: '0.5rem 0', userSelect: 'none' }}>
-                            📋 Show tabular / export view
-                        </summary>
                         <div style={{ marginTop: '1rem' }}>
                             <DynamicTable moduleId="retailers" data={processedRetailers}
                                 onRowClick={(row) => navigate(`/worklist/${row.id}`)}
                                 actionsRef={() => <ArrowUpRight size={20} color="var(--primary-light)" />} />
                         </div>
-                    </details>
                 </>
             )}
 
