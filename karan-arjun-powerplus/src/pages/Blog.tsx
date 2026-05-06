@@ -4,9 +4,23 @@ import { Icons } from '../components/Icons';
 import type { Blog } from '../data/mockData';
 import { db } from '../lib/firebase';
 
+function toStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((item) => String(item ?? '').trim())
+    .filter(Boolean);
+}
+
+function isDirectVideoUrl(url: string) {
+  return /\.(mp4|webm|ogg)(\?.*)?$/i.test(url);
+}
+
 export default function Blog() {
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedBlog, setSelectedBlog] = useState<Blog | null>(null);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'blogs'), (snapshot) => {
@@ -18,6 +32,17 @@ export default function Blog() {
           excerpt: String(data.excerpt ?? ''),
           date: String(data.date ?? new Date().toLocaleDateString('en-IN')),
           category: String(data.category ?? 'General'),
+          content: String(data.content ?? ''),
+          imageUrls: toStringArray(data.imageUrls),
+          videoUrls: toStringArray(data.videoUrls),
+          links: Array.isArray(data.links)
+            ? data.links
+                .map((item) => ({
+                  label: String(item?.label ?? ''),
+                  url: String(item?.url ?? ''),
+                }))
+                .filter((item) => item.url.trim().length > 0)
+            : [],
         };
       });
       setBlogs(firestoreBlogs);
@@ -47,6 +72,13 @@ export default function Blog() {
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {blogs.map((blog) => (
           <article key={blog.id} className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm hover:shadow-lg transition-shadow flex flex-col">
+            {blog.imageUrls && blog.imageUrls.length > 0 && (
+              <img
+                src={blog.imageUrls[0]}
+                alt={blog.title}
+                className="w-full h-48 object-cover rounded-2xl mb-6"
+              />
+            )}
             <div className="flex items-center justify-between mb-6">
               <span className="px-3 py-1 bg-primary/5 text-primary text-[10px] font-sans font-bold rounded-full uppercase tracking-widest">
                 {blog.category}
@@ -59,12 +91,98 @@ export default function Blog() {
             <p className="text-sm text-on-surface-variant font-serif mb-8 flex-grow">
               {blog.excerpt}
             </p>
-            <button className="flex items-center gap-2 font-sans font-bold text-primary text-sm hover:text-secondary-container transition-colors mt-auto w-fit">
+            <button
+              onClick={() => setSelectedBlog(blog)}
+              className="flex items-center gap-2 font-sans font-bold text-primary text-sm hover:text-secondary-container transition-colors mt-auto w-fit"
+            >
               Read Article <Icons.ArrowRight className="w-4 h-4" />
             </button>
           </article>
         ))}
       </section>
+
+      {selectedBlog && (
+        <div className="fixed inset-0 bg-black/60 z-50 p-4 md:p-8 flex items-center justify-center">
+          <div className="bg-white w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-[2rem] p-6 md:p-8 relative">
+            <button
+              onClick={() => setSelectedBlog(null)}
+              className="absolute top-4 right-4 p-2 rounded-lg hover:bg-slate-100 text-slate-500"
+              aria-label="Close article"
+            >
+              <Icons.X className="w-5 h-5" />
+            </button>
+            <span className="inline-block px-3 py-1 bg-primary/5 text-primary text-[10px] font-sans font-bold rounded-full uppercase tracking-widest mb-3">
+              {selectedBlog.category}
+            </span>
+            <h2 className="font-sans text-2xl md:text-3xl font-extrabold text-primary mb-2 pr-10">{selectedBlog.title}</h2>
+            <p className="text-xs text-slate-400 font-sans font-medium mb-6">{selectedBlog.date}</p>
+
+            {selectedBlog.imageUrls && selectedBlog.imageUrls.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {selectedBlog.imageUrls.map((imageUrl) => (
+                  <img key={imageUrl} src={imageUrl} alt={selectedBlog.title} className="w-full h-56 object-cover rounded-xl" />
+                ))}
+              </div>
+            )}
+
+            {(selectedBlog.content || selectedBlog.excerpt) && (
+              <div className="space-y-4 text-sm md:text-base text-on-surface-variant font-serif leading-relaxed mb-6">
+                {(selectedBlog.content || selectedBlog.excerpt)
+                  .split('\n')
+                  .filter((line) => line.trim().length > 0)
+                  .map((line) => (
+                    <p key={line}>{line}</p>
+                  ))}
+              </div>
+            )}
+
+            {selectedBlog.videoUrls && selectedBlog.videoUrls.length > 0 && (
+              <div className="mb-6">
+                <h3 className="font-sans font-bold text-primary mb-3">Videos</h3>
+                <div className="space-y-4">
+                  {selectedBlog.videoUrls.map((videoUrl) => (
+                    <div key={videoUrl} className="space-y-2">
+                      {isDirectVideoUrl(videoUrl) ? (
+                        <video controls className="w-full rounded-xl bg-black/90">
+                          <source src={videoUrl} />
+                        </video>
+                      ) : (
+                        <a
+                          href={videoUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-2 text-primary font-sans font-semibold hover:underline"
+                        >
+                          Watch Video <Icons.ArrowRight className="w-4 h-4" />
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {selectedBlog.links && selectedBlog.links.length > 0 && (
+              <div>
+                <h3 className="font-sans font-bold text-primary mb-3">Useful Links</h3>
+                <div className="space-y-2">
+                  {selectedBlog.links.map((link) => (
+                    <a
+                      key={`${link.label}-${link.url}`}
+                      href={link.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block text-sm text-primary hover:underline font-sans"
+                    >
+                      {link.label || link.url}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

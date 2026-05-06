@@ -1,7 +1,59 @@
 import { motion } from 'motion/react';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
 import { Icons } from '../components/Icons';
+import { initialHomeVideos } from '../data/mockData';
+import { db } from '../lib/firebase';
+
+function toStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((item) => String(item ?? '').trim())
+    .filter(Boolean);
+}
+
+function toYouTubeEmbedUrl(url: string) {
+  const trimmed = url.trim();
+  const shortsMatch = trimmed.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{6,})/);
+  if (shortsMatch) {
+    return `https://www.youtube.com/embed/${shortsMatch[1]}`;
+  }
+  const watchMatch = trimmed.match(/[?&]v=([a-zA-Z0-9_-]{6,})/);
+  if (watchMatch) {
+    return `https://www.youtube.com/embed/${watchMatch[1]}`;
+  }
+  const shortLinkMatch = trimmed.match(/youtu\.be\/([a-zA-Z0-9_-]{6,})/);
+  if (shortLinkMatch) {
+    return `https://www.youtube.com/embed/${shortLinkMatch[1]}`;
+  }
+  return '';
+}
 
 export default function Home() {
+  const [homeVideos, setHomeVideos] = useState<string[]>(initialHomeVideos);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, 'settings', 'homepage'), (snapshot) => {
+      if (!snapshot.exists()) {
+        setHomeVideos(initialHomeVideos);
+        return;
+      }
+      const data = snapshot.data();
+      setHomeVideos(toStringArray(data.videos));
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const embedVideos = homeVideos
+    .map((video) => ({
+      sourceUrl: video,
+      embedUrl: toYouTubeEmbedUrl(video),
+    }))
+    .filter((video) => video.embedUrl.length > 0);
+
   return (
     <div className="flex flex-col relative">
       {/* Global Animated Background Mesh */}
@@ -127,6 +179,35 @@ export default function Home() {
         </div>
       </section>
 
+      {embedVideos.length > 0 && (
+        <section className="py-20 relative z-10">
+          <div className="max-w-7xl mx-auto px-8">
+            <div className="text-center mb-10">
+              <h2 className="font-sans text-3xl md:text-4xl font-extrabold text-primary mb-3 tracking-tight">Power Plus Videos</h2>
+              <p className="text-on-surface-variant max-w-2xl mx-auto text-base md:text-lg">
+                Watch real short videos and field updates from Power Plus.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {embedVideos.map((video) => (
+                <article key={video.sourceUrl} className="glass-panel rounded-[2rem] p-4 border border-slate-100 shadow-sm">
+                  <div className="aspect-[9/16] rounded-2xl overflow-hidden bg-black">
+                    <iframe
+                      src={video.embedUrl}
+                      title={`Power Plus video ${video.sourceUrl}`}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerPolicy="strict-origin-when-cross-origin"
+                      allowFullScreen
+                    />
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Benefits Bento */}
       <section className="py-24 relative z-10">
         <div className="max-w-7xl mx-auto px-8 relative">
@@ -138,6 +219,13 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-auto">
             {/* Benefit 1 */}
             <div className="md:col-span-8 glass-panel rounded-[2.5rem] p-8 md:p-10 relative overflow-hidden group flex flex-col justify-end min-h-[350px] transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(10,25,19,0.12)] hover:border-white/60">
+              <img
+                src="https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&w=1400&q=80"
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 w-full h-full object-cover scale-125 opacity-[0.34] pointer-events-none"
+              />
+              <div className="absolute inset-0 bg-gradient-to-br from-white/42 via-white/28 to-white/52 pointer-events-none" />
               <div className="absolute top-6 right-6 md:top-10 md:right-10 w-16 h-16 md:w-20 md:h-20 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg z-10 text-primary group-hover:scale-110 transition-transform duration-500">
                 <Icons.Droplets className="w-8 h-8 md:w-10 md:h-10" />
               </div>
@@ -150,38 +238,66 @@ export default function Home() {
             
             {/* Benefit 2 */}
             <div className="md:col-span-4 glass-panel rounded-[2.5rem] p-8 md:p-10 flex flex-col relative overflow-hidden min-h-[250px] transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(10,25,19,0.12)] hover:border-white/60 group">
-              <div className="w-14 h-14 md:w-16 md:h-16 bg-white/80 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg mb-6 text-primary group-hover:rotate-12 transition-transform duration-500">
+              <img
+                src="https://images.unsplash.com/photo-1610348725531-843dff563e2c?auto=format&fit=crop&w=1200&q=80"
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 w-full h-full object-cover scale-125 opacity-[0.34] pointer-events-none"
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-white/42 via-white/28 to-white/52 pointer-events-none" />
+              <div className="w-14 h-14 md:w-16 md:h-16 bg-white/80 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg mb-6 text-primary group-hover:rotate-12 transition-transform duration-500 relative z-10">
                 <Icons.Palette className="w-7 h-7 md:w-8 md:h-8" />
               </div>
-              <h3 className="font-sans text-xl md:text-2xl font-extrabold text-primary mb-3">Premium Quality</h3>
-              <p className="text-on-surface-variant text-base">Improves fruit color, shine, and weight for premium market pricing.</p>
+              <h3 className="font-sans text-xl md:text-2xl font-extrabold text-primary mb-3 relative z-10">Premium Quality</h3>
+              <p className="text-on-surface-variant text-base relative z-10">Improves fruit color, shine, and weight for premium market pricing.</p>
             </div>
             
             {/* Benefit 3 */}
             <div className="md:col-span-4 glass-panel rounded-[2.5rem] p-8 md:p-10 flex flex-col relative overflow-hidden min-h-[250px] transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(10,25,19,0.12)] hover:border-white/60 group">
-              <div className="w-14 h-14 md:w-16 md:h-16 bg-white/80 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg mb-6 text-primary group-hover:-rotate-12 transition-transform duration-500">
+              <img
+                src="https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?auto=format&fit=crop&w=1200&q=80"
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 w-full h-full object-cover scale-125 opacity-[0.34] pointer-events-none"
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-white/42 via-white/28 to-white/52 pointer-events-none" />
+              <div className="w-14 h-14 md:w-16 md:h-16 bg-white/80 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg mb-6 text-primary group-hover:-rotate-12 transition-transform duration-500 relative z-10">
                 <Icons.ShieldCheck className="w-7 h-7 md:w-8 md:h-8" />
               </div>
-              <h3 className="font-sans text-xl md:text-2xl font-extrabold text-primary mb-3">Disease Resistance</h3>
-              <p className="text-on-surface-variant text-base">Enhanced immunity against common diseases and fungal infections.</p>
+              <h3 className="font-sans text-xl md:text-2xl font-extrabold text-primary mb-3 relative z-10">Disease Resistance</h3>
+              <p className="text-on-surface-variant text-base relative z-10">Enhanced immunity against common diseases and fungal infections.</p>
             </div>
 
             {/* Benefit 4 */}
             <div className="md:col-span-4 glass-panel rounded-[2.5rem] p-8 md:p-10 flex flex-col relative overflow-hidden min-h-[250px] transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(10,25,19,0.12)] hover:border-white/60 group">
-              <div className="w-14 h-14 md:w-16 md:h-16 bg-white/80 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg mb-6 text-primary group-hover:rotate-12 transition-transform duration-500">
+              <img
+                src="https://images.unsplash.com/photo-1461354464878-ad92f492a5a0?auto=format&fit=crop&w=1200&q=80"
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 w-full h-full object-cover scale-125 opacity-[0.34] pointer-events-none"
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-white/42 via-white/28 to-white/52 pointer-events-none" />
+              <div className="w-14 h-14 md:w-16 md:h-16 bg-white/80 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg mb-6 text-primary group-hover:rotate-12 transition-transform duration-500 relative z-10">
                 <Icons.Sprout className="w-7 h-7 md:w-8 md:h-8" />
               </div>
-              <h3 className="font-sans text-xl md:text-2xl font-extrabold text-primary mb-3">Root Development</h3>
-              <p className="text-on-surface-variant text-base">Stimulates deep root growth and increases soil organic carbon.</p>
+              <h3 className="font-sans text-xl md:text-2xl font-extrabold text-primary mb-3 relative z-10">Root Development</h3>
+              <p className="text-on-surface-variant text-base relative z-10">Stimulates deep root growth and increases soil organic carbon.</p>
             </div>
 
             {/* Benefit 5 */}
             <div className="md:col-span-4 glass-panel rounded-[2.5rem] p-8 md:p-10 flex flex-col relative overflow-hidden min-h-[250px] transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(10,25,19,0.12)] hover:border-white/60 group">
-              <div className="w-14 h-14 md:w-16 md:h-16 bg-white/80 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg mb-6 text-primary group-hover:-rotate-12 transition-transform duration-500">
+              <img
+                src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80"
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 w-full h-full object-cover scale-125 opacity-[0.34] pointer-events-none"
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-white/42 via-white/28 to-white/52 pointer-events-none" />
+              <div className="w-14 h-14 md:w-16 md:h-16 bg-white/80 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg mb-6 text-primary group-hover:-rotate-12 transition-transform duration-500 relative z-10">
                 <Icons.Calendar className="w-7 h-7 md:w-8 md:h-8" />
               </div>
-              <h3 className="font-sans text-xl md:text-2xl font-extrabold text-primary mb-3">Extended Freshness</h3>
-              <p className="text-on-surface-variant text-base">Increases post-harvest fruit freshness and overall shelf life.</p>
+              <h3 className="font-sans text-xl md:text-2xl font-extrabold text-primary mb-3 relative z-10">Extended Freshness</h3>
+              <p className="text-on-surface-variant text-base relative z-10">Increases post-harvest fruit freshness and overall shelf life.</p>
             </div>
 
             {/* Benefit 6 (CTA Block) */}

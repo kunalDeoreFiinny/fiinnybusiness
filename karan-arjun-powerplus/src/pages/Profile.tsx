@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { addDoc, collection, onSnapshot, query, serverTimestamp, where } from 'firebase/firestore';
+import { arrayUnion, collection, doc, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
 import { Icons } from '../components/Icons';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
@@ -15,15 +15,22 @@ interface OrderRecord {
 
 interface TicketRecord {
   id: string;
+  ticketId: string;
   subject: string;
   description: string;
   status: 'Pending' | 'In Progress' | 'Resolved';
   date?: string;
   createdAt?: { seconds?: number };
+  messages: Array<{
+    id: string;
+    sender: 'admin' | 'customer';
+    text: string;
+    createdAt: number;
+  }>;
 }
 
 export default function Profile() {
-  const { user, profile } = useAuth();
+  const { user, profile, loading } = useAuth();
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [grievances, setGrievances] = useState<TicketRecord[]>([]);
   const [subject, setSubject] = useState('');
@@ -31,6 +38,8 @@ export default function Profile() {
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+  const [sendingReplyId, setSendingReplyId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user || profile?.role === 'admin') {
@@ -52,10 +61,30 @@ export default function Profile() {
 
     const unsubscribeGrievances = onSnapshot(grievancesQuery, (snapshot) => {
       const list = snapshot.docs
-        .map((docItem) => ({
-          id: docItem.id,
-          ...(docItem.data() as Omit<TicketRecord, 'id'>),
-        }))
+        .map((docItem) => {
+          const data = docItem.data();
+          const messages = Array.isArray(data.messages)
+            ? data.messages
+                .map((item) => ({
+                  id: String(item?.id ?? ''),
+                  sender: (item?.sender === 'customer' ? 'customer' : 'admin') as 'admin' | 'customer',
+                  text: String(item?.text ?? ''),
+                  createdAt: Number(item?.createdAt ?? 0),
+                }))
+                .filter((item) => item.id && item.text)
+                .sort((a, b) => a.createdAt - b.createdAt)
+            : [];
+          return {
+            id: docItem.id,
+            ticketId: String(data.ticketId ?? `GRV-${docItem.id.slice(0, 8).toUpperCase()}`),
+            subject: String(data.subject ?? ''),
+            description: String(data.description ?? ''),
+            status: (data.status as TicketRecord['status']) ?? 'Pending',
+            date: String(data.date ?? '-'),
+            createdAt: data.createdAt as TicketRecord['createdAt'],
+            messages,
+          };
+        })
         .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
       setGrievances(list);
     });
@@ -75,6 +104,14 @@ export default function Profile() {
       .join('');
   }, [profile?.name, user?.displayName]);
 
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center text-primary font-sans font-semibold">
+        Loading account...
+      </div>
+    );
+  }
+
   if (profile?.role === 'admin') {
     return <Navigate to="/admin" replace />;
   }
@@ -90,22 +127,50 @@ export default function Profile() {
 
     setSubmitting(true);
     try {
-      await addDoc(collection(db, 'grievances'), {
+      const grievanceRef = doc(collection(db, 'grievances'));
+      const ticketId = `GRV-${grievanceRef.id.slice(0, 8).toUpperCase()}`;
+      await setDoc(grievanceRef, {
+        ticketId,
         uid: user.uid,
         userName: profile?.name ?? user.displayName ?? 'Power Plus User',
         subject: subject.trim(),
         description: description.trim(),
         status: 'Pending',
         date: new Date().toLocaleDateString('en-IN'),
+        messages: [],
         createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       });
       setSubject('');
       setDescription('');
-      setInfo('Your ticket has been submitted successfully.');
+      setInfo(`Your ticket has been submitted successfully. Ticket ID: ${ticketId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not submit ticket.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleCustomerReply = async (ticket: TicketRecord) => {
+    const replyText = (replyDrafts[ticket.id] ?? '').trim();
+    if (!user || !replyText) return;
+    setSendingReplyId(ticket.id);
+    try {
+      const messageId = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      await updateDoc(doc(db, 'grievances', ticket.id), {
+        messages: arrayUnion({
+          id: messageId,
+          sender: 'customer',
+          text: replyText,
+          createdAt: Date.now(),
+        }),
+        updatedAt: serverTimestamp(),
+      });
+      setReplyDrafts((prev) => ({ ...prev, [ticket.id]: '' }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send reply.');
+    } finally {
+      setSendingReplyId(null);
     }
   };
 
@@ -233,11 +298,14 @@ export default function Profile() {
 
             <div className="flex-1">
               <h3 className="font-sans text-xl font-bold text-primary tracking-tight mb-6">Your Tickets</h3>
-              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+              <div className="space-y-4 max-h-[520px] overflow-y-auto pr-2">
                 {grievances.map((ticket) => (
                   <div key={ticket.id} className="p-5 rounded-2xl border border-slate-100 bg-slate-50 flex flex-col gap-2">
                     <div className="flex justify-between items-start">
-                      <h4 className="font-sans font-bold text-primary text-sm">{ticket.subject}</h4>
+                      <div>
+                        <h4 className="font-sans font-bold text-primary text-sm">{ticket.subject}</h4>
+                        <p className="font-sans text-[10px] uppercase tracking-wider text-primary/60 mt-1">{ticket.ticketId}</p>
+                      </div>
                       <span
                         className={`px-2 py-1 rounded text-[10px] font-sans font-bold uppercase tracking-wider ${
                           ticket.status === 'Resolved'
@@ -251,7 +319,49 @@ export default function Profile() {
                       </span>
                     </div>
                     <p className="font-serif text-xs text-on-surface-variant line-clamp-2">{ticket.description}</p>
-                    <span className="font-sans text-[10px] text-slate-400 mt-2">{ticket.date ?? '-'}</span>
+                    {ticket.messages.length > 0 && (
+                      <div className="mt-2 space-y-2">
+                        {ticket.messages.map((message) => (
+                          <div
+                            key={message.id}
+                            className={`rounded-lg px-3 py-2 border ${
+                              message.sender === 'admin'
+                                ? 'bg-primary/5 border-primary/10'
+                                : 'bg-white border-slate-200'
+                            }`}
+                          >
+                            <p className="font-sans text-[10px] uppercase tracking-wider text-primary/60 mb-1">
+                              {message.sender === 'admin' ? 'Admin Reply' : 'Your Message'}
+                            </p>
+                            <p className="font-sans text-xs text-primary/90">{message.text}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {ticket.status === 'Resolved' ? (
+                      <p className="font-sans text-[11px] text-emerald-600 font-semibold mt-1">
+                        Ticket closed — this issue has been resolved.
+                      </p>
+                    ) : (
+                      <div className="flex gap-2 mt-1">
+                        <input
+                          type="text"
+                          value={replyDrafts[ticket.id] ?? ''}
+                          onChange={(e) => setReplyDrafts((prev) => ({ ...prev, [ticket.id]: e.target.value }))}
+                          onKeyDown={(e) => { if (e.key === 'Enter') void handleCustomerReply(ticket); }}
+                          placeholder="Reply to this ticket..."
+                          className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-xs font-sans bg-white focus:outline-none focus:border-primary/30"
+                        />
+                        <button
+                          onClick={() => void handleCustomerReply(ticket)}
+                          disabled={sendingReplyId === ticket.id || !(replyDrafts[ticket.id] ?? '').trim()}
+                          className="px-4 py-2 rounded-xl bg-primary text-secondary-container text-xs font-sans font-bold hover:bg-primary-container transition-colors disabled:opacity-50"
+                        >
+                          {sendingReplyId === ticket.id ? 'Sending...' : 'Reply'}
+                        </button>
+                      </div>
+                    )}
+                    <span className="font-sans text-[10px] text-slate-400">{ticket.date ?? '-'}</span>
                   </div>
                 ))}
                 {grievances.length === 0 && (

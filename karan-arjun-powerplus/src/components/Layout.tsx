@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Icons } from './Icons';
 import { useState } from 'react';
 import { useCart } from '../context/CartContext';
@@ -6,10 +6,16 @@ import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { itemCount, setIsCartOpen } = useCart();
-  const { user, profile, signOutUser } = useAuth();
-  const showCustomerWhatsApp = Boolean(user && profile?.role !== 'admin');
+  const { user, profile, signOutUser, loading } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOutUser();
+    navigate('/');
+  };
+  const showCustomerWhatsApp = !loading && Boolean(user && profile?.role !== 'admin');
 
   const links = [
     { name: 'Product', href: '/' },
@@ -20,22 +26,22 @@ export default function Navbar() {
   ];
 
   return (
-    <div className="fixed top-6 left-1/2 -translate-x-1/2 w-[95%] max-w-5xl z-50">
+    <div className="fixed top-6 left-1/2 -translate-x-1/2 w-[97%] max-w-7xl z-50">
       <nav className="bg-primary/90 backdrop-blur-xl rounded-full border border-white/10 shadow-[0_8px_40px_rgba(10,25,19,0.3)] transition-all duration-300">
-        <div className="flex justify-between items-center h-16 px-6 md:px-8 w-full">
+        <div className="flex justify-between items-center h-16 px-4 md:px-6 lg:px-8 w-full gap-3">
           <Link to="/" className="text-lg md:text-xl font-extrabold text-white tracking-tight font-sans shrink-0">
             Karan Arjun Power Plus™
           </Link>
         
         {/* Desktop Links */}
-        <div className="hidden lg:flex gap-6 items-center font-sans font-medium text-sm tracking-wide">
+        <div className="hidden lg:flex gap-3 items-center font-sans font-medium text-sm tracking-wide">
           {links.map((link) => (
             <Link
               key={link.name}
               to={link.href}
               className={`transition-all duration-300 px-4 py-2 rounded-full ${
                 location.pathname === link.href 
-                  ? 'bg-white/20 backdrop-blur-md text-white font-bold shadow-sm border border-white/10' 
+                  ? 'bg-white/20 backdrop-blur-md text-white font-bold shadow-sm border border-white/10'
                   : 'text-white/70 hover:text-white hover:bg-white/10'
               }`}
             >
@@ -44,7 +50,7 @@ export default function Navbar() {
           ))}
         </div>
 
-        <div className="flex items-center gap-2 md:gap-4 lg:gap-6">
+        <div className="flex items-center gap-2 md:gap-3 lg:gap-4 shrink-0">
           <button onClick={() => setIsCartOpen(true)} className="text-white/70 hover:text-white transition-colors p-2 relative">
             <Icons.ShoppingCart className="w-5 h-5" />
             {itemCount > 0 && (
@@ -53,34 +59,38 @@ export default function Navbar() {
               </span>
             )}
           </button>
-          {profile?.role === 'admin' && (
-            <Link
-              to="/admin"
-              className="hidden lg:flex items-center px-3 py-2 rounded-full bg-white/10 text-white text-xs font-sans font-bold hover:bg-white/20 transition-colors"
-            >
-              Admin
-            </Link>
-          )}
-          {user ? (
+          {!loading && (
             <>
-              <Link to={profile?.role === 'admin' ? '/admin' : '/profile'} className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-300 p-2 rounded-full hidden sm:block">
-                <Icons.User className="w-6 h-6" />
-              </Link>
-              <button
-                onClick={() => void signOutUser()}
-                className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-300 p-2 rounded-full hidden sm:block"
-                title="Sign out"
-              >
-                <Icons.LogOut className="w-5 h-5" />
-              </button>
+              {profile?.role === 'admin' && (
+                <Link
+                  to="/admin"
+                  className="hidden lg:flex items-center px-3 py-2 rounded-full bg-white/10 text-white text-xs font-sans font-bold hover:bg-white/20 transition-colors"
+                >
+                  Admin
+                </Link>
+              )}
+              {user ? (
+                <>
+                  <Link to={profile?.role === 'admin' ? '/admin' : '/profile'} className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-300 p-2 rounded-full hidden sm:block">
+                    <Icons.User className="w-6 h-6" />
+                  </Link>
+                  <button
+                    onClick={() => void handleSignOut()}
+                    className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-300 p-2 rounded-full hidden sm:block"
+                    title="Sign out"
+                  >
+                    <Icons.LogOut className="w-5 h-5" />
+                  </button>
+                </>
+              ) : (
+                <Link
+                  to="/auth"
+                  className="hidden sm:flex items-center px-3 py-2 rounded-full bg-white/10 text-white text-xs font-sans font-bold hover:bg-white/20 transition-colors"
+                >
+                  Login
+                </Link>
+              )}
             </>
-          ) : (
-            <Link
-              to="/auth"
-              className="hidden sm:flex items-center px-3 py-2 rounded-full bg-white/10 text-white text-xs font-sans font-bold hover:bg-white/20 transition-colors"
-            >
-              Login
-            </Link>
           )}
           {/* Mobile Menu Toggle */}
           <button 
@@ -109,54 +119,58 @@ export default function Navbar() {
               {link.name}
             </Link>
           ))}
-          {user ? (
-            <Link
-              to={profile?.role === 'admin' ? '/admin' : '/profile'}
-              onClick={() => setIsMenuOpen(false)}
-              className={`px-4 py-3 rounded-xl font-sans font-medium text-base flex items-center gap-2 ${
-                (location.pathname === '/profile' || location.pathname.startsWith('/admin'))
-                  ? 'bg-primary/5 text-primary font-bold'
-                  : 'text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              <Icons.User className="w-5 h-5" /> {profile?.role === 'admin' ? 'Admin Dashboard' : 'Profile Dashboard'}
-            </Link>
-          ) : (
-            <Link
-              to="/auth"
-              onClick={() => setIsMenuOpen(false)}
-              className={`px-4 py-3 rounded-xl font-sans font-medium text-base flex items-center gap-2 ${
-                location.pathname === '/auth'
-                  ? 'bg-primary/5 text-primary font-bold'
-                  : 'text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              <Icons.Lock className="w-5 h-5" /> Login
-            </Link>
-          )}
-          {profile?.role === 'admin' && (
-            <Link
-              to="/admin"
-              onClick={() => setIsMenuOpen(false)}
-              className={`px-4 py-3 rounded-xl font-sans font-medium text-base flex items-center gap-2 ${
-                location.pathname.startsWith('/admin')
-                  ? 'bg-primary/5 text-primary font-bold'
-                  : 'text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              <Icons.LayoutDashboard className="w-5 h-5" /> Admin
-            </Link>
-          )}
-          {user && (
-            <button
-              onClick={() => {
-                void signOutUser();
-                setIsMenuOpen(false);
-              }}
-              className="px-4 py-3 rounded-xl font-sans font-medium text-base flex items-center gap-2 text-slate-600 hover:bg-slate-50"
-            >
-              <Icons.LogOut className="w-5 h-5" /> Logout
-            </button>
+          {!loading && (
+            <>
+              {user ? (
+                <Link
+                  to={profile?.role === 'admin' ? '/admin' : '/profile'}
+                  onClick={() => setIsMenuOpen(false)}
+                  className={`px-4 py-3 rounded-xl font-sans font-medium text-base flex items-center gap-2 ${
+                    (location.pathname === '/profile' || location.pathname.startsWith('/admin'))
+                      ? 'bg-primary/5 text-primary font-bold'
+                      : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <Icons.User className="w-5 h-5" /> {profile?.role === 'admin' ? 'Admin Dashboard' : 'Profile Dashboard'}
+                </Link>
+              ) : (
+                <Link
+                  to="/auth"
+                  onClick={() => setIsMenuOpen(false)}
+                  className={`px-4 py-3 rounded-xl font-sans font-medium text-base flex items-center gap-2 ${
+                    location.pathname === '/auth'
+                      ? 'bg-primary/5 text-primary font-bold'
+                      : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <Icons.Lock className="w-5 h-5" /> Login
+                </Link>
+              )}
+              {profile?.role === 'admin' && (
+                <Link
+                  to="/admin"
+                  onClick={() => setIsMenuOpen(false)}
+                  className={`px-4 py-3 rounded-xl font-sans font-medium text-base flex items-center gap-2 ${
+                    location.pathname.startsWith('/admin')
+                      ? 'bg-primary/5 text-primary font-bold'
+                      : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <Icons.LayoutDashboard className="w-5 h-5" /> Admin
+                </Link>
+              )}
+              {user && (
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    void handleSignOut();
+                  }}
+                  className="px-4 py-3 rounded-xl font-sans font-medium text-base flex items-center gap-2 text-slate-600 hover:bg-slate-50"
+                >
+                  <Icons.LogOut className="w-5 h-5" /> Logout
+                </button>
+              )}
+            </>
           )}
           
         </div>
