@@ -1,7 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Icons } from './Icons';
-import { motion } from 'motion/react';
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -10,6 +9,7 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { itemCount, setIsCartOpen } = useCart();
   const { user, profile, signOutUser } = useAuth();
+  const showCustomerWhatsApp = Boolean(user && profile?.role !== 'admin');
 
   const links = [
     { name: 'Product', href: '/' },
@@ -159,21 +159,21 @@ export default function Navbar() {
             </button>
           )}
           
-          <div className="mt-2 pt-2 border-t border-slate-100 px-2 pb-2">
-            <a 
-              href="https://wa.me/919307199040"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => setIsMenuOpen(false)}
-              className="flex items-center justify-center space-x-2 bg-secondary-container text-on-secondary-container py-3 rounded-xl font-sans font-bold text-sm shadow-sm"
-            >
-              <Icons.MessageCircle className="w-5 h-5" />
-              <span>Chat on WhatsApp</span>
-            </a>
-          </div>
         </div>
       )}
       </nav>
+      {showCustomerWhatsApp && (
+        <a
+          href="https://wa.me/919307199040"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden md:flex absolute -right-16 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full items-center justify-center bg-[#25D366] text-white shadow-[0_8px_24px_rgba(37,211,102,0.45)] hover:scale-105 transition-transform"
+          aria-label="Chat on WhatsApp"
+          title="Chat on WhatsApp"
+        >
+          <Icons.MessageCircle className="w-6 h-6" />
+        </a>
+      )}
     </div>
   );
 }
