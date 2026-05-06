@@ -1,21 +1,27 @@
-# React + TypeScript + Vite
+How to run the project
+Step 1 — Create the .env.local file
+Create a file named .env.local at the project root (KARANARJUNKSKPVTLTD/.env.local) with your Firebase project credentials:
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-Currently, two official plugins are available:
+VITE_FIREBASE_API_KEY=AIza...
+VITE_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=123456789
+VITE_FIREBASE_APP_ID=1:123456789:web:abcdef
+VITE_FIREBASE_MEASUREMENT_ID=G-XXXXXXXX
+VITE_RECAPTCHA_KEY=your-recaptcha-v3-site-key
+Step 2 — Get the values from Firebase Console
+Go to console.firebase.google.com
+Select your project
+Click the gear icon → Project Settings
+Scroll to "Your apps" → select the web app
+Copy all values from the SDK setup and configuration block
+Step 3 — Run the project
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+npm install        # only needed once, or after pulling new changes
+npm run dev        # starts the Vite dev server at http://localhost:5173
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
 export default defineConfig([
   globalIgnores(['dist']),
   {

@@ -15,6 +15,13 @@ export interface Blog {
   excerpt: string;
   date: string;
   category: string;
+  content?: string;
+  imageUrls?: string[];
+  videoUrls?: string[];
+  links?: Array<{
+    label: string;
+    url: string;
+  }>;
 }
 
 export interface User {
@@ -27,12 +34,19 @@ export interface User {
 
 export interface Grievance {
   id: string;
+  ticketId?: string;
   userId: string;
   userName: string;
   subject: string;
   description: string;
   status: 'Pending' | 'In Progress' | 'Resolved';
   date: string;
+  messages?: Array<{
+    id: string;
+    sender: 'admin' | 'customer';
+    text: string;
+    createdAt: number;
+  }>;
 }
 
 export interface AboutInfo {
@@ -142,3 +156,9 @@ export const initialAbout: AboutInfo = {
   phone: "+91 9307199040",
   certification: "ISO 9001:2015"
 };
+
+export const initialHomeVideos: string[] = [
+  'https://www.youtube.com/shorts/dmCafHKBuIY',
+  'https://www.youtube.com/shorts/AKFS1bF5AG4',
+  'https://www.youtube.com/shorts/qH0ah_cm2fA',
+];

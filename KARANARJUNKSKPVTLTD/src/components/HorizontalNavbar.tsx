@@ -1,17 +1,19 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, BarChart3, Layers, ReceiptText, Activity, FileText, ClipboardList } from 'lucide-react';
+import { Home, BarChart3, Layers, ReceiptText, Activity, FileText, ClipboardList, Package, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import type { AppScreen } from '../contexts/AuthContext';
 
 const PRIORITY_NAV = [
-  { path: '/dashboard',     label: 'B2B Dashboard',  icon: <Home size={15} />,          screenKey: 'dashboard' as AppScreen },
-  { path: '/b2c-dashboard', label: 'B2C Dashboard',  icon: <BarChart3 size={15} />,     screenKey: 'b2c_dashboard' as AppScreen },
-  { path: '/analytics',     label: 'Analytics',      icon: <Layers size={15} />,        screenKey: 'analytics' as AppScreen },
-  { path: '/worklist',      label: 'Worklist',        icon: <ReceiptText size={15} />,   screenKey: 'worklist' as AppScreen },
-  { path: '/b2b-invoice',   label: 'Billing & Invoice',icon: <ReceiptText size={15} />,  screenKey: 'worklist' as AppScreen },
-  { path: '/barcode',       label: 'Barcode Labels',  icon: <Activity size={15} />,      screenKey: 'inventory' as AppScreen },
-  { path: '/gst-reports',   label: 'GST Reports',    icon: <FileText size={15} />,      screenKey: 'analytics' as AppScreen },
-  { path: '/order-history', label: 'Audit Log',      icon: <ClipboardList size={15} />, screenKey: 'order_history' as AppScreen },
+  { path: '/dashboard',        label: 'B2B Dashboard',    icon: <Home size={15} />,           screenKey: 'dashboard' as AppScreen },
+  { path: '/b2c-dashboard',    label: 'B2C Dashboard',    icon: <BarChart3 size={15} />,      screenKey: 'b2c_dashboard' as AppScreen },
+  { path: '/analytics',        label: 'Analytics',        icon: <Layers size={15} />,         screenKey: 'analytics' as AppScreen },
+  { path: '/worklist',         label: 'Worklist',          icon: <ReceiptText size={15} />,    screenKey: 'worklist' as AppScreen },
+  { path: '/inventory',        label: 'Inventory',         icon: <Package size={15} />,        screenKey: 'inventory' as AppScreen },
+  { path: '/administration',   label: 'Administration',    icon: <ShieldAlert size={15} />,    screenKey: 'admin' as AppScreen },
+  { path: '/b2b-invoice',      label: 'Billing & Invoice', icon: <ReceiptText size={15} />,   screenKey: 'worklist' as AppScreen },
+  { path: '/barcode',          label: 'Barcode Labels',    icon: <Activity size={15} />,       screenKey: 'inventory' as AppScreen },
+  { path: '/gst-reports',      label: 'GST Reports',      icon: <FileText size={15} />,       screenKey: 'analytics' as AppScreen },
+  { path: '/order-history',    label: 'Audit Log',        icon: <ClipboardList size={15} />,  screenKey: 'order_history' as AppScreen },
 ];
 
 export default function HorizontalNavbar() {
@@ -31,19 +33,24 @@ export default function HorizontalNavbar() {
 
   return (
     <nav
-      aria-label="Priority navigation"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.125rem',
-        padding: '0 1rem',
-        background: 'var(--surface-base)',
-        borderBottom: '1px solid var(--surface-border)',
-        overflowX: 'auto',
-        scrollbarWidth: 'none',
-        flexShrink: 0,
-      }}
-    >
+  aria-label="Priority navigation"
+  style={{
+    opacity:0.9,
+    position: 'sticky',
+    top: 0, // 👈 cha₹nge to '64px' if you have a top header
+    zIndex: 100,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.125rem',
+    padding: '0 1rem',
+    background: 'rgba(0, 0, 0, 0.9)',
+    borderBottom: '1px solid var(--surface-border)',
+    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)', // 👈 makes it feel real
+    overflowX: 'auto',
+    scrollbarWidth: 'none',
+    flexShrink: 0,
+  }}
+>
       {visibleItems.map(item => {
         const active =
           location.pathname === item.path ||

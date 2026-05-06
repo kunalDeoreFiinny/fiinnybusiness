@@ -1,7 +1,98 @@
 import { motion } from 'motion/react';
+import { collection, doc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Icons } from '../components/Icons';
+import { initialHomeVideos } from '../data/mockData';
+import { useAuth } from '../context/AuthContext';
+import { db } from '../lib/firebase';
+
+function toStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((item) => String(item ?? '').trim())
+    .filter(Boolean);
+}
+
+function toYouTubeEmbedUrl(url: string) {
+  const trimmed = url.trim();
+  const shortsMatch = trimmed.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{6,})/);
+  if (shortsMatch) {
+    return `https://www.youtube.com/embed/${shortsMatch[1]}`;
+  }
+  const watchMatch = trimmed.match(/[?&]v=([a-zA-Z0-9_-]{6,})/);
+  if (watchMatch) {
+    return `https://www.youtube.com/embed/${watchMatch[1]}`;
+  }
+  const shortLinkMatch = trimmed.match(/youtu\.be\/([a-zA-Z0-9_-]{6,})/);
+  if (shortLinkMatch) {
+    return `https://www.youtube.com/embed/${shortLinkMatch[1]}`;
+  }
+  return '';
+}
 
 export default function Home() {
+  const { user, profile } = useAuth();
+  const [homeVideos, setHomeVideos] = useState<string[]>(initialHomeVideos);
+  const [subject, setSubject] = useState('');
+  const [description, setDescription] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [ticketError, setTicketError] = useState('');
+  const [ticketInfo, setTicketInfo] = useState('');
+
+  const handleGrievanceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setTicketError('');
+    setTicketInfo('');
+    setSubmitting(true);
+    try {
+      const grievanceRef = doc(collection(db, 'grievances'));
+      const ticketId = `GRV-${grievanceRef.id.slice(0, 8).toUpperCase()}`;
+      await setDoc(grievanceRef, {
+        ticketId,
+        uid: user.uid,
+        userName: profile?.name ?? user.displayName ?? 'Power Plus User',
+        subject: subject.trim(),
+        description: description.trim(),
+        status: 'Pending',
+        date: new Date().toLocaleDateString('en-IN'),
+        messages: [],
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      setSubject('');
+      setDescription('');
+      setTicketInfo(`Ticket submitted! Your ID: ${ticketId}`);
+    } catch {
+      setTicketError('Could not submit ticket. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, 'settings', 'homepage'), (snapshot) => {
+      if (!snapshot.exists()) {
+        setHomeVideos(initialHomeVideos);
+        return;
+      }
+      const data = snapshot.data();
+      setHomeVideos(toStringArray(data.videos));
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const embedVideos = homeVideos
+    .map((video) => ({
+      sourceUrl: video,
+      embedUrl: toYouTubeEmbedUrl(video),
+    }))
+    .filter((video) => video.embedUrl.length > 0);
+
   return (
     <div className="flex flex-col relative">
       {/* Global Animated Background Mesh */}
@@ -127,6 +218,35 @@ export default function Home() {
         </div>
       </section>
 
+      {embedVideos.length > 0 && (
+        <section className="py-20 relative z-10">
+          <div className="max-w-7xl mx-auto px-8">
+            <div className="text-center mb-10">
+              <h2 className="font-sans text-3xl md:text-4xl font-extrabold text-primary mb-3 tracking-tight">Power Plus Videos</h2>
+              <p className="text-on-surface-variant max-w-2xl mx-auto text-base md:text-lg">
+                Watch real short videos and field updates from Power Plus.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {embedVideos.map((video) => (
+                <article key={video.sourceUrl} className="glass-panel rounded-[2rem] p-4 border border-slate-100 shadow-sm">
+                  <div className="aspect-[9/16] rounded-2xl overflow-hidden bg-black">
+                    <iframe
+                      src={video.embedUrl}
+                      title={`Power Plus video ${video.sourceUrl}`}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerPolicy="strict-origin-when-cross-origin"
+                      allowFullScreen
+                    />
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Benefits Bento */}
       <section className="py-24 relative z-10">
         <div className="max-w-7xl mx-auto px-8 relative">
@@ -138,6 +258,13 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-auto">
             {/* Benefit 1 */}
             <div className="md:col-span-8 glass-panel rounded-[2.5rem] p-8 md:p-10 relative overflow-hidden group flex flex-col justify-end min-h-[350px] transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(10,25,19,0.12)] hover:border-white/60">
+              <img
+                src="https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&w=1400&q=80"
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 w-full h-full object-cover scale-125 opacity-[0.34] pointer-events-none"
+              />
+              <div className="absolute inset-0 bg-gradient-to-br from-white/42 via-white/28 to-white/52 pointer-events-none" />
               <div className="absolute top-6 right-6 md:top-10 md:right-10 w-16 h-16 md:w-20 md:h-20 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg z-10 text-primary group-hover:scale-110 transition-transform duration-500">
                 <Icons.Droplets className="w-8 h-8 md:w-10 md:h-10" />
               </div>
@@ -150,38 +277,66 @@ export default function Home() {
             
             {/* Benefit 2 */}
             <div className="md:col-span-4 glass-panel rounded-[2.5rem] p-8 md:p-10 flex flex-col relative overflow-hidden min-h-[250px] transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(10,25,19,0.12)] hover:border-white/60 group">
-              <div className="w-14 h-14 md:w-16 md:h-16 bg-white/80 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg mb-6 text-primary group-hover:rotate-12 transition-transform duration-500">
+              <img
+                src="https://images.unsplash.com/photo-1610348725531-843dff563e2c?auto=format&fit=crop&w=1200&q=80"
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 w-full h-full object-cover scale-125 opacity-[0.34] pointer-events-none"
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-white/42 via-white/28 to-white/52 pointer-events-none" />
+              <div className="w-14 h-14 md:w-16 md:h-16 bg-white/80 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg mb-6 text-primary group-hover:rotate-12 transition-transform duration-500 relative z-10">
                 <Icons.Palette className="w-7 h-7 md:w-8 md:h-8" />
               </div>
-              <h3 className="font-sans text-xl md:text-2xl font-extrabold text-primary mb-3">Premium Quality</h3>
-              <p className="text-on-surface-variant text-base">Improves fruit color, shine, and weight for premium market pricing.</p>
+              <h3 className="font-sans text-xl md:text-2xl font-extrabold text-primary mb-3 relative z-10">Premium Quality</h3>
+              <p className="text-on-surface-variant text-base relative z-10">Improves fruit color, shine, and weight for premium market pricing.</p>
             </div>
             
             {/* Benefit 3 */}
             <div className="md:col-span-4 glass-panel rounded-[2.5rem] p-8 md:p-10 flex flex-col relative overflow-hidden min-h-[250px] transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(10,25,19,0.12)] hover:border-white/60 group">
-              <div className="w-14 h-14 md:w-16 md:h-16 bg-white/80 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg mb-6 text-primary group-hover:-rotate-12 transition-transform duration-500">
+              <img
+                src="https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?auto=format&fit=crop&w=1200&q=80"
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 w-full h-full object-cover scale-125 opacity-[0.34] pointer-events-none"
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-white/42 via-white/28 to-white/52 pointer-events-none" />
+              <div className="w-14 h-14 md:w-16 md:h-16 bg-white/80 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg mb-6 text-primary group-hover:-rotate-12 transition-transform duration-500 relative z-10">
                 <Icons.ShieldCheck className="w-7 h-7 md:w-8 md:h-8" />
               </div>
-              <h3 className="font-sans text-xl md:text-2xl font-extrabold text-primary mb-3">Disease Resistance</h3>
-              <p className="text-on-surface-variant text-base">Enhanced immunity against common diseases and fungal infections.</p>
+              <h3 className="font-sans text-xl md:text-2xl font-extrabold text-primary mb-3 relative z-10">Disease Resistance</h3>
+              <p className="text-on-surface-variant text-base relative z-10">Enhanced immunity against common diseases and fungal infections.</p>
             </div>
 
             {/* Benefit 4 */}
             <div className="md:col-span-4 glass-panel rounded-[2.5rem] p-8 md:p-10 flex flex-col relative overflow-hidden min-h-[250px] transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(10,25,19,0.12)] hover:border-white/60 group">
-              <div className="w-14 h-14 md:w-16 md:h-16 bg-white/80 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg mb-6 text-primary group-hover:rotate-12 transition-transform duration-500">
+              <img
+                src="https://images.unsplash.com/photo-1461354464878-ad92f492a5a0?auto=format&fit=crop&w=1200&q=80"
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 w-full h-full object-cover scale-125 opacity-[0.34] pointer-events-none"
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-white/42 via-white/28 to-white/52 pointer-events-none" />
+              <div className="w-14 h-14 md:w-16 md:h-16 bg-white/80 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg mb-6 text-primary group-hover:rotate-12 transition-transform duration-500 relative z-10">
                 <Icons.Sprout className="w-7 h-7 md:w-8 md:h-8" />
               </div>
-              <h3 className="font-sans text-xl md:text-2xl font-extrabold text-primary mb-3">Root Development</h3>
-              <p className="text-on-surface-variant text-base">Stimulates deep root growth and increases soil organic carbon.</p>
+              <h3 className="font-sans text-xl md:text-2xl font-extrabold text-primary mb-3 relative z-10">Root Development</h3>
+              <p className="text-on-surface-variant text-base relative z-10">Stimulates deep root growth and increases soil organic carbon.</p>
             </div>
 
             {/* Benefit 5 */}
             <div className="md:col-span-4 glass-panel rounded-[2.5rem] p-8 md:p-10 flex flex-col relative overflow-hidden min-h-[250px] transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(10,25,19,0.12)] hover:border-white/60 group">
-              <div className="w-14 h-14 md:w-16 md:h-16 bg-white/80 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg mb-6 text-primary group-hover:-rotate-12 transition-transform duration-500">
+              <img
+                src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80"
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 w-full h-full object-cover scale-125 opacity-[0.34] pointer-events-none"
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-white/42 via-white/28 to-white/52 pointer-events-none" />
+              <div className="w-14 h-14 md:w-16 md:h-16 bg-white/80 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg mb-6 text-primary group-hover:-rotate-12 transition-transform duration-500 relative z-10">
                 <Icons.Calendar className="w-7 h-7 md:w-8 md:h-8" />
               </div>
-              <h3 className="font-sans text-xl md:text-2xl font-extrabold text-primary mb-3">Extended Freshness</h3>
-              <p className="text-on-surface-variant text-base">Increases post-harvest fruit freshness and overall shelf life.</p>
+              <h3 className="font-sans text-xl md:text-2xl font-extrabold text-primary mb-3 relative z-10">Extended Freshness</h3>
+              <p className="text-on-surface-variant text-base relative z-10">Increases post-harvest fruit freshness and overall shelf life.</p>
             </div>
 
             {/* Benefit 6 (CTA Block) */}
@@ -193,14 +348,103 @@ export default function Home() {
                 </div>
                 <h3 className="font-sans text-3xl md:text-4xl font-extrabold text-white mb-4 leading-tight">Ready to Transform Your Yield?</h3>
                 <p className="text-white/80 mb-8 font-serif text-lg">Join 75,800+ successful farmers who have upgraded to Power Plus™ and seen massive improvements in sweetness and quality.</p>
-                <button className="bg-secondary-container text-on-secondary-container px-8 py-4 rounded-xl font-sans font-bold hover:bg-white transition-colors inline-flex items-center space-x-2 shadow-xl">
+                <a
+                  href="https://wa.me/919307199040"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-secondary-container text-on-secondary-container px-8 py-4 rounded-xl font-sans font-bold hover:bg-white transition-colors inline-flex items-center space-x-2 shadow-xl"
+                >
                   <span>Get a Free Consultation</span>
                   <Icons.ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </button>
+                </a>
               </div>
               <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/4 w-96 h-96 bg-secondary/20 rounded-full blur-3xl mix-blend-overlay"></div>
               <Icons.Sprout className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/4 w-80 h-80 text-white/5 group-hover:rotate-12 transition-transform duration-700" />
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Support / Grievance Section */}
+      <section className="py-24 relative z-10">
+        <div className="max-w-3xl mx-auto px-8">
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/5 rounded-full text-primary border border-primary/10 mb-4">
+              <Icons.MessageCircle className="w-4 h-4" />
+              <span className="font-sans font-bold text-xs uppercase tracking-widest">Support</span>
+            </div>
+            <h2 className="font-sans text-3xl md:text-4xl font-extrabold text-primary mb-3 tracking-tight">Need Help? Raise a Ticket</h2>
+            <p className="text-on-surface-variant font-serif text-base md:text-lg">Our team responds to every query. You can also track replies in your profile.</p>
+          </div>
+
+          <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm p-8 md:p-10">
+            {user && profile?.role !== 'admin' ? (
+              <>
+                {ticketError && <p className="text-sm font-sans font-semibold text-red-600 mb-4">{ticketError}</p>}
+                {ticketInfo && (
+                  <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-4 mb-6">
+                    <Icons.CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+                    <p className="text-sm font-sans font-semibold text-emerald-700">{ticketInfo}</p>
+                  </div>
+                )}
+                <form onSubmit={handleGrievanceSubmit} className="space-y-5">
+                  <div>
+                    <label className="block font-sans text-sm font-semibold text-primary mb-2">Subject</label>
+                    <input
+                      type="text"
+                      required
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      placeholder="E.g., Order delay, Product damage..."
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary/30 bg-slate-50 font-sans text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-sans text-sm font-semibold text-primary mb-2">Description</label>
+                    <textarea
+                      required
+                      rows={4}
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Describe your issue in detail..."
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary/30 bg-slate-50 font-sans text-sm resize-none"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full py-4 bg-primary text-secondary-container rounded-xl font-sans font-bold text-sm hover:bg-primary-container transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                  >
+                    {submitting ? 'Submitting...' : (
+                      <><Icons.Send className="w-4 h-4" /> Submit Ticket</>
+                    )}
+                  </button>
+                </form>
+                <p className="text-center text-xs text-slate-400 font-sans mt-4">
+                  Track your tickets and admin replies in{' '}
+                  <Link to="/profile" className="text-primary font-semibold hover:underline">your profile</Link>.
+                </p>
+              </>
+            ) : user && profile?.role === 'admin' ? (
+              <div className="flex flex-col items-center gap-3 py-6 text-center">
+                <Icons.ShieldCheck className="w-10 h-10 text-primary/40" />
+                <p className="font-sans font-semibold text-primary/70">You are signed in as admin. Manage tickets from the <Link to="/admin" className="text-primary underline">Admin panel</Link>.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-5 py-6 text-center">
+                <Icons.Lock className="w-10 h-10 text-primary/30" />
+                <div>
+                  <p className="font-sans font-semibold text-primary mb-1">Sign in to raise a support ticket</p>
+                  <p className="font-serif text-sm text-on-surface-variant">Your ticket will be tracked and our team will reply directly.</p>
+                </div>
+                <Link
+                  to="/auth"
+                  className="px-8 py-3 bg-primary text-secondary-container rounded-xl font-sans font-bold text-sm hover:bg-primary-container transition-colors inline-flex items-center gap-2"
+                >
+                  <Icons.LogIn className="w-4 h-4" /> Sign In to Continue
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </section>

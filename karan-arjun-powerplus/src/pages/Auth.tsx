@@ -1,6 +1,7 @@
-import React, { useRef, useMemo, useState } from 'react';
-import { Link, Navigate, useLocation } from 'react-router-dom';
+import React, { useRef, useState } from 'react';
+import { Link, Navigate } from 'react-router-dom';
 import { RecaptchaVerifier, type ConfirmationResult } from 'firebase/auth';
+import type { FirebaseError } from 'firebase/app';
 import { Icons } from '../components/Icons';
 import { useAuth } from '../context/AuthContext';
 import { auth } from '../lib/firebase';
@@ -8,10 +9,37 @@ import { auth } from '../lib/firebase';
 type AuthMode = 'signin' | 'signup' | 'phone';
 type PhoneStep = 'number' | 'otp';
 
+function getSafeAuthMessage(error: unknown, context: 'signin' | 'signup' | 'google' | 'phone' | 'otp' | 'reset') {
+  const code = (error as FirebaseError | undefined)?.code ?? '';
+
+  if (
+    context === 'signin'
+    && ['auth/invalid-credential', 'auth/wrong-password', 'auth/user-not-found', 'auth/invalid-email'].includes(code)
+  ) {
+    return 'You have entered wrong user/password.';
+  }
+
+  if (context === 'signup' && code === 'auth/email-already-in-use') {
+    return 'This email is already registered. Please sign in.';
+  }
+
+  if (context === 'phone' && ['auth/invalid-phone-number', 'auth/too-many-requests'].includes(code)) {
+    return 'Could not send OTP. Please check the mobile number and try again.';
+  }
+
+  if (context === 'otp' && ['auth/invalid-verification-code', 'auth/code-expired'].includes(code)) {
+    return 'Invalid OTP. Please try again.';
+  }
+
+  if (context === 'reset' && code === 'auth/user-not-found') {
+    return 'No account found with this email.';
+  }
+
+  return 'Authentication failed. Please try again.';
+}
+
 export default function Auth() {
-  const { user, profile, signIn, signUp, signInWithGoogle, signInWithPhone, resetPassword } = useAuth();
-  const location = useLocation();
-  const fromPath = (location.state as { from?: string } | null)?.from ?? '/profile';
+  const { user, loading, signIn, signUp, signInWithGoogle, signInWithPhone, resetPassword } = useAuth();
 
   const [mode, setMode] = useState<AuthMode>('signin');
   const [name, setName] = useState('');
@@ -26,13 +54,8 @@ export default function Auth() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const recaptchaRef = useRef<RecaptchaVerifier | null>(null);
 
-  const redirectPath = useMemo(() => {
-    if (profile?.role === 'admin') return '/admin';
-    return fromPath;
-  }, [profile, fromPath]);
-
-  if (user) {
-    return <Navigate to={redirectPath} replace />;
+  if (user && !loading) {
+    return <Navigate to="/" replace />;
   }
 
   const resetForm = () => {
@@ -61,7 +84,7 @@ export default function Auth() {
         await signIn(email, password);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Authentication failed.');
+      setError(getSafeAuthMessage(err, mode === 'signin' ? 'signin' : 'signup'));
     } finally {
       setIsSubmitting(false);
     }
@@ -73,7 +96,7 @@ export default function Auth() {
     try {
       await signInWithGoogle();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Google sign-in failed.');
+      setError(getSafeAuthMessage(err, 'google'));
     } finally {
       setIsSubmitting(false);
     }
@@ -95,7 +118,7 @@ export default function Auth() {
       setPhoneStep('otp');
       setInfo(`OTP sent to ${fullPhone}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not send OTP. Check the number and try again.');
+      setError(getSafeAuthMessage(err, 'phone'));
     } finally {
       setIsSubmitting(false);
     }
@@ -109,7 +132,7 @@ export default function Auth() {
     try {
       await confirmResult.confirm(otp.trim());
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid OTP. Please try again.');
+      setError(getSafeAuthMessage(err, 'otp'));
     } finally {
       setIsSubmitting(false);
     }
@@ -126,7 +149,7 @@ export default function Auth() {
       await resetPassword(email.trim());
       setInfo('Password reset email sent. Please check your inbox.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not send reset email.');
+      setError(getSafeAuthMessage(err, 'reset'));
     }
   };
 
