@@ -43,7 +43,10 @@ import {
   X,
   Plus,
   Edit,
-  Trash
+  Trash,
+  Send,
+  LogIn,
+  CheckCircle
 } from 'lucide-react';
 
 export const Icons = {
@@ -91,5 +94,8 @@ export const Icons = {
   X,
   Plus,
   Edit,
-  Trash
+  Trash,
+  Send,
+  LogIn,
+  CheckCircle
 };
