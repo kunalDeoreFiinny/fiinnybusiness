@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, onSnapshot, collection } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
 export type UserRole = 'admin' | 'analyst' | 'retailer' | 'manufacturer' | 'customer';
@@ -11,6 +11,9 @@ interface TenantData {
     logoUrl?: string;
     location?: string;
     purpose?: string;
+    plan?: string;
+    planStatus?: string;
+    planExpiryAt?: any;
 }
 
 export type AppScreen =
@@ -32,15 +35,16 @@ export type AppScreen =
     | 'online_orders'
     | 'online_dashboard'
     | 'manage_store'
-    | 'analytics';
+    | 'analytics'
+    | 'krishidukan';
 
 export type RolePermissions = Record<UserRole, Record<AppScreen, boolean>>;
 export const defaultPermissions: RolePermissions = {
-    admin: { dashboard: true, b2c_dashboard: true, online_dashboard: true, analytics: true, retailers: true, worklist: true, dispatch: true, pos: true, inventory: true, online_orders: true, order_history: true, settings: true, admin: true, manufacturers: true, invoice_templates: true, invoice_settings: true, schema_builder: true, manage_retailers: true, manage_store: true },
-    analyst: { dashboard: true, b2c_dashboard: true, online_dashboard: true, analytics: true, retailers: true, worklist: true, dispatch: true, pos: true, inventory: true, online_orders: false, order_history: true, settings: true, admin: false, manufacturers: false, invoice_templates: false, invoice_settings: false, schema_builder: false, manage_retailers: false, manage_store: false },
-    retailer: { dashboard: false, b2c_dashboard: false, online_dashboard: false, analytics: false, retailers: false, worklist: false, dispatch: false, pos: false, inventory: false, online_orders: false, order_history: false, settings: true, admin: false, manufacturers: false, invoice_templates: false, invoice_settings: false, schema_builder: false, manage_retailers: false, manage_store: false },
-    manufacturer: { dashboard: false, b2c_dashboard: false, online_dashboard: false, analytics: false, retailers: false, worklist: false, dispatch: false, pos: false, inventory: false, online_orders: false, order_history: false, settings: true, admin: false, manufacturers: false, invoice_templates: false, invoice_settings: false, schema_builder: false, manage_retailers: false, manage_store: false },
-    customer: { dashboard: false, b2c_dashboard: false, online_dashboard: false, analytics: false, retailers: false, worklist: false, dispatch: false, pos: false, inventory: false, online_orders: false, order_history: false, settings: true, admin: false, manufacturers: false, invoice_templates: false, invoice_settings: false, schema_builder: false, manage_retailers: false, manage_store: false }
+    admin: { dashboard: true, b2c_dashboard: true, online_dashboard: true, analytics: true, retailers: true, worklist: true, dispatch: true, pos: true, inventory: true, online_orders: true, order_history: true, settings: true, admin: true, manufacturers: true, invoice_templates: true, invoice_settings: true, schema_builder: true, manage_retailers: true, manage_store: true, krishidukan: true },
+    analyst: { dashboard: true, b2c_dashboard: true, online_dashboard: true, analytics: true, retailers: true, worklist: true, dispatch: true, pos: true, inventory: true, online_orders: false, order_history: true, settings: true, admin: false, manufacturers: false, invoice_templates: false, invoice_settings: false, schema_builder: false, manage_retailers: false, manage_store: false, krishidukan: false },
+    retailer: { dashboard: false, b2c_dashboard: false, online_dashboard: false, analytics: false, retailers: false, worklist: false, dispatch: false, pos: false, inventory: false, online_orders: false, order_history: false, settings: true, admin: false, manufacturers: false, invoice_templates: false, invoice_settings: false, schema_builder: false, manage_retailers: false, manage_store: false, krishidukan: false },
+    manufacturer: { dashboard: false, b2c_dashboard: false, online_dashboard: false, analytics: false, retailers: false, worklist: false, dispatch: false, pos: false, inventory: false, online_orders: false, order_history: false, settings: true, admin: false, manufacturers: false, invoice_templates: false, invoice_settings: false, schema_builder: false, manage_retailers: false, manage_store: false, krishidukan: false },
+    customer: { dashboard: false, b2c_dashboard: false, online_dashboard: false, analytics: false, retailers: false, worklist: false, dispatch: false, pos: false, inventory: false, online_orders: false, order_history: false, settings: true, admin: false, manufacturers: false, invoice_templates: false, invoice_settings: false, schema_builder: false, manage_retailers: false, manage_store: false, krishidukan: false }
 };
 
 interface AuthContextType {
@@ -48,11 +52,16 @@ interface AuthContextType {
     userRole: UserRole | null;
     tenantId: string | null;
     tenantData: TenantData | null;
-    linkedId: string | null; // retailerId or manufacturerId for non-admin users
+    linkedId: string | null;
     userName: string | null;
     permissions: RolePermissions;
     loading: boolean;
     logout: () => Promise<void>;
+    // Module system
+    enabledModules: string[];
+    tenantPlan: string;
+    modulesLoading: boolean;
+    hasModule: (moduleId: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -65,6 +74,10 @@ const AuthContext = createContext<AuthContextType>({
     permissions: defaultPermissions,
     loading: true,
     logout: async () => { },
+    enabledModules: [],
+    tenantPlan: 'free',
+    modulesLoading: true,
+    hasModule: () => false,
 });
 
 export function useAuth() {
@@ -80,9 +93,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [userName, setUserName] = useState<string | null>(null);
     const [permissions, setPermissions] = useState<RolePermissions>(defaultPermissions);
     const [loading, setLoading] = useState(true);
+    const [enabledModules, setEnabledModules] = useState<string[]>([]);
+    const [tenantPlan, setTenantPlan] = useState<string>('free');
+    const [modulesLoading, setModulesLoading] = useState(true);
 
     useEffect(() => {
         let unsubscribePerms: (() => void) | null = null;
+        let unsubscribeModules: (() => void) | null = null;
 
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -166,16 +183,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                                     await setDoc(permDocRef, defaultPermissions);
                                     // Snapshot will trigger again automatically after setDoc
                                 }
+                            }, (_err) => {
+                                setPermissions(defaultPermissions);
                             });
                         } catch (permErr) {
                             console.error("Error fetching permissions", permErr);
                             setPermissions(defaultPermissions);
+                        }
+
+                        // Subscribe to tenant's purchased modules
+                        try {
+                            const tenantSnap = await getDoc(doc(db, 'tenants', tId));
+                            setTenantPlan(tenantSnap.data()?.plan || 'free');
+
+                            if (unsubscribeModules) unsubscribeModules();
+                            const modulesColRef = collection(db, 'tenants', tId, 'modules');
+                            unsubscribeModules = onSnapshot(modulesColRef, (snap) => {
+                                const now = new Date();
+                                const active = snap.docs
+                                    .filter(d => {
+                                        const data = d.data();
+                                        if (!['active', 'cancelled_at_period_end'].includes(data.status)) return false;
+                                        if (data.expiresAt && data.expiresAt.toDate() < now) return false;
+                                        return true;
+                                    })
+                                    .map(d => d.id);
+                                setEnabledModules(active);
+                                setModulesLoading(false);
+                            }, (_err) => {
+                                // permission-denied on free/unauthenticated tenants — silent fallback
+                                setModulesLoading(false);
+                            });
+                        } catch (modErr) {
+                            console.error("Error fetching modules", modErr);
+                            setModulesLoading(false);
                         }
                     } else {
                         if (unsubscribePerms) {
                             unsubscribePerms();
                             unsubscribePerms = null;
                         }
+                        setModulesLoading(false);
                     }
 
                 } catch (error) {
@@ -209,12 +257,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return () => {
             unsubscribe();
             if (unsubscribePerms) unsubscribePerms();
+            if (unsubscribeModules) unsubscribeModules();
         };
     }, []);
 
     const logout = () => {
         return signOut(auth);
     };
+
+    const hasModule = (moduleId: string): boolean => enabledModules.includes(moduleId);
 
     const value = {
         currentUser,
@@ -225,7 +276,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         userName,
         permissions,
         loading,
-        logout
+        logout,
+        enabledModules,
+        tenantPlan,
+        modulesLoading,
+        hasModule,
     };
 
     return (

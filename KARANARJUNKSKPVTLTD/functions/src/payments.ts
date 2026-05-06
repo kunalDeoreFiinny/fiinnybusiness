@@ -16,6 +16,40 @@ const PLANS = {
   pro: { amount: 2999, yearly: 29990 },
 };
 
+// Modules included per plan — activated automatically when a plan is purchased
+const PLAN_MODULE_MAP: Record<string, string[]> = {
+  starter: ['fast_checkout', 'vpay', 'whatsapp_integration', 'cash_drawer'],
+  growth: [
+    'fast_checkout', 'vpay', 'whatsapp_integration', 'cash_drawer',
+    'cash_tender', 'multiple_payment_modes', 'customer_feedback',
+    'returns_exchanges', 'loyalty', 'multiple_billing_counters',
+  ],
+  pro: [
+    'fast_checkout', 'vpay', 'whatsapp_integration', 'cash_drawer',
+    'cash_tender', 'multiple_payment_modes', 'customer_feedback',
+    'returns_exchanges', 'loyalty', 'multiple_billing_counters',
+    'weight_scale', 'multi_bill_tabs', 'offline_pos', 'vcheckout',
+    'image_based_pos', 'in_store_online_orders',
+  ],
+};
+
+async function activatePlanModules(tenantId: string, plan: string, expiryDate: Date): Promise<void> {
+  const modules = PLAN_MODULE_MAP[plan] || [];
+  if (modules.length === 0) return;
+  const batch = admin.firestore().batch();
+  for (const moduleId of modules) {
+    const ref = admin.firestore().doc(`tenants/${tenantId}/modules/${moduleId}`);
+    batch.set(ref, {
+      moduleId,
+      status: 'active',
+      billingCycle: 'plan_included',
+      activatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      expiresAt: admin.firestore.Timestamp.fromDate(expiryDate),
+    }, { merge: true });
+  }
+  await batch.commit();
+}
+
 export const getSaaSSubscription = functions.region('asia-south1').https.onCall(async (data: any, context: any) => {
   if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be logged in');
   const tenantId = data.tenantId;
@@ -105,6 +139,9 @@ export const verifySaaSPayment = functions.region('asia-south1').https.onCall(as
     planExpiryAt: admin.firestore.Timestamp.fromDate(newExpiry),
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   }, { merge: true });
+
+  // Activate all modules included in this plan
+  await activatePlanModules(tenantId, plan, newExpiry);
 
   return { success: true };
 });

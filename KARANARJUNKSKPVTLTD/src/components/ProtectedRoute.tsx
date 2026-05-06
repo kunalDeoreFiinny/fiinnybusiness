@@ -13,6 +13,9 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({ children, requireAdmin = false, requireRole, appScreen }: ProtectedRouteProps) {
     const { currentUser, userRole, permissions, loading } = useAuth();
 
+    // DEMO MODE — bypass auth for local preview
+    if (import.meta.env.DEV) return <>{children}</>;
+
     if (loading) {
         return <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Verifying access...</div>;
     }
