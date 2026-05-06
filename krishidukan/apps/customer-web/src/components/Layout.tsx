@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { Link, useNavigate, useLocation as useRouterLocation } from 'react-router-dom';
-import { Search, MapPin, Home, Grid3x3, Store, User, LocateFixed, X } from 'lucide-react';
+import { Search, MapPin, Home, Store, User, LocateFixed, X } from 'lucide-react';
 import { useLocation } from '../LocationContext';
 
 const HEADER_HEIGHT = 60;
@@ -31,8 +31,11 @@ export function Layout({ children }: { children: ReactNode }) {
         display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12,
       }}>
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: '#fff', flexShrink: 0 }}>
-          <span style={{ fontSize: 22 }}>🌾</span>
-          <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: '-0.3px' }}>KrishiDukan</span>
+          <span style={{ fontSize: 22 }}>⚡</span>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: '-0.3px', lineHeight: 1.1 }}>KaranArjun</div>
+            <div style={{ fontSize: 10, fontWeight: 600, opacity: 0.85, letterSpacing: '0.04em' }}>PowerPlus</div>
+          </div>
         </Link>
 
         {/* Location pill — desktop visible always; mobile only on home */}
@@ -150,9 +153,8 @@ export function Layout({ children }: { children: ReactNode }) {
         boxShadow: '0 -2px 8px rgba(0,0,0,0.04)',
       }}>
         {[
-          { to: '/', icon: Home, label: 'Home' },
-          { to: '/categories', icon: Grid3x3, label: 'Categories' },
-          { to: '/shops', icon: Store, label: 'Shops' },
+          { to: '/', icon: Home, label: 'Products' },
+          { to: '/retailers', icon: Store, label: 'Retailers' },
           { to: '/account', icon: User, label: 'Account' },
         ].map(({ to, icon: Icon, label }) => {
           const active = to === '/' ? router.pathname === '/' : router.pathname.startsWith(to);
