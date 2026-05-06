@@ -1,13 +1,16 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
 import {
+  RecaptchaVerifier,
   createUserWithEmailAndPassword,
   onAuthStateChanged,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
+  signInWithPhoneNumber,
   signInWithPopup,
   signOut,
   updateProfile,
+  type ConfirmationResult,
 } from 'firebase/auth';
 import {
   doc,
@@ -36,6 +39,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, name: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  signInWithPhone: (phone: string, verifier: RecaptchaVerifier) => Promise<ConfirmationResult>;
   signOutUser: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
 }
@@ -75,7 +79,7 @@ async function ensureUserProfile(authUser: User, preferredName?: string): Promis
     uid: authUser.uid,
     name: preferredName || authUser.displayName || 'Power Plus User',
     email: authUser.email ?? '',
-    phone: '',
+    phone: authUser.phoneNumber ?? '',
     role,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -149,6 +153,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async signInWithGoogle() {
         const credential = await signInWithPopup(auth, googleProvider);
         await ensureUserProfile(credential.user);
+      },
+      async signInWithPhone(phone, verifier) {
+        return signInWithPhoneNumber(auth, phone, verifier);
       },
       async signOutUser() {
         await signOut(auth);

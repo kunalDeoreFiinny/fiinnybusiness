@@ -13,10 +13,31 @@ export default function Home() {
       <section className="relative pt-32 pb-0 overflow-hidden text-center z-10">
         {/* Floating Accents */}
         <div className="absolute top-32 left-[15%] z-10 transform -rotate-12 animate-bounce">
-          <Icons.Sprout className="w-16 h-16 text-tertiary-fixed opacity-40" />
+          <Icons.Sprout className="w-12 h-12 text-emerald-500 opacity-40" />
         </div>
         <div className="absolute top-48 right-[15%] z-10 transform rotate-12 animate-pulse">
-          <Icons.Grape className="w-20 h-20 text-primary opacity-30" />
+          <Icons.Grape className="w-12 h-12 text-violet-500 opacity-40" />
+        </div>
+        <div className="absolute top-24 right-[28%] z-10 transform -rotate-6 animate-pulse hidden md:block">
+          <Icons.Apple className="w-12 h-12 text-rose-500 opacity-40" />
+        </div>
+        <div className="absolute top-64 left-[28%] z-10 transform rotate-6 animate-bounce hidden lg:block">
+          <Icons.Cherry className="w-12 h-12 text-fuchsia-500 opacity-40" />
+        </div>
+        <div className="absolute top-40 left-[6%] z-10 transform -rotate-12 animate-pulse hidden xl:block">
+          <Icons.Carrot className="w-12 h-12 text-orange-500 opacity-40" />
+        </div>
+        <div className="absolute top-20 left-[40%] z-10 transform rotate-6 animate-bounce hidden md:block">
+          <Icons.Citrus className="w-12 h-12 text-yellow-400 opacity-45" />
+        </div>
+        <div className="absolute top-52 right-[6%] z-10 transform -rotate-12 animate-pulse hidden lg:block">
+          <Icons.Salad className="w-12 h-12 text-green-500 opacity-40" />
+        </div>
+        <div className="absolute top-72 right-[32%] z-10 transform rotate-12 animate-bounce hidden xl:block">
+          <Icons.Wheat className="w-12 h-12 text-amber-500 opacity-40" />
+        </div>
+        <div className="absolute top-[22rem] left-[12%] z-10 transform -rotate-6 animate-pulse hidden lg:block">
+          <Icons.Vegan className="w-12 h-12 text-teal-500 opacity-40" />
         </div>
 
         <div className="max-w-7xl mx-auto px-8 relative z-20">

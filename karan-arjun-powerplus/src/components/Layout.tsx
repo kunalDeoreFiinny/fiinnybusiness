@@ -19,20 +19,16 @@ export default function Navbar() {
     { name: 'About', href: '/about' },
   ];
 
-  const isAdmin = location.pathname.startsWith('/admin');
-
-  if (isAdmin) return null;
-
   return (
     <div className="fixed top-6 left-1/2 -translate-x-1/2 w-[95%] max-w-5xl z-50">
       <nav className="bg-primary/90 backdrop-blur-xl rounded-full border border-white/10 shadow-[0_8px_40px_rgba(10,25,19,0.3)] transition-all duration-300">
         <div className="flex justify-between items-center h-16 px-6 md:px-8 w-full">
-          <Link to="/" className="text-lg md:text-xl font-extrabold text-white tracking-tight font-sans truncate pr-4">
+          <Link to="/" className="text-lg md:text-xl font-extrabold text-white tracking-tight font-sans shrink-0">
             Karan Arjun Power Plus™
           </Link>
         
         {/* Desktop Links */}
-        <div className="hidden md:flex gap-4 lg:gap-6 items-center font-sans font-medium text-sm tracking-wide">
+        <div className="hidden lg:flex gap-6 items-center font-sans font-medium text-sm tracking-wide">
           {links.map((link) => (
             <Link
               key={link.name}
@@ -60,7 +56,7 @@ export default function Navbar() {
           {profile?.role === 'admin' && (
             <Link
               to="/admin"
-              className="hidden md:flex items-center px-3 py-2 rounded-full bg-white/10 text-white text-xs font-sans font-bold hover:bg-white/20 transition-colors"
+              className="hidden lg:flex items-center px-3 py-2 rounded-full bg-white/10 text-white text-xs font-sans font-bold hover:bg-white/20 transition-colors"
             >
               Admin
             </Link>
@@ -86,19 +82,9 @@ export default function Navbar() {
               Login
             </Link>
           )}
-          <a 
-            href="https://wa.me/919307199040" 
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden lg:flex items-center space-x-1.5 bg-secondary-container text-on-secondary-container px-4 py-2 rounded-full font-sans font-bold text-xs hover:opacity-90 transition-opacity shadow-lg"
-          >
-            <Icons.MessageCircle className="w-4 h-4" />
-            <span>Chat on WhatsApp</span>
-          </a>
-
           {/* Mobile Menu Toggle */}
           <button 
-            className="md:hidden p-2 text-white/70 hover:text-white transition-colors"
+            className="lg:hidden p-2 text-white/70 hover:text-white transition-colors"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             {isMenuOpen ? <Icons.X className="w-6 h-6" /> : <Icons.Menu className="w-6 h-6" />}
@@ -108,7 +94,7 @@ export default function Navbar() {
 
       {/* Mobile Menu Dropdown */}
       {isMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden flex flex-col p-2 gap-1 z-50">
+        <div className="lg:hidden absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden flex flex-col p-2 gap-1 z-50">
           {links.map((link) => (
             <Link
               key={link.name}

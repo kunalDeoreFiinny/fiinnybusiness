@@ -18,15 +18,15 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 
 function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  const isHideNavbarFooter = location.pathname.startsWith('/admin');
+  const isAdminRoute = location.pathname.startsWith('/admin');
 
   return (
     <div className="min-h-screen flex flex-col bg-surface overflow-x-hidden">
-      {!isHideNavbarFooter && <Navbar />}
+      <Navbar />
       <main className="flex-grow">
         {children}
       </main>
-      {!isHideNavbarFooter && <Footer />}
+      {!isAdminRoute && <Footer />}
     </div>
   );
 }

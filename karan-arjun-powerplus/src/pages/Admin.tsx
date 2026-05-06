@@ -281,8 +281,8 @@ export default function Admin() {
   };
 
   return (
-    <div className="absolute inset-0 flex bg-slate-50 overflow-hidden z-50">
-      <aside className="w-64 bg-primary-container text-white p-6 flex flex-col border-r border-white/5 shrink-0 h-full">
+    <div className="absolute inset-0 flex bg-slate-50 overflow-hidden">
+      <aside className="w-64 bg-primary-container text-white px-6 pb-6 pt-24 flex flex-col border-r border-white/5 shrink-0 h-full">
         <div className="flex items-center gap-3 mb-12">
           <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center font-sans font-black text-2xl">P</div>
           <div className="flex flex-col">
@@ -314,7 +314,7 @@ export default function Admin() {
         </nav>
       </aside>
 
-      <main className="flex-grow overflow-auto p-8">
+      <main className="flex-grow overflow-auto px-8 pb-8 pt-24">
         <header className="flex justify-between items-center mb-8 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
           <h1 className="text-2xl font-sans font-bold text-primary">{activeTab}</h1>
           <div className="flex items-center gap-3">
