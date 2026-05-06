@@ -95,14 +95,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let profileUnsubscribe: (() => void) | undefined;
 
     const authUnsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      setLoading(true);
+
       if (profileUnsubscribe) {
         profileUnsubscribe();
       }
 
+      setProfile(null);
       setUser(authUser);
 
       if (!authUser) {
-        setProfile(null);
         setLoading(false);
         return;
       }
