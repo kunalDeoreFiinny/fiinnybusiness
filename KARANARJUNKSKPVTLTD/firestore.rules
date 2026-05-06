@@ -72,16 +72,60 @@ service cloud.firestore {
       allow write: if request.auth != null && isAdminOrAnalyst();
     }
     
+    // Global module catalog — all authenticated users can read, only Cloud Functions write
+    match /posModules/{moduleId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
     // Tenant specific collections
     match /tenants/{tenantId} {
       // Allow users to read their own tenant, or master
       allow read: if request.auth != null && (tenantId == 'master' || (getUserData() != null && getUserData().tenantId == tenantId));
-      
+
       // Allow users to create their own tenant during onboarding
       allow write: if request.auth != null && (
-        tenantId == 'tenant_' + request.auth.uid || 
+        tenantId == 'tenant_' + request.auth.uid ||
         (getUserData() != null && getUserData().tenantId == tenantId && isAdminOrAnalyst())
       );
+
+      // Module subscriptions — only Cloud Functions write, tenant members read
+      match /modules/{moduleId} {
+        allow read: if request.auth != null && getUserData() != null && getUserData().tenantId == tenantId;
+        allow write: if false;
+      }
+
+      // Returns — admin/analyst full access
+      match /returns/{returnId} {
+        allow read, write: if request.auth != null && getUserData() != null && getUserData().tenantId == tenantId && isAdminOrAnalyst();
+      }
+
+      // Loyalty points — admin/analyst full access
+      match /loyalty/{customerId} {
+        allow read, write: if request.auth != null && getUserData() != null && getUserData().tenantId == tenantId && isAdminOrAnalyst();
+      }
+
+      // Feedback — public create (no auth), tenant members read
+      match /feedback/{feedbackId} {
+        allow create: if true;
+        allow read: if request.auth != null && getUserData() != null && getUserData().tenantId == tenantId && isAdminOrAnalyst();
+        allow update, delete: if false;
+      }
+
+      // V-Checkout sessions — public read by token, Cloud Function updates, admin creates
+      match /vcheckoutSessions/{sessionId} {
+        allow read: if true;
+        allow create: if request.auth != null && getUserData() != null && getUserData().tenantId == tenantId && isAdminOrAnalyst();
+        allow update: if true;  // Customer submits cart via public page
+        allow delete: if false;
+      }
+
+      // Products — public read for V-Checkout product browsing
+      match /products/{pId} {
+        allow read: if true;
+        allow write: if request.auth != null && isAdminOrAnalyst();
+      }
+
       match /retailers/{rId} {
         allow read: if request.auth != null && (isAdminOrAnalyst() || (hasRole('retailer') && getLinkedId() == rId));
         allow write: if request.auth != null && isAdminOrAnalyst();
@@ -111,11 +155,6 @@ service cloud.firestore {
           isAdminOrAnalyst() || 
           (hasRole('retailer') && resource.data.retailerId == getLinkedId())
         );
-        allow write: if request.auth != null && isAdminOrAnalyst();
-      }
-      
-      match /products/{pId} {
-        allow read: if request.auth != null; // Everyone can read products
         allow write: if request.auth != null && isAdminOrAnalyst();
       }
       

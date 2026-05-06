@@ -1,0 +1,47 @@
+export enum ProductCategory {
+  SEEDS = 'seeds',
+  FERTILIZERS = 'fertilizers',
+  PESTICIDES = 'pesticides',
+  HERBICIDES = 'herbicides',
+  FUNGICIDES = 'fungicides',
+  MICRONUTRIENTS = 'micronutrients',
+  IRRIGATION_EQUIPMENT = 'irrigation_equipment',
+  FARM_TOOLS = 'farm_tools',
+  ANIMAL_FEED = 'animal_feed',
+  VETERINARY_SUPPLIES = 'veterinary_supplies',
+  ORGANIC_INPUTS = 'organic_inputs',
+  PLANT_GROWTH_REGULATORS = 'plant_growth_regulators',
+  OTHER = 'other',
+}
+
+export const CATEGORY_LABELS: Record<ProductCategory, string> = {
+  [ProductCategory.SEEDS]: 'Seeds',
+  [ProductCategory.FERTILIZERS]: 'Fertilizers',
+  [ProductCategory.PESTICIDES]: 'Pesticides',
+  [ProductCategory.HERBICIDES]: 'Herbicides',
+  [ProductCategory.FUNGICIDES]: 'Fungicides',
+  [ProductCategory.MICRONUTRIENTS]: 'Micronutrients',
+  [ProductCategory.IRRIGATION_EQUIPMENT]: 'Irrigation Equipment',
+  [ProductCategory.FARM_TOOLS]: 'Farm Tools',
+  [ProductCategory.ANIMAL_FEED]: 'Animal Feed',
+  [ProductCategory.VETERINARY_SUPPLIES]: 'Veterinary Supplies',
+  [ProductCategory.ORGANIC_INPUTS]: 'Organic Inputs',
+  [ProductCategory.PLANT_GROWTH_REGULATORS]: 'Plant Growth Regulators',
+  [ProductCategory.OTHER]: 'Other',
+};
+
+export const CATEGORY_ICONS: Record<ProductCategory, string> = {
+  [ProductCategory.SEEDS]: '🌱',
+  [ProductCategory.FERTILIZERS]: '🧪',
+  [ProductCategory.PESTICIDES]: '🐛',
+  [ProductCategory.HERBICIDES]: '🌿',
+  [ProductCategory.FUNGICIDES]: '🍄',
+  [ProductCategory.MICRONUTRIENTS]: '⚗️',
+  [ProductCategory.IRRIGATION_EQUIPMENT]: '💧',
+  [ProductCategory.FARM_TOOLS]: '🔧',
+  [ProductCategory.ANIMAL_FEED]: '🐄',
+  [ProductCategory.VETERINARY_SUPPLIES]: '💊',
+  [ProductCategory.ORGANIC_INPUTS]: '♻️',
+  [ProductCategory.PLANT_GROWTH_REGULATORS]: '🌾',
+  [ProductCategory.OTHER]: '📦',
+};

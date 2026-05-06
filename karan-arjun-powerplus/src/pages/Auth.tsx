@@ -1,0 +1,393 @@
+import React, { useRef, useState } from 'react';
+import { Link, Navigate } from 'react-router-dom';
+import { RecaptchaVerifier, type ConfirmationResult } from 'firebase/auth';
+import type { FirebaseError } from 'firebase/app';
+import { Icons } from '../components/Icons';
+import { useAuth } from '../context/AuthContext';
+import { auth } from '../lib/firebase';
+
+type AuthMode = 'signin' | 'signup' | 'phone';
+type PhoneStep = 'number' | 'otp';
+
+function getSafeAuthMessage(error: unknown, context: 'signin' | 'signup' | 'google' | 'phone' | 'otp' | 'reset') {
+  const code = (error as FirebaseError | undefined)?.code ?? '';
+
+  if (
+    context === 'signin'
+    && ['auth/invalid-credential', 'auth/wrong-password', 'auth/user-not-found', 'auth/invalid-email'].includes(code)
+  ) {
+    return 'You have entered wrong user/password.';
+  }
+
+  if (context === 'signup' && code === 'auth/email-already-in-use') {
+    return 'This email is already registered. Please sign in.';
+  }
+
+  if (context === 'phone' && ['auth/invalid-phone-number', 'auth/too-many-requests'].includes(code)) {
+    return 'Could not send OTP. Please check the mobile number and try again.';
+  }
+
+  if (context === 'otp' && ['auth/invalid-verification-code', 'auth/code-expired'].includes(code)) {
+    return 'Invalid OTP. Please try again.';
+  }
+
+  if (context === 'reset' && code === 'auth/user-not-found') {
+    return 'No account found with this email.';
+  }
+
+  return 'Authentication failed. Please try again.';
+}
+
+export default function Auth() {
+  const { user, loading, signIn, signUp, signInWithGoogle, signInWithPhone, resetPassword } = useAuth();
+
+  const [mode, setMode] = useState<AuthMode>('signin');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
+  const [phoneStep, setPhoneStep] = useState<PhoneStep>('number');
+  const [confirmResult, setConfirmResult] = useState<ConfirmationResult | null>(null);
+  const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const recaptchaRef = useRef<RecaptchaVerifier | null>(null);
+
+  if (user && !loading) {
+    return <Navigate to="/" replace />;
+  }
+
+  const resetForm = () => {
+    setError('');
+    setInfo('');
+    setPhone('');
+    setOtp('');
+    setPhoneStep('number');
+    setConfirmResult(null);
+  };
+
+  const switchMode = (next: AuthMode) => {
+    resetForm();
+    setMode(next);
+  };
+
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setInfo('');
+    setIsSubmitting(true);
+    try {
+      if (mode === 'signup') {
+        await signUp(email, password, name.trim());
+      } else {
+        await signIn(email, password);
+      }
+    } catch (err) {
+      setError(getSafeAuthMessage(err, mode === 'signin' ? 'signin' : 'signup'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogleAuth = async () => {
+    setError('');
+    setIsSubmitting(true);
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      setError(getSafeAuthMessage(err, 'google'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSendOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsSubmitting(true);
+    try {
+      if (recaptchaRef.current) {
+        recaptchaRef.current.clear();
+        recaptchaRef.current = null;
+      }
+      recaptchaRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', { size: 'invisible' });
+      const fullPhone = phone.trim().startsWith('+') ? phone.trim() : `+91${phone.trim().replace(/\D/g, '')}`;
+      const result = await signInWithPhone(fullPhone, recaptchaRef.current);
+      setConfirmResult(result);
+      setPhoneStep('otp');
+      setInfo(`OTP sent to ${fullPhone}`);
+    } catch (err) {
+      setError(getSafeAuthMessage(err, 'phone'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleVerifyOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!confirmResult) return;
+    setError('');
+    setIsSubmitting(true);
+    try {
+      await confirmResult.confirm(otp.trim());
+    } catch (err) {
+      setError(getSafeAuthMessage(err, 'otp'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setError('');
+    setInfo('');
+    if (!email.trim()) {
+      setError('Enter your email first, then click Forgot Password.');
+      return;
+    }
+    try {
+      await resetPassword(email.trim());
+      setInfo('Password reset email sent. Please check your inbox.');
+    } catch (err) {
+      setError(getSafeAuthMessage(err, 'reset'));
+    }
+  };
+
+  return (
+    <div className="min-h-[calc(100vh-80px)] flex">
+      {/* Left panel */}
+      <div className="hidden lg:flex w-1/2 relative bg-primary-container overflow-hidden items-end p-12">
+        <div className="absolute inset-0 z-0">
+          <img
+            src="https://lh3.googleusercontent.com/aida/ADBb0uiMg-b-JQP8eneEtUBoN3nthy1tdhBSG6_gAOctHTN3w73JYJrce4dcRnzHjlE8MJWXueBD5BFZALu1jxxRhIcfqdsJtctncGh-V-W8VtRZLPLUYkNgXK111GJ9RDa_MiKEpE4s3Jm7NBMflQUjX2UycDh9XjfpJJt1SkFrZ52t95rfWV3vqHG_vIEWadkgoQHiPk8v4sf5p9GAAV0XqfmR4FDO9ckc6UUKKcwdPb0PUBjG4ISlLkmwxMI5tUUVx-mTYWFm_15TH-o"
+            alt="Agri"
+            className="w-full h-full object-cover opacity-60"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-primary-container to-transparent" />
+        </div>
+        <div className="relative z-10 text-white max-w-md">
+          <h2 className="font-sans text-4xl font-extrabold mb-6 leading-tight">
+            Trust with tradition, one step toward modernity.
+          </h2>
+          <p className="font-serif text-white/80 leading-relaxed text-lg">
+            Sign in to manage orders, tickets, and your Power Plus account from anywhere.
+          </p>
+        </div>
+      </div>
+
+      {/* Right panel */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-surface">
+        <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-10 border border-slate-100">
+
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="font-sans text-3xl font-extrabold text-primary mb-2">
+              {mode === 'phone' ? 'Phone Sign-In' : mode === 'signin' ? 'Welcome Back' : 'Create Account'}
+            </h1>
+            <p className="font-serif text-on-surface-variant text-sm">
+              {mode === 'phone' ? 'We\'ll send a one-time password to your mobile' : mode === 'signin' ? 'Sign in to access your dashboard' : 'Join the official Power Plus portal'}
+            </p>
+          </div>
+
+          {/* Email/signup tabs — hide when in phone mode */}
+          {mode !== 'phone' && (
+            <div className="flex bg-slate-50 p-1.5 rounded-2xl mb-6 border border-slate-200">
+              <button
+                type="button"
+                onClick={() => switchMode('signin')}
+                className={`flex-1 py-3 px-4 rounded-xl font-sans font-bold transition-all ${mode === 'signin' ? 'bg-white shadow-sm text-primary' : 'text-slate-500 hover:text-primary'}`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => switchMode('signup')}
+                className={`flex-1 py-3 px-4 rounded-xl font-sans font-bold transition-all ${mode === 'signup' ? 'bg-white shadow-sm text-primary' : 'text-slate-500 hover:text-primary'}`}
+              >
+                Create Account
+              </button>
+            </div>
+          )}
+
+          {error && <p className="mb-4 text-sm font-sans font-semibold text-red-600">{error}</p>}
+          {info && <p className="mb-4 text-sm font-sans font-semibold text-emerald-700">{info}</p>}
+
+          {/* Social buttons — hide when in phone mode */}
+          {mode !== 'phone' && (
+            <>
+              <button
+                type="button"
+                onClick={handleGoogleAuth}
+                disabled={isSubmitting}
+                className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors mb-3 font-sans font-bold text-primary disabled:opacity-60"
+              >
+                <img
+                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuB2G12m3xsHHzz0Zs52jjHypEvXWHOgM1mdK3BDoO_xRmGaDgLoHRYsC_0oXdbaWKD4bv8C3k6dgMl9jME2LIPeu8Inrk_-oC5UQGdGCS5stwFL33m5DO_TEEEvRgqtaa38BEqN-E1F18lp2q4A0MDwQFtv_-Q3jlQZdes4eLG7JQnxZNacr1_lLGn9cNqJDsLy_2CBeZ4Ovx9yjwuryIKnj30lNniBxoH0wURjzpnyzFkXDgCw4uE00aVYSA6lHMI4h6p1701TvRBl"
+                  alt="Google"
+                  className="w-5 h-5"
+                />
+                Continue with Google
+              </button>
+
+              <button
+                type="button"
+                onClick={() => switchMode('phone')}
+                disabled={isSubmitting}
+                className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors mb-6 font-sans font-bold text-primary disabled:opacity-60"
+              >
+                <Icons.Phone className="w-5 h-5" />
+                Continue with Phone (OTP)
+              </button>
+
+              <div className="relative flex items-center mb-6">
+                <div className="flex-grow border-t border-slate-100" />
+                <span className="flex-shrink-0 mx-4 text-xs text-slate-400 font-sans font-bold uppercase tracking-widest">
+                  or continue with email
+                </span>
+                <div className="flex-grow border-t border-slate-100" />
+              </div>
+            </>
+          )}
+
+          {/* Email form */}
+          {mode !== 'phone' && (
+            <form onSubmit={handleEmailAuth} className="space-y-5">
+              {mode === 'signup' && (
+                <div>
+                  <label className="block font-sans font-bold text-primary text-sm mb-2">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Rajesh Patil"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all font-serif"
+                  />
+                </div>
+              )}
+              <div>
+                <label className="block font-sans font-bold text-primary text-sm mb-2">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="farmer@example.com"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all font-serif"
+                />
+              </div>
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block font-sans font-bold text-primary text-sm">Password</label>
+                  {mode === 'signin' && (
+                    <button type="button" onClick={handleForgotPassword} className="text-xs font-sans font-bold text-secondary hover:underline">
+                      Forgot Password?
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all font-serif"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-4 bg-primary text-white font-sans font-bold rounded-xl hover:shadow-xl transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {mode === 'signin' ? 'Sign In' : 'Create Account'} <Icons.ArrowRight className="w-5 h-5" />
+              </button>
+            </form>
+          )}
+
+          {/* Phone OTP form */}
+          {mode === 'phone' && (
+            <div className="space-y-5">
+              {/* invisible reCAPTCHA anchor */}
+              <div id="recaptcha-container" />
+
+              {phoneStep === 'number' ? (
+                <form onSubmit={handleSendOTP} className="space-y-5">
+                  <div>
+                    <label className="block font-sans font-bold text-primary text-sm mb-2">Mobile Number</label>
+                    <div className="flex gap-2">
+                      <span className="flex items-center px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 font-sans font-bold text-primary text-sm shrink-0">
+                        +91
+                      </span>
+                      <input
+                        type="tel"
+                        required
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                        placeholder="9876543210"
+                        maxLength={10}
+                        className="flex-1 px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all font-serif"
+                      />
+                    </div>
+                    <p className="mt-1.5 text-xs text-slate-400 font-sans">Enter 10-digit Indian mobile number</p>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || phone.replace(/\D/g, '').length < 10}
+                    className="w-full py-4 bg-primary text-white font-sans font-bold rounded-xl hover:shadow-xl transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {isSubmitting ? 'Sending…' : 'Send OTP'} <Icons.ArrowRight className="w-5 h-5" />
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleVerifyOTP} className="space-y-5">
+                  <div>
+                    <label className="block font-sans font-bold text-primary text-sm mb-2">Enter OTP</label>
+                    <input
+                      type="text"
+                      required
+                      inputMode="numeric"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="6-digit OTP"
+                      maxLength={6}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all font-serif tracking-[0.5em] text-center text-xl"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || otp.length < 6}
+                    className="w-full py-4 bg-primary text-white font-sans font-bold rounded-xl hover:shadow-xl transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {isSubmitting ? 'Verifying…' : 'Verify OTP'} <Icons.ArrowRight className="w-5 h-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setPhoneStep('number'); setOtp(''); setError(''); setInfo(''); }}
+                    className="w-full text-sm font-sans font-bold text-primary/60 hover:text-primary transition-colors"
+                  >
+                    ← Change number
+                  </button>
+                </form>
+              )}
+
+              <button
+                type="button"
+                onClick={() => switchMode('signin')}
+                className="w-full text-sm font-sans font-bold text-primary/60 hover:text-primary transition-colors pt-2"
+              >
+                Use email instead
+              </button>
+            </div>
+          )}
+
+          <div className="mt-6 text-center">
+            <Link to="/" className="text-xs font-sans font-bold text-primary/60 hover:text-primary transition-colors">
+              Back to home
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
