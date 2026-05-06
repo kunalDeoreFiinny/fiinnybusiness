@@ -70,6 +70,7 @@ const LoyaltyPage            = lazy(() => import('./pages/LoyaltyPage'));
 const CustomerFeedbackPage   = lazy(() => import('./pages/CustomerFeedbackPage'));
 const CustomerFeedbackSubmitPage = lazy(() => import('./pages/CustomerFeedbackSubmitPage'));
 const VCheckoutPage          = lazy(() => import('./pages/VCheckoutPage'));
+const KrishiDukanPage        = lazy(() => import('./pages/KrishiDukanPage'));
 
 // Full-page spinner shown while a lazy chunk is loading
 function PageLoader() {
@@ -169,6 +170,7 @@ function Layout({ children }: { children: React.ReactNode, currentTheme: 'light'
     { path: '/admin/invoice-settings', icon: <Palette size={17} />, label: 'Invoice Branding', screenKey: 'invoice_settings' },
     { path: '/admin/schema-builder', icon: <Database size={17} />, label: 'UI Layout Builder', screenKey: 'schema_builder' },
     { path: '/settings', icon: <Settings size={17} />, label: t('common.settings'), screenKey: 'settings' },
+    { path: '/krishidukan', icon: <Package size={17} />, label: '🌾 KrishiDukan', screenKey: 'krishidukan' },
   ].filter(item => {
     if (userRole && permissions && !permissions[userRole]?.[item.screenKey as AppScreen]) return false;
     return true;
@@ -458,6 +460,9 @@ function AppRoutes() {
       <Route path="/order-history" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="order_history"><OrderHistoryPage /></ProtectedRoute>} />
       <Route path="/online-orders" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="online_orders"><OnlineOrdersPage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute appScreen="settings"><SettingsPage /></ProtectedRoute>} />
+
+      {/* KrishiDukan marketplace module */}
+      <Route path="/krishidukan" element={<ProtectedRoute requireRole={['admin']} appScreen="krishidukan"><KrishiDukanPage /></ProtectedRoute>} />
 
       {/* Admin Routes */}
       <Route path="/admin" element={<ProtectedRoute requireRole={['admin']} appScreen="admin"><AdminPage /></ProtectedRoute>} />
