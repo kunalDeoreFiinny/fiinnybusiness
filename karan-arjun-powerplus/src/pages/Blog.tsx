@@ -53,7 +53,7 @@ export default function Blog() {
   }, []);
 
   return (
-    <div className="flex flex-col py-16 px-8 max-w-7xl mx-auto min-h-screen">
+    <div className="flex flex-col pt-32 pb-16 px-8 max-w-7xl mx-auto min-h-screen">
       <header className="text-center max-w-3xl mx-auto space-y-4 mb-16">
         <h1 className="font-sans text-[32px] md:text-5xl font-extrabold text-primary leading-tight">
           Agricultural Insights
