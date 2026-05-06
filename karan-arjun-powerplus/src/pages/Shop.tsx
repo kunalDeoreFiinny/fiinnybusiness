@@ -1,13 +1,43 @@
 import { motion } from 'motion/react';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
 import { Icons } from '../components/Icons';
 import { useCart } from '../context/CartContext';
-import { initialProducts } from '../data/mockData';
+import { db } from '../lib/firebase';
+import type { Product } from '../data/mockData';
 
 export default function Shop() {
   const { addToCart, setIsCheckoutOpen } = useCart();
-  const products = initialProducts;
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleAddToCart = (p: any) => {
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'products'), (snapshot) => {
+      const firestoreProducts: Product[] = snapshot.docs.map((docItem) => {
+        const data = docItem.data();
+        const numericPrice = Number(data.numericPrice ?? data.price ?? 0);
+        return {
+          id: docItem.id,
+          name: String(data.name ?? 'Untitled Product'),
+          desc: String(data.desc ?? ''),
+          numericPrice,
+          price:
+            typeof data.price === 'string' && data.price.includes('₹')
+              ? data.price
+              : `₹${numericPrice.toLocaleString('en-IN')}`,
+          image: String(data.image ?? '/bottle-1l-Photoroom.png'),
+          badge: data.badge ? String(data.badge) : undefined,
+          featured: Boolean(data.featured),
+        };
+      });
+      setProducts(firestoreProducts);
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleAddToCart = (p: Product) => {
     addToCart({
       id: p.id,
       name: p.name,
@@ -18,7 +48,7 @@ export default function Shop() {
     });
   };
 
-  const handleBuyNow = (p: any) => {
+  const handleBuyNow = (p: Product) => {
     handleAddToCart(p);
     setIsCheckoutOpen(true);
   };
@@ -37,6 +67,16 @@ export default function Shop() {
           Choose the perfect size for your agricultural needs. Formulated with scientifically balanced micro-nutrients for optimal yield.
         </p>
       </header>
+
+      {isLoading && (
+        <div className="text-center mb-8 text-primary/70 font-sans font-semibold">Loading products...</div>
+      )}
+
+      {!isLoading && products.length === 0 && (
+        <div className="text-center mb-8 text-primary/70 font-sans font-semibold">
+          No products are published yet.
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10 mb-20 relative z-10">
         {products.map((p) => (

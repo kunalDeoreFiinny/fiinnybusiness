@@ -3,11 +3,13 @@ import { Icons } from './Icons';
 import { motion } from 'motion/react';
 import { useState, useRef, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { itemCount, setIsCartOpen } = useCart();
+  const { user, profile, signOutUser } = useAuth();
 
   const links = [
     { name: 'Product', href: '/' },
@@ -55,9 +57,35 @@ export default function Navbar() {
               </span>
             )}
           </button>
-          <Link to="/profile" className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-300 p-2 rounded-full hidden sm:block">
-            <Icons.User className="w-6 h-6" />
-          </Link>
+          {profile?.role === 'admin' && (
+            <Link
+              to="/admin"
+              className="hidden md:flex items-center px-3 py-2 rounded-full bg-white/10 text-white text-xs font-sans font-bold hover:bg-white/20 transition-colors"
+            >
+              Admin
+            </Link>
+          )}
+          {user ? (
+            <>
+              <Link to={profile?.role === 'admin' ? '/admin' : '/profile'} className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-300 p-2 rounded-full hidden sm:block">
+                <Icons.User className="w-6 h-6" />
+              </Link>
+              <button
+                onClick={() => void signOutUser()}
+                className="text-white/70 hover:text-white hover:bg-white/10 transition-all duration-300 p-2 rounded-full hidden sm:block"
+                title="Sign out"
+              >
+                <Icons.LogOut className="w-5 h-5" />
+              </button>
+            </>
+          ) : (
+            <Link
+              to="/auth"
+              className="hidden sm:flex items-center px-3 py-2 rounded-full bg-white/10 text-white text-xs font-sans font-bold hover:bg-white/20 transition-colors"
+            >
+              Login
+            </Link>
+          )}
           <a 
             href="https://wa.me/919307199040" 
             target="_blank"
@@ -95,17 +123,55 @@ export default function Navbar() {
               {link.name}
             </Link>
           ))}
-          <Link
-            to="/profile"
-            onClick={() => setIsMenuOpen(false)}
-            className={`px-4 py-3 rounded-xl font-sans font-medium text-base flex items-center gap-2 ${
-              location.pathname === '/profile'
-                ? 'bg-primary/5 text-primary font-bold'
-                : 'text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            <Icons.User className="w-5 h-5" /> Profile Dashboard
-          </Link>
+          {user ? (
+            <Link
+              to={profile?.role === 'admin' ? '/admin' : '/profile'}
+              onClick={() => setIsMenuOpen(false)}
+              className={`px-4 py-3 rounded-xl font-sans font-medium text-base flex items-center gap-2 ${
+                (location.pathname === '/profile' || location.pathname.startsWith('/admin'))
+                  ? 'bg-primary/5 text-primary font-bold'
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <Icons.User className="w-5 h-5" /> {profile?.role === 'admin' ? 'Admin Dashboard' : 'Profile Dashboard'}
+            </Link>
+          ) : (
+            <Link
+              to="/auth"
+              onClick={() => setIsMenuOpen(false)}
+              className={`px-4 py-3 rounded-xl font-sans font-medium text-base flex items-center gap-2 ${
+                location.pathname === '/auth'
+                  ? 'bg-primary/5 text-primary font-bold'
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <Icons.Lock className="w-5 h-5" /> Login
+            </Link>
+          )}
+          {profile?.role === 'admin' && (
+            <Link
+              to="/admin"
+              onClick={() => setIsMenuOpen(false)}
+              className={`px-4 py-3 rounded-xl font-sans font-medium text-base flex items-center gap-2 ${
+                location.pathname.startsWith('/admin')
+                  ? 'bg-primary/5 text-primary font-bold'
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <Icons.LayoutDashboard className="w-5 h-5" /> Admin
+            </Link>
+          )}
+          {user && (
+            <button
+              onClick={() => {
+                void signOutUser();
+                setIsMenuOpen(false);
+              }}
+              className="px-4 py-3 rounded-xl font-sans font-medium text-base flex items-center gap-2 text-slate-600 hover:bg-slate-50"
+            >
+              <Icons.LogOut className="w-5 h-5" /> Logout
+            </button>
+          )}
           
           <div className="mt-2 pt-2 border-t border-slate-100 px-2 pb-2">
             <a 

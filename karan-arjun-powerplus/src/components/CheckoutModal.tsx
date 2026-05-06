@@ -1,29 +1,63 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import { db } from '../lib/firebase';
 import { Icons } from './Icons';
 
 export function CheckoutModal() {
   const { isCheckoutOpen, setIsCheckoutOpen, items, cartTotal, clearCart } = useCart();
+  const { user, profile } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError('');
+
+    if (!user) {
+      setError('Please sign in before placing your order.');
+      return;
+    }
+
     setIsSubmitting(true);
-    
-    // Mock API call
-    setTimeout(() => {
+    const formData = new FormData(e.currentTarget);
+
+    try {
+      await addDoc(collection(db, 'orders'), {
+        uid: user.uid,
+        customerName: String(formData.get('fullName') ?? ''),
+        customerPhone: String(formData.get('phone') ?? ''),
+        state: String(formData.get('state') ?? ''),
+        district: String(formData.get('district') ?? ''),
+        address: String(formData.get('address') ?? ''),
+        pinCode: String(formData.get('pinCode') ?? ''),
+        items: items.map((item) => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+        })),
+        totalAmount: cartTotal,
+        status: 'Placed',
+        customerEmail: profile?.email ?? user.email ?? '',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
       setIsSubmitting(false);
       setIsSuccess(true);
-      
-      // Close and reset after 3 seconds
+
       setTimeout(() => {
         setIsSuccess(false);
         setIsCheckoutOpen(false);
         clearCart();
       }, 3000);
-    }, 1500);
+    } catch (err) {
+      setIsSubmitting(false);
+      setError(err instanceof Error ? err.message : 'Failed to place order.');
+    }
   };
 
   const closeCheckout = () => {
@@ -69,40 +103,48 @@ export function CheckoutModal() {
                     </button>
                   </div>
                   
-                  <form id="checkout-form" onSubmit={handleSubmit} className="space-y-5">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      <div className="space-y-1">
-                        <label className="text-sm font-semibold text-primary/80 font-sans">Full Name *</label>
-                        <input required type="text" className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 font-sans" placeholder="Rajesh Patil" />
+                    <form id="checkout-form" onSubmit={handleSubmit} className="space-y-5">
+                      {error && <p className="text-sm font-sans font-semibold text-red-600">{error}</p>}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div className="space-y-1">
+                          <label className="text-sm font-semibold text-primary/80 font-sans">Full Name *</label>
+                          <input
+                            required
+                            name="fullName"
+                            type="text"
+                            defaultValue={profile?.name ?? ''}
+                            className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 font-sans"
+                            placeholder="Rajesh Patil"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-sm font-semibold text-primary/80 font-sans">Phone Number *</label>
+                          <input required name="phone" type="tel" className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 font-sans" placeholder="+91 98765 43210" />
+                        </div>
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-sm font-semibold text-primary/80 font-sans">Phone Number *</label>
-                        <input required type="tel" className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 font-sans" placeholder="+91 98765 43210" />
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div className="space-y-1">
+                          <label className="text-sm font-semibold text-primary/80 font-sans">State *</label>
+                          <input required name="state" type="text" className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 font-sans" placeholder="Maharashtra" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-sm font-semibold text-primary/80 font-sans">District *</label>
+                          <input required name="district" type="text" className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 font-sans" placeholder="Nashik" />
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      <div className="space-y-1">
-                        <label className="text-sm font-semibold text-primary/80 font-sans">State *</label>
-                        <input required type="text" className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 font-sans" placeholder="Maharashtra" />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-sm font-semibold text-primary/80 font-sans">District *</label>
-                        <input required type="text" className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 font-sans" placeholder="Nashik" />
-                      </div>
-                    </div>
 
-                    <div className="space-y-1">
-                      <label className="text-sm font-semibold text-primary/80 font-sans">Complete Address *</label>
-                      <textarea required rows={3} className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 font-sans resize-none" placeholder="House/Flat No., Street, Village/Town..."></textarea>
-                    </div>
+                      <div className="space-y-1">
+                        <label className="text-sm font-semibold text-primary/80 font-sans">Complete Address *</label>
+                        <textarea required name="address" rows={3} className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 font-sans resize-none" placeholder="House/Flat No., Street, Village/Town..." />
+                      </div>
 
-                    <div className="space-y-1 w-full md:w-1/2 pr-0 md:pr-2.5">
-                      <label className="text-sm font-semibold text-primary/80 font-sans">PIN Code *</label>
-                      <input required type="text" className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 font-sans" placeholder="414402" />
-                    </div>
-                  </form>
-                </div>
+                      <div className="space-y-1 w-full md:w-1/2 pr-0 md:pr-2.5">
+                        <label className="text-sm font-semibold text-primary/80 font-sans">PIN Code *</label>
+                        <input required name="pinCode" type="text" className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 font-sans" placeholder="414402" />
+                      </div>
+                    </form>
+                  </div>
 
                 {/* Summary Section */}
                 <div className="w-full md:w-[350px] bg-surface-container p-8 md:p-10 flex flex-col border-t md:border-t-0 md:border-l border-primary/10">
