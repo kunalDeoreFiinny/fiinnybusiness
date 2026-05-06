@@ -348,10 +348,15 @@ export default function Home() {
                 </div>
                 <h3 className="font-sans text-3xl md:text-4xl font-extrabold text-white mb-4 leading-tight">Ready to Transform Your Yield?</h3>
                 <p className="text-white/80 mb-8 font-serif text-lg">Join 75,800+ successful farmers who have upgraded to Power Plus™ and seen massive improvements in sweetness and quality.</p>
-                <button className="bg-secondary-container text-on-secondary-container px-8 py-4 rounded-xl font-sans font-bold hover:bg-white transition-colors inline-flex items-center space-x-2 shadow-xl">
+                <a
+                  href="https://wa.me/919307199040"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-secondary-container text-on-secondary-container px-8 py-4 rounded-xl font-sans font-bold hover:bg-white transition-colors inline-flex items-center space-x-2 shadow-xl"
+                >
                   <span>Get a Free Consultation</span>
                   <Icons.ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </button>
+                </a>
               </div>
               <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/4 w-96 h-96 bg-secondary/20 rounded-full blur-3xl mix-blend-overlay"></div>
               <Icons.Sprout className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/4 w-80 h-80 text-white/5 group-hover:rotate-12 transition-transform duration-700" />
