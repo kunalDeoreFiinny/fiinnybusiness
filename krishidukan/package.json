@@ -1,0 +1,25 @@
+{
+  "name": "krishidukan",
+  "private": true,
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "db:migrate": "pnpm --filter @krishidukan/api prisma migrate dev",
+    "db:seed": "pnpm --filter @krishidukan/api prisma db seed",
+    "db:studio": "pnpm --filter @krishidukan/api prisma studio",
+    "db:reset": "pnpm --filter @krishidukan/api prisma migrate reset"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "typescript": "^5.6.2",
+    "@types/node": "^22.7.5",
+    "eslint": "^9.11.1",
+    "prettier": "^3.3.3"
+  },
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}
