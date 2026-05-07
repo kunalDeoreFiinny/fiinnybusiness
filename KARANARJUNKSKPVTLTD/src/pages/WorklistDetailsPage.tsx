@@ -103,6 +103,8 @@ export default function WorklistDetailsPage() {
 
     // Quick-update inline payment notes per order
     const [orderNotes, setOrderNotes] = useState<Record<string, string>>({});
+    // Quick-update inline due dates per order
+    const [orderDueDates, setOrderDueDates] = useState<Record<string, string>>({});
 
     // New Note Form States
     const [newNoteTalkedTo, setNewNoteTalkedTo] = useState('');
@@ -845,7 +847,7 @@ export default function WorklistDetailsPage() {
                                     <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1080px' }}>
                                         <thead>
                                             <tr style={{ background: 'var(--surface-raised)' }}>
-                                                {['Order No', 'Type', 'Order Status', 'Payment', 'Mode', 'Items', 'Amount', 'Outstanding', 'Credit Days', 'Date', 'Remarks', 'Actions'].map(h => (
+                                                {['Order No', 'Type', 'Order Status', 'Payment', 'Mode', 'Items', 'Amount', 'Outstanding', 'Due Date', 'Date', 'Remarks', 'Actions'].map(h => (
                                                     <th key={h} style={{
                                                         position: 'sticky', top: 0, zIndex: 5,
                                                         padding: '0.6rem 0.75rem',
@@ -876,8 +878,6 @@ export default function WorklistDetailsPage() {
                                                 const date = so.createdAt?.toDate
                                                     ? new Date(so.createdAt.toDate()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' })
                                                     : '—';
-                                                const creditMatch = (so.modeOfPayment as string | undefined)?.match(/^(\d+)\s*Days?$/i);
-                                                const creditDays = creditMatch ? `${creditMatch[1]}d` : '—';
                                                 const rowBg = idx % 2 === 0 ? 'transparent' : 'hsla(0,0%,100%,0.018)';
                                                 const cellStyle: React.CSSProperties = {
                                                     padding: '0.55rem 0.75rem',
@@ -967,10 +967,8 @@ export default function WorklistDetailsPage() {
                                                                 <option value="Cash">Cash</option>
                                                                 <option value="UPI">UPI</option>
                                                                 <option value="Cheque">Cheque</option>
-                                                                <option value="15 Days">15 Days</option>
-                                                                <option value="30 Days">30 Days</option>
-                                                                <option value="45 Days">45 Days</option>
                                                                 <option value="Credit">Credit</option>
+                                                                <option value="Bank Transfer">Bank Transfer</option>
                                                             </select>
                                                         </td>
 
@@ -998,9 +996,34 @@ export default function WorklistDetailsPage() {
                                                             }
                                                         </td>
 
-                                                        {/* Credit Days */}
-                                                        <td style={{ ...cellStyle, textAlign: 'center', color: creditDays === '—' ? 'var(--text-tertiary)' : 'var(--secondary)', fontWeight: creditDays === '—' ? 400 : 600, fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                                                            {creditDays}
+                                                        {/* Due Date */}
+                                                        <td style={{ ...cellStyle, minWidth: '140px' }}>
+                                                            <input
+                                                                type="date"
+                                                                value={orderDueDates[so.id] ?? (so.dueDate || '')}
+                                                                onChange={async e => {
+                                                                    const val = e.target.value;
+                                                                    setOrderDueDates(prev => ({ ...prev, [so.id]: val }));
+                                                                    if (!tenantId) return;
+                                                                    await updateDoc(getTenantDoc(db, tenantId, 'salesOrders', so.id), { dueDate: val });
+                                                                }}
+                                                                style={{
+                                                                    width: '100%', fontSize: '0.72rem', padding: '0.2rem 0.35rem',
+                                                                    borderRadius: '6px', border: '1px solid var(--surface-border)',
+                                                                    background: 'var(--surface-raised)', color: 'var(--text-primary)', cursor: 'pointer',
+                                                                }}
+                                                            />
+                                                            {(() => {
+                                                                const ds = orderDueDates[so.id] ?? so.dueDate;
+                                                                if (!ds) return null;
+                                                                const due = new Date(ds);
+                                                                if (isNaN(due.getTime())) return null;
+                                                                const today = new Date(); today.setHours(0, 0, 0, 0);
+                                                                const diff = Math.round((due.getTime() - today.getTime()) / 864e5);
+                                                                const label = diff === 0 ? 'Due Today' : diff < 0 ? `Overdue ${Math.abs(diff)}d` : `Due in ${diff}d`;
+                                                                const c = diff < 0 ? '#ef4444' : diff <= 3 ? '#f59e0b' : '#10b981';
+                                                                return <span style={{ display: 'block', marginTop: '0.2rem', fontSize: '0.67rem', fontWeight: 700, color: c }}>{label}</span>;
+                                                            })()}
                                                         </td>
 
                                                         {/* Date */}
@@ -1033,7 +1056,6 @@ export default function WorklistDetailsPage() {
                                                                     style={{ fontSize: '0.7rem', padding: '0.22rem 0.55rem' }}
                                                                     onClick={async () => {
                                                                         await updateDoc(getTenantDoc(db, tenantId!, 'salesOrders', so.id), {
-                                                                            paymentDate: so.paymentDate ?? '',
                                                                             paymentNotes: orderNotes[so.id] ?? so.paymentNotes ?? '',
                                                                         });
                                                                     }}

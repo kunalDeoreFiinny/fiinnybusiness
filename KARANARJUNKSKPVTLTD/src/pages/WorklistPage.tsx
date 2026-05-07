@@ -222,21 +222,24 @@ function PartnersTab() {
 
                             const salesOrdersQ = query(getTenantCollection(db, tenantId, 'salesOrders'), where('retailerId', '==', r.id));
                             const salesOrdersSnap = await getDocs(salesOrdersQ);
-                            const salesOrders = salesOrdersSnap.docs.map(doc => doc.data() as { status?: string; paymentStatus?: string; modeOfPayment?: string });
+                            const salesOrders = salesOrdersSnap.docs.map(doc => doc.data() as { status?: string; paymentStatus?: string; dueDate?: string });
 
                             const hasPendingPos = orders.some(o => !o.isDelivered);
                             const hasPendingB2b = salesOrders.some(so => so.status === 'pending');
                             const isBrandNew = orders.length === 0 && salesOrders.length === 0;
                             const hasPending = isBrandNew || hasPendingPos || hasPendingB2b;
 
+                            const today = new Date(); today.setHours(0, 0, 0, 0);
                             const pendingSOs = salesOrders.filter(so => so.paymentStatus?.toLowerCase() !== 'paid');
-                            const creditDayValues = pendingSOs
-                                .map(so => {
-                                    const m = (so.modeOfPayment || '').match(/^(\d+)\s*Days?$/i);
-                                    return m ? parseInt(m[1], 10) : null;
-                                })
-                                .filter((v): v is number => v !== null);
-                            const closestCreditDays: number | null = creditDayValues.length > 0 ? Math.min(...creditDayValues) : null;
+                            const dueDates = pendingSOs
+                                .map(so => so.dueDate ? new Date(so.dueDate) : null)
+                                .filter((d): d is Date => d !== null && !isNaN(d.getTime()));
+                            const nearestDue = dueDates.length > 0
+                                ? dueDates.sort((a, b) => a.getTime() - b.getTime())[0]
+                                : null;
+                            const closestCreditDays: number | null = nearestDue !== null
+                                ? Math.round((nearestDue.getTime() - today.getTime()) / 864e5)
+                                : null;
 
                             return { ...r, hasPendingOrders: hasPending, closestCreditDays } as Retailer;
                         })
@@ -508,12 +511,16 @@ function PartnersTab() {
                         onSelectionChange={handleSelectionChange}
                         actionsRef={(row) => {
                             const cd = (row as Retailer).closestCreditDays ?? null;
-                            const color = cd === null ? '' : cd <= 7 ? '#ef4444' : cd <= 30 ? '#f59e0b' : '#10b981';
+                            const label = cd === null ? null
+                                : cd === 0 ? 'Due Today'
+                                : cd < 0 ? `Overdue ${Math.abs(cd)}d`
+                                : `Due in ${cd}d`;
+                            const color = cd === null ? '' : cd < 0 ? '#ef4444' : cd <= 3 ? '#f59e0b' : '#10b981';
                             return (
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                                    {cd !== null ? (
-                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '10px', background: `${color}18`, color, border: `1px solid ${color}44`, whiteSpace: 'nowrap' }}>
-                                            <Clock size={11} /> {cd}d
+                                    {label !== null ? (
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.72rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '10px', background: `${color}18`, color, border: `1px solid ${color}44`, whiteSpace: 'nowrap' }}>
+                                            <Clock size={11} /> {label}
                                         </span>
                                     ) : (
                                         <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>—</span>
@@ -542,10 +549,12 @@ function PartnersTab() {
 
 function ReminderModal({ entries, onClose }: { entries: ReminderEntry[]; onClose: () => void }) {
     const generateText = (e: ReminderEntry) => {
-        const creditLine = e.closestCreditDays != null
-            ? ` Credit period closing in ${e.closestCreditDays} day${e.closestCreditDays !== 1 ? 's' : ''}.`
-            : '';
-        return `Dear ${e.name},\n\nThis is a payment reminder from KaranArjun KSK.\n\nYou have ${e.pendingOrderCount} pending order${e.pendingOrderCount !== 1 ? 's' : ''} with a total outstanding of ₹${e.pendingAmount.toLocaleString('en-IN')}.${creditLine}\n\nPlease arrange payment at the earliest convenience.\n\nRegards,\nKaranArjun KSK`;
+        const cd = e.closestCreditDays;
+        const dueLine = cd == null ? ''
+            : cd === 0 ? ' Your payment is due today.'
+            : cd < 0 ? ` Your payment is overdue by ${Math.abs(cd)} day${Math.abs(cd) !== 1 ? 's' : ''}.`
+            : ` Payment due in ${cd} day${cd !== 1 ? 's' : ''}.`;
+        return `Dear ${e.name},\n\nThis is a payment reminder from KaranArjun KSK.\n\nYou have ${e.pendingOrderCount} pending order${e.pendingOrderCount !== 1 ? 's' : ''} with a total outstanding of ₹${e.pendingAmount.toLocaleString('en-IN')}.${dueLine}\n\nPlease arrange payment at the earliest convenience.\n\nRegards,\nKaranArjun KSK`;
     };
 
     const copy = (text: string) =>
