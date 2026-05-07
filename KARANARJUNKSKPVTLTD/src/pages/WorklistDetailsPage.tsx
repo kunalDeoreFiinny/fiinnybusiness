@@ -100,7 +100,6 @@ export default function WorklistDetailsPage() {
 
     // Advanced Order Form States
     const [dbProducts, setDbProducts] = useState<any[]>([]);
-    const [newOrderProductId, setNewOrderProductId] = useState<string>('');
 
     // Quick-update inline payment notes per order
     const [orderNotes, setOrderNotes] = useState<Record<string, string>>({});
@@ -130,42 +129,56 @@ export default function WorklistDetailsPage() {
         fetchRetailer();
 
         // Fetch Products
-        const unsubProducts = onSnapshot(getTenantCollection(db, tenantId!, 'products'), (snap) => {
-            const p = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setDbProducts(p);
-            if (p.length > 0 && !newOrderProductId) {
-                setNewOrderProductId(p[0].id);
-            }
-        });
+        const unsubProducts = onSnapshot(
+            getTenantCollection(db, tenantId!, 'products'),
+            (snap) => { setDbProducts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))); },
+            (err) => console.error('Products listener error:', err)
+        );
 
         // Real-time listeners for subcollections
         const tasksQuery = query(getTenantCollection(db, tenantId!, 'retailers', id, 'tasks'), orderBy('createdAt', 'desc'));
-        const unsubTasks = onSnapshot(tasksQuery, (snap) => {
-            setTasks(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task)));
-        });
+        const unsubTasks = onSnapshot(
+            tasksQuery,
+            (snap) => { setTasks(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task))); },
+            (err) => console.error('Tasks listener error:', err)
+        );
 
         const notesQuery = query(getTenantCollection(db, tenantId!, 'retailers', id, 'notes'), orderBy('createdAt', 'desc'));
-        const unsubNotes = onSnapshot(notesQuery, (snap) => {
-            setNoteData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Note)));
-        });
+        const unsubNotes = onSnapshot(
+            notesQuery,
+            (snap) => { setNoteData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Note))); },
+            (err) => console.error('Notes listener error:', err)
+        );
 
+        // orderBy removed — composite index not available; sort client-side instead
         const ordersQuery = query(
             getTenantCollection(db, tid, 'orders'),
-            where('retailerId', '==', id),
-            orderBy('createdAt', 'desc')
+            where('retailerId', '==', id)
         );
-        const unsubOrders = onSnapshot(ordersQuery, (snap) => {
-            setOrders(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order)));
-        });
+        const unsubOrders = onSnapshot(
+            ordersQuery,
+            (snap) => {
+                const docs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+                docs.sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
+                setOrders(docs);
+            },
+            (err) => console.error('Orders listener error:', err)
+        );
 
         const salesOrdersQuery = query(
             getTenantCollection(db, tid, 'salesOrders'),
-            where('retailerId', '==', id),
-            orderBy('createdAt', 'desc')
+            where('retailerId', '==', id)
         );
-        const unsubSalesOrders = onSnapshot(salesOrdersQuery, (snap) => {
-            setSalesOrders(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        });
+        const unsubSalesOrders = onSnapshot(
+            salesOrdersQuery,
+            (snap) => {
+                type SODoc = { id: string; createdAt?: { seconds?: number }; [key: string]: unknown };
+                const docs: SODoc[] = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SODoc));
+                docs.sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
+                setSalesOrders(docs);
+            },
+            (err) => console.error('SalesOrders listener error:', err)
+        );
 
         return () => {
             unsubTasks();
@@ -174,7 +187,7 @@ export default function WorklistDetailsPage() {
             unsubSalesOrders();
             unsubProducts();
         };
-    }, [id]);
+    }, [id, tenantId]);
 
     const handleWhatsApp = () => {
         if (!retailer?.number) return;
@@ -973,11 +986,15 @@ export default function WorklistDetailsPage() {
                                                             </span>
                                                         </td>
 
-                                                        {/* Outstanding */}
+                                                        {/* Outstanding — paymentStatus is the source of truth */}
                                                         <td style={{ ...cellStyle, whiteSpace: 'nowrap' }}>
-                                                            {outstanding > 0
-                                                                ? <span style={{ fontWeight: 600, color: '#ef4444', fontSize: '0.8rem' }}>₹{outstanding.toLocaleString()}</span>
-                                                                : <span style={{ color: '#10b981', fontWeight: 600, fontSize: '0.78rem' }}>✓ Clear</span>
+                                                            {grandTotal === 0
+                                                                ? <span style={{ color: 'var(--text-tertiary)', fontSize: '0.78rem' }}>—</span>
+                                                                : so.paymentStatus === 'Paid'
+                                                                    ? <span style={{ color: '#10b981', fontWeight: 600, fontSize: '0.78rem' }}>✓ Clear</span>
+                                                                    : outstanding > 0
+                                                                        ? <span style={{ fontWeight: 600, color: '#ef4444', fontSize: '0.8rem' }}>₹{outstanding.toLocaleString()}</span>
+                                                                        : <span style={{ fontWeight: 600, color: '#f59e0b', fontSize: '0.78rem' }}>Pending</span>
                                                             }
                                                         </td>
 
