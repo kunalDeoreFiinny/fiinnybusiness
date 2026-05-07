@@ -66,24 +66,24 @@ function razorpayRequest(
 }
 
 // Step 1: Create a Razorpay order server-side so amount cannot be tampered with
-export const createRazorpayOrder = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
+export const createRazorpayOrder = functions.https.onCall(async (request) => {
+  if (!request.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Sign in to continue.');
   }
 
-  const { items } = data as { items: CartItem[] };
+  const { items } = (request.data ?? {}) as { items: CartItem[] };
   if (!Array.isArray(items) || items.length === 0) {
     throw new functions.https.HttpsError('invalid-argument', 'Cart is empty.');
   }
 
-  const keyId: string = functions.config().razorpay?.key_id ?? process.env.RAZORPAY_KEY_ID ?? '';
-  const keySecret: string = functions.config().razorpay?.key_secret ?? process.env.RAZORPAY_KEY_SECRET ?? '';
+  const keyId     = process.env.RAZORPAY_KEY_ID     ?? '';
+  const keySecret = process.env.RAZORPAY_KEY_SECRET ?? '';
 
   if (!keyId || !keySecret) {
     throw new functions.https.HttpsError('internal', 'Payment service not configured.');
   }
 
-  // Fetch authoritative prices from Firestore — do NOT trust client-supplied amounts
+  // Fetch authoritative prices from Firestore — never trust client-supplied amounts
   let totalAmount = 0;
   const verifiedItems: Array<{ id: string; name: string; price: number; quantity: number }> = [];
 
@@ -93,14 +93,14 @@ export const createRazorpayOrder = functions.https.onCall(async (data, context) 
       throw new functions.https.HttpsError('not-found', `Product not found: ${item.id}`);
     }
     const product = productSnap.data()!;
-    const price = Number(product.numericPrice ?? 0);
-    const qty = Math.max(1, Math.floor(Number(item.quantity)));
-    totalAmount += price * qty;
+    const price   = Number(product.numericPrice ?? 0);
+    const qty     = Math.max(1, Math.floor(Number(item.quantity)));
+    totalAmount  += price * qty;
     verifiedItems.push({ id: item.id, name: String(product.name), price, quantity: qty });
   }
 
-  const receipt = `ppw_${context.auth.uid.slice(0, 8)}_${Date.now()}`;
-  const order = await razorpayRequest(
+  const receipt = `ppw_${request.auth.uid.slice(0, 8)}_${Date.now()}`;
+  const order   = await razorpayRequest(
     'POST',
     '/v1/orders',
     { amount: Math.round(totalAmount * 100), currency: 'INR', receipt },
@@ -115,9 +115,9 @@ export const createRazorpayOrder = functions.https.onCall(async (data, context) 
   };
 });
 
-// Step 2: Verify Razorpay signature and create order in Firestore
-export const verifyAndSaveOrder = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
+// Step 2: Verify Razorpay HMAC signature and save order to Firestore
+export const verifyAndSaveOrder = functions.https.onCall(async (request) => {
+  if (!request.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Sign in to continue.');
   }
 
@@ -129,22 +129,22 @@ export const verifyAndSaveOrder = functions.https.onCall(async (data, context) =
     items,
     totalAmount,
     customerEmail,
-  } = data as {
+  } = (request.data ?? {}) as {
     razorpay_payment_id: string;
-    razorpay_order_id: string;
-    razorpay_signature: string;
-    delivery: DeliveryDetails;
-    items: Array<{ id: string; name: string; price: number; quantity: number }>;
-    totalAmount: number;
-    customerEmail: string;
+    razorpay_order_id:   string;
+    razorpay_signature:  string;
+    delivery:            DeliveryDetails;
+    items:               Array<{ id: string; name: string; price: number; quantity: number }>;
+    totalAmount:         number;
+    customerEmail:       string;
   };
 
-  const keySecret: string = functions.config().razorpay?.key_secret ?? process.env.RAZORPAY_KEY_SECRET ?? '';
+  const keySecret = process.env.RAZORPAY_KEY_SECRET ?? '';
   if (!keySecret) {
     throw new functions.https.HttpsError('internal', 'Payment service not configured.');
   }
 
-  // Cryptographic verification — payment cannot be faked
+  // Cryptographic check — this is mathematically impossible to fake without the secret key
   const expectedSig = crypto
     .createHmac('sha256', keySecret)
     .update(`${razorpay_order_id}|${razorpay_payment_id}`)
@@ -154,24 +154,24 @@ export const verifyAndSaveOrder = functions.https.onCall(async (data, context) =
     throw new functions.https.HttpsError('invalid-argument', 'Payment verification failed. Contact support.');
   }
 
-  // Write order using admin SDK (bypasses Firestore rules — only this function can create orders)
+  // Admin SDK bypasses Firestore rules — only this function can create orders
   const orderRef = await db.collection('orders').add({
-    uid: context.auth.uid,
-    customerName: delivery.fullName,
-    customerPhone: delivery.phone,
-    state: delivery.state,
-    district: delivery.district,
-    address: delivery.address,
-    pinCode: delivery.pinCode,
+    uid:              request.auth.uid,
+    customerName:     delivery.fullName,
+    customerPhone:    delivery.phone,
+    state:            delivery.state,
+    district:         delivery.district,
+    address:          delivery.address,
+    pinCode:          delivery.pinCode,
     customerEmail,
     items,
     totalAmount,
-    status: 'Paid',
-    paymentStatus: 'paid',
+    status:           'Paid',
+    paymentStatus:    'paid',
     razorpayPaymentId: razorpay_payment_id,
-    razorpayOrderId: razorpay_order_id,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    razorpayOrderId:   razorpay_order_id,
+    createdAt:        admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt:        admin.firestore.FieldValue.serverTimestamp(),
   });
 
   return { success: true, orderId: orderRef.id };

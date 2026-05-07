@@ -30,50 +30,50 @@ export function CheckoutModal() {
     const fd = new FormData(e.currentTarget);
     const delivery = {
       fullName: String(fd.get('fullName') ?? ''),
-      phone: String(fd.get('phone') ?? ''),
-      state: String(fd.get('state') ?? ''),
+      phone:    String(fd.get('phone') ?? ''),
+      state:    String(fd.get('state') ?? ''),
       district: String(fd.get('district') ?? ''),
-      address: String(fd.get('address') ?? ''),
-      pinCode: String(fd.get('pinCode') ?? ''),
+      address:  String(fd.get('address') ?? ''),
+      pinCode:  String(fd.get('pinCode') ?? ''),
     };
 
     setIsSubmitting(true);
 
     const rzp = new window.Razorpay({
-      key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-      amount: Math.round(cartTotal * 100),
-      currency: 'INR',
-      name: 'Power Plus™',
+      key:         import.meta.env.VITE_RAZORPAY_KEY_ID,
+      amount:      Math.round(cartTotal * 100),
+      currency:    'INR',
+      name:        'Power Plus™',
       description: `Order — ${items.length} item${items.length !== 1 ? 's' : ''}`,
       prefill: {
-        name: delivery.fullName,
-        email: profile?.email ?? user.email ?? '',
+        name:    delivery.fullName,
+        email:   profile?.email ?? user.email ?? '',
         contact: delivery.phone,
       },
       theme: { color: '#1d3d6b' },
       handler: async (response) => {
         try {
           await addDoc(collection(db, 'orders'), {
-            uid: user.uid,
-            customerName: delivery.fullName,
-            customerPhone: delivery.phone,
-            state: delivery.state,
-            district: delivery.district,
-            address: delivery.address,
-            pinCode: delivery.pinCode,
-            customerEmail: profile?.email ?? user.email ?? '',
+            uid:               user.uid,
+            customerName:      delivery.fullName,
+            customerPhone:     delivery.phone,
+            state:             delivery.state,
+            district:          delivery.district,
+            address:           delivery.address,
+            pinCode:           delivery.pinCode,
+            customerEmail:     profile?.email ?? user.email ?? '',
             items: items.map((item) => ({
-              id: item.id,
-              name: item.name,
-              price: item.price,
+              id:       item.id,
+              name:     item.name,
+              price:    item.price,
               quantity: item.quantity,
             })),
-            totalAmount: cartTotal,
-            status: 'Paid',
-            paymentStatus: 'paid',
+            totalAmount:       cartTotal,
+            status:            'Paid',
+            paymentStatus:     'paid',
             razorpayPaymentId: response.razorpay_payment_id,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
+            createdAt:         serverTimestamp(),
+            updatedAt:         serverTimestamp(),
           });
           setIsSubmitting(false);
           setIsSuccess(true);
@@ -138,7 +138,6 @@ export function CheckoutModal() {
               </div>
             ) : (
               <>
-                {/* Form Section */}
                 <div className="flex-1 p-8 md:p-10 overflow-y-auto">
                   <div className="flex justify-between items-center mb-8">
                     <h2 className="text-2xl font-bold font-sans text-primary">Delivery Details</h2>
@@ -157,9 +156,7 @@ export function CheckoutModal() {
                       <div className="space-y-1">
                         <label className="text-sm font-semibold text-primary/80 font-sans">Full Name *</label>
                         <input
-                          required
-                          name="fullName"
-                          type="text"
+                          required name="fullName" type="text"
                           defaultValue={profile?.name ?? ''}
                           className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 font-sans"
                           placeholder="Rajesh Patil"
@@ -168,9 +165,7 @@ export function CheckoutModal() {
                       <div className="space-y-1">
                         <label className="text-sm font-semibold text-primary/80 font-sans">Phone Number *</label>
                         <input
-                          required
-                          name="phone"
-                          type="tel"
+                          required name="phone" type="tel"
                           defaultValue={profile?.phone ?? ''}
                           className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 font-sans"
                           placeholder="+91 98765 43210"
@@ -182,9 +177,7 @@ export function CheckoutModal() {
                       <div className="space-y-1">
                         <label className="text-sm font-semibold text-primary/80 font-sans">State *</label>
                         <input
-                          required
-                          name="state"
-                          type="text"
+                          required name="state" type="text"
                           defaultValue={profile?.state ?? ''}
                           className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 font-sans"
                           placeholder="Maharashtra"
@@ -193,9 +186,7 @@ export function CheckoutModal() {
                       <div className="space-y-1">
                         <label className="text-sm font-semibold text-primary/80 font-sans">District *</label>
                         <input
-                          required
-                          name="district"
-                          type="text"
+                          required name="district" type="text"
                           defaultValue={profile?.district ?? ''}
                           className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 font-sans"
                           placeholder="Nashik"
@@ -206,9 +197,7 @@ export function CheckoutModal() {
                     <div className="space-y-1">
                       <label className="text-sm font-semibold text-primary/80 font-sans">Complete Address *</label>
                       <textarea
-                        required
-                        name="address"
-                        rows={3}
+                        required name="address" rows={3}
                         className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 font-sans resize-none"
                         placeholder="House/Flat No., Street, Village/Town..."
                       />
@@ -217,9 +206,7 @@ export function CheckoutModal() {
                     <div className="space-y-1 w-full md:w-1/2 pr-0 md:pr-2.5">
                       <label className="text-sm font-semibold text-primary/80 font-sans">PIN Code *</label>
                       <input
-                        required
-                        name="pinCode"
-                        type="text"
+                        required name="pinCode" type="text"
                         defaultValue={profile?.pincode ?? ''}
                         className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-white focus:outline-none focus:ring-2 focus:ring-primary/50 font-sans"
                         placeholder="414402"
@@ -228,13 +215,9 @@ export function CheckoutModal() {
                   </form>
                 </div>
 
-                {/* Summary Section */}
                 <div className="w-full md:w-[350px] bg-surface-container p-8 md:p-10 flex flex-col border-t md:border-t-0 md:border-l border-primary/10">
                   <div className="hidden md:flex justify-end mb-6">
-                    <button
-                      onClick={closeCheckout}
-                      className="text-primary/50 hover:text-primary transition-colors bg-white rounded-full p-2 shadow-sm"
-                    >
+                    <button onClick={closeCheckout} className="text-primary/50 hover:text-primary transition-colors bg-white rounded-full p-2 shadow-sm">
                       <Icons.X className="w-5 h-5" />
                     </button>
                   </div>
@@ -247,25 +230,20 @@ export function CheckoutModal() {
                           <span className="font-semibold text-primary">{item.name}</span>
                           <span className="text-primary/60">Qty: {item.quantity}</span>
                         </div>
-                        <span className="font-semibold text-primary">
-                          ₹{(item.price * item.quantity).toLocaleString()}
-                        </span>
+                        <span className="font-semibold text-primary">₹{(item.price * item.quantity).toLocaleString()}</span>
                       </div>
                     ))}
                   </div>
 
                   <div className="border-t border-primary/20 pt-4 space-y-3 mb-6">
                     <div className="flex justify-between text-sm font-sans text-primary/70">
-                      <span>Subtotal</span>
-                      <span>₹{cartTotal.toLocaleString()}</span>
+                      <span>Subtotal</span><span>₹{cartTotal.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-sm font-sans text-primary/70">
-                      <span>Shipping</span>
-                      <span className="text-green-600 font-semibold">Free</span>
+                      <span>Shipping</span><span className="text-green-600 font-semibold">Free</span>
                     </div>
                     <div className="flex justify-between text-lg font-bold font-sans text-primary pt-2 border-t border-primary/10">
-                      <span>Total</span>
-                      <span>₹{cartTotal.toLocaleString()}</span>
+                      <span>Total</span><span>₹{cartTotal.toLocaleString()}</span>
                     </div>
                   </div>
 
@@ -286,10 +264,7 @@ export function CheckoutModal() {
                         <span>Processing…</span>
                       </>
                     ) : (
-                      <>
-                        Pay ₹{cartTotal.toLocaleString()}
-                        <Icons.CreditCard className="w-5 h-5" />
-                      </>
+                      <>Pay ₹{cartTotal.toLocaleString()} <Icons.CreditCard className="w-5 h-5" /></>
                     )}
                   </button>
                 </div>

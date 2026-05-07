@@ -1,5 +1,3 @@
 lib/
 node_modules/
-.env
-.env.*
 .runtimeconfig.json
