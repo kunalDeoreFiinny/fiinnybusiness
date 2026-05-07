@@ -46,7 +46,8 @@ import {
   Trash,
   Send,
   LogIn,
-  CheckCircle
+  CheckCircle,
+  Globe
 } from 'lucide-react';
 
 export const Icons = {
@@ -97,5 +98,6 @@ export const Icons = {
   Trash,
   Send,
   LogIn,
-  CheckCircle
+  CheckCircle,
+  Globe
 };

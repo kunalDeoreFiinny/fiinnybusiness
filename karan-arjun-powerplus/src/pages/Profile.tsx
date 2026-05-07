@@ -4,6 +4,18 @@ import { arrayUnion, collection, doc, onSnapshot, query, serverTimestamp, setDoc
 import { Icons } from '../components/Icons';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
+import type { ProfileUpdates } from '../context/AuthContext';
+
+const INDIAN_STATES = [
+  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
+  'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram',
+  'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
+  'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
+  'Andaman and Nicobar Islands', 'Chandigarh',
+  'Dadra and Nagar Haveli and Daman and Diu', 'Delhi',
+  'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry',
+];
 
 interface OrderRecord {
   id: string;
@@ -29,8 +41,23 @@ interface TicketRecord {
   }>;
 }
 
+interface EditForm {
+  name: string;
+  email: string;
+  phone: string;
+  village: string;
+  district: string;
+  state: string;
+  pincode: string;
+}
+
+const inputClass =
+  'w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 bg-slate-50 font-sans text-sm transition-all';
+const labelClass = 'block font-sans text-sm font-semibold text-primary mb-1.5';
+
 export default function Profile() {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, updateUserProfile } = useAuth();
+
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [grievances, setGrievances] = useState<TicketRecord[]>([]);
   const [subject, setSubject] = useState('');
@@ -41,20 +68,24 @@ export default function Profile() {
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [sendingReplyId, setSendingReplyId] = useState<string | null>(null);
 
+  // Edit profile state
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState<EditForm>({
+    name: '', email: '', phone: '', village: '', district: '', state: '', pincode: '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [saveSuccess, setSaveSuccess] = useState('');
+
   useEffect(() => {
-    if (!user || profile?.role === 'admin') {
-      return;
-    }
+    if (!user || profile?.role === 'admin') return;
 
     const ordersQuery = query(collection(db, 'orders'), where('uid', '==', user.uid));
     const grievancesQuery = query(collection(db, 'grievances'), where('uid', '==', user.uid));
 
     const unsubscribeOrders = onSnapshot(ordersQuery, (snapshot) => {
       const list = snapshot.docs
-        .map((docItem) => ({
-          id: docItem.id,
-          ...(docItem.data() as Omit<OrderRecord, 'id'>),
-        }))
+        .map((docItem) => ({ id: docItem.id, ...(docItem.data() as Omit<OrderRecord, 'id'>) }))
         .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
       setOrders(list);
     });
@@ -89,19 +120,12 @@ export default function Profile() {
       setGrievances(list);
     });
 
-    return () => {
-      unsubscribeOrders();
-      unsubscribeGrievances();
-    };
+    return () => { unsubscribeOrders(); unsubscribeGrievances(); };
   }, [user, profile?.role]);
 
   const initials = useMemo(() => {
     const value = profile?.name ?? user?.displayName ?? 'User';
-    return value
-      .split(' ')
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() ?? '')
-      .join('');
+    return value.split(' ').slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('');
   }, [profile?.name, user?.displayName]);
 
   if (loading) {
@@ -112,19 +136,59 @@ export default function Profile() {
     );
   }
 
-  if (profile?.role === 'admin') {
-    return <Navigate to="/admin" replace />;
-  }
+  if (profile?.role === 'admin') return <Navigate to="/admin" replace />;
+
+  const openEdit = () => {
+    setEditForm({
+      name: profile?.name ?? '',
+      email: profile?.email ?? '',
+      phone: profile?.phone ?? '',
+      village: profile?.village ?? '',
+      district: profile?.district ?? '',
+      state: profile?.state ?? '',
+      pincode: profile?.pincode ?? '',
+    });
+    setSaveError('');
+    setSaveSuccess('');
+    setIsEditOpen(true);
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setSaveError('');
+    setSaveSuccess('');
+    try {
+      const updates: ProfileUpdates = {
+        name: editForm.name.trim() || 'Power Plus User',
+        email: editForm.email.trim(),
+        phone: editForm.phone.trim(),
+        village: editForm.village.trim(),
+        district: editForm.district.trim(),
+        state: editForm.state,
+        pincode: editForm.pincode.trim(),
+      };
+      await updateUserProfile(updates);
+      setSaveSuccess('Profile updated successfully!');
+      setIsEditOpen(false);
+    } catch {
+      setSaveError('Could not save profile. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const field = (key: keyof EditForm) => ({
+    value: editForm[key],
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+      setEditForm((prev) => ({ ...prev, [key]: e.target.value })),
+  });
 
   const handleGrievanceSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setInfo('');
-    if (!user) {
-      setError('Please sign in again.');
-      return;
-    }
-
+    if (!user) { setError('Please sign in again.'); return; }
     setSubmitting(true);
     try {
       const grievanceRef = doc(collection(db, 'grievances'));
@@ -143,7 +207,7 @@ export default function Profile() {
       });
       setSubject('');
       setDescription('');
-      setInfo(`Your ticket has been submitted successfully. Ticket ID: ${ticketId}`);
+      setInfo(`Ticket submitted! ID: ${ticketId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not submit ticket.');
     } finally {
@@ -156,10 +220,9 @@ export default function Profile() {
     if (!user || !replyText) return;
     setSendingReplyId(ticket.id);
     try {
-      const messageId = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       await updateDoc(doc(db, 'grievances', ticket.id), {
         messages: arrayUnion({
-          id: messageId,
+          id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           sender: 'customer',
           text: replyText,
           createdAt: Date.now(),
@@ -174,40 +237,242 @@ export default function Profile() {
     }
   };
 
+  const hasAddress = profile?.village || profile?.district || profile?.state;
+  const addressLine = [profile?.village, profile?.district, profile?.state, profile?.pincode]
+    .filter(Boolean).join(', ');
+
   return (
-    <div className="flex flex-col py-24 px-8 max-w-5xl mx-auto gap-12 min-h-screen relative">
+    <div className="flex flex-col py-24 px-8 max-w-5xl mx-auto gap-8 min-h-screen relative">
       <header className="mb-2 relative z-10 text-center">
         <h1 className="font-sans text-4xl font-extrabold text-primary mb-2 tracking-tight">Your Profile</h1>
         <p className="text-on-surface-variant font-serif">Manage your account, orders, and support tickets.</p>
       </header>
 
-      <div className="flex flex-col gap-10 relative z-10">
+      {saveSuccess && (
+        <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-4">
+          <Icons.CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+          <p className="text-sm font-sans font-semibold text-emerald-700">{saveSuccess}</p>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-8 relative z-10">
+
+        {/* Avatar / Info Card */}
         <div className="glass-panel-dark rounded-[2.5rem] p-10 flex flex-col md:flex-row items-center gap-10 relative overflow-hidden">
-          <div className="w-32 h-32 shrink-0 rounded-full overflow-hidden border-4 border-white/20 shadow-[0_0_20px_rgba(250,204,21,0.15)] flex items-center justify-center bg-gradient-to-br from-primary-container to-primary">
+          <div className="w-28 h-28 shrink-0 rounded-full overflow-hidden border-4 border-white/20 shadow-[0_0_20px_rgba(250,204,21,0.15)] flex items-center justify-center bg-gradient-to-br from-primary-container to-primary">
             <span className="text-4xl font-sans font-bold text-secondary-container">{initials || 'U'}</span>
           </div>
 
-          <div className="flex flex-col flex-1 items-center md:items-start w-full">
-            <h1 className="font-sans text-3xl font-bold text-white mb-1">{profile?.name ?? user?.displayName ?? 'Power Plus User'}</h1>
-            <p className="text-white/60 mb-6 text-sm font-medium tracking-wide capitalize">{profile?.role ?? 'customer'} account</p>
-
-            <div className="flex flex-col sm:flex-row gap-6 text-sm text-white/80 font-sans w-full justify-center md:justify-start">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center shrink-0">
-                  <Icons.Mail className="w-5 h-5 text-secondary-container" />
-                </div>
-                <span className="font-medium text-lg">{profile?.email ?? user?.email ?? '-'}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center shrink-0">
-                  <Icons.Phone className="w-5 h-5 text-secondary-container" />
-                </div>
-                <span className="font-medium text-lg">{profile?.phone || 'Not added yet'}</span>
+          <div className="flex flex-col flex-1 items-center md:items-start w-full gap-4">
+            <div className="flex items-center gap-3 w-full justify-center md:justify-start">
+              <div>
+                <h2 className="font-sans text-3xl font-bold text-white leading-tight">
+                  {profile?.name ?? user?.displayName ?? 'Power Plus User'}
+                </h2>
+                <p className="text-white/50 text-sm font-medium tracking-wide capitalize mt-0.5">
+                  {profile?.role ?? 'customer'} account
+                </p>
               </div>
             </div>
+
+            <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm text-white/80 font-sans justify-center md:justify-start">
+              {(profile?.email) && (
+                <div className="flex items-center gap-2">
+                  <Icons.Mail className="w-4 h-4 text-secondary-container shrink-0" />
+                  <span>{profile.email}</span>
+                </div>
+              )}
+              {(profile?.phone) && (
+                <div className="flex items-center gap-2">
+                  <Icons.Phone className="w-4 h-4 text-secondary-container shrink-0" />
+                  <span>{profile.phone}</span>
+                </div>
+              )}
+              {hasAddress && (
+                <div className="flex items-center gap-2">
+                  <Icons.MapPin className="w-4 h-4 text-secondary-container shrink-0" />
+                  <span>{addressLine}</span>
+                </div>
+              )}
+              {!profile?.email && !profile?.phone && !hasAddress && (
+                <p className="text-white/40 text-sm italic">No contact details added yet.</p>
+              )}
+            </div>
           </div>
+
+          <button
+            onClick={openEdit}
+            className="absolute top-6 right-6 flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-sans font-bold transition-colors border border-white/10"
+          >
+            <Icons.Edit className="w-3.5 h-3.5" />
+            Edit Profile
+          </button>
         </div>
 
+        {/* Edit Profile Form */}
+        {isEditOpen && (
+          <div className="bg-white rounded-[2.5rem] p-8 md:p-10 border border-slate-100 shadow-sm">
+            <div className="flex items-start justify-between mb-8">
+              <div>
+                <h2 className="font-sans text-2xl font-bold text-primary tracking-tight">Edit Profile</h2>
+                <p className="text-on-surface-variant font-serif text-sm mt-1">
+                  Update your personal info and farm address.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsEditOpen(false)}
+                className="p-2 rounded-full hover:bg-slate-100 transition-colors mt-1"
+              >
+                <Icons.X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProfile} className="space-y-8">
+
+              {/* Personal Info */}
+              <div>
+                <p className="font-sans text-xs font-bold text-primary/50 uppercase tracking-widest mb-4">
+                  Personal Info
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelClass}>Full Name <span className="text-red-400">*</span></label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Rajesh Patil"
+                      className={inputClass}
+                      {...field('name')}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      Email Address
+                      {!profile?.email && (
+                        <span className="ml-2 text-[10px] font-normal text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                          Not added
+                        </span>
+                      )}
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="farmer@example.com"
+                      className={inputClass}
+                      {...field('email')}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      Mobile Number
+                      {!profile?.phone && (
+                        <span className="ml-2 text-[10px] font-normal text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                          Not added
+                        </span>
+                      )}
+                    </label>
+                    <div className="flex gap-2">
+                      <span className="flex items-center px-3 py-3 rounded-xl border border-slate-200 bg-slate-100 font-sans font-bold text-primary text-sm shrink-0">
+                        +91
+                      </span>
+                      <input
+                        type="tel"
+                        placeholder="9876543210"
+                        maxLength={10}
+                        className={`${inputClass} flex-1`}
+                        value={editForm.phone.replace(/^\+91/, '')}
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          setEditForm((prev) => ({ ...prev, phone: digits ? `+91${digits}` : '' }));
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Address */}
+              <div>
+                <p className="font-sans text-xs font-bold text-primary/50 uppercase tracking-widest mb-4">
+                  Farm / Delivery Address
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelClass}>Village / Area</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Karjat"
+                      className={inputClass}
+                      {...field('village')}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>District</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Ahmednagar"
+                      className={inputClass}
+                      {...field('district')}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>State</label>
+                    <select className={`${inputClass} cursor-pointer`} {...field('state')}>
+                      <option value="">Select state...</option>
+                      {INDIAN_STATES.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Pincode</label>
+                    <input
+                      type="text"
+                      placeholder="414402"
+                      maxLength={6}
+                      className={inputClass}
+                      value={editForm.pincode}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({ ...prev, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) }))
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {saveError && (
+                <p className="text-sm font-sans font-semibold text-red-600">{saveError}</p>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex-1 sm:flex-none py-3 px-8 bg-primary text-secondary-container rounded-xl font-sans font-bold text-sm hover:bg-primary-container transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {saving ? (
+                    'Saving...'
+                  ) : (
+                    <><Icons.CheckCircle className="w-4 h-4" /> Save Changes</>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditOpen(false)}
+                  className="flex-1 sm:flex-none py-3 px-8 border border-slate-200 text-slate-600 rounded-xl font-sans font-bold text-sm hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Order History */}
         <div className="bg-surface-container rounded-[2.5rem] p-10 border border-black/5 shadow-sm">
           <h2 className="font-sans text-2xl font-bold text-primary tracking-tight mb-8">Order History</h2>
           <div className="overflow-x-auto">
@@ -246,9 +511,7 @@ export default function Profile() {
                 })}
                 {orders.length === 0 && (
                   <tr>
-                    <td className="py-6 text-on-surface-variant" colSpan={5}>
-                      No orders yet.
-                    </td>
+                    <td className="py-6 text-on-surface-variant" colSpan={5}>No orders yet.</td>
                   </tr>
                 )}
               </tbody>
@@ -256,34 +519,37 @@ export default function Profile() {
           </div>
         </div>
 
+        {/* Support Tickets */}
         <div className="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-sm">
           <div className="flex flex-col md:flex-row gap-10">
             <div className="flex-1">
               <h2 className="font-sans text-2xl font-bold text-primary tracking-tight mb-2">Support & Grievances</h2>
-              <p className="text-on-surface-variant font-serif text-sm mb-8">Submit a ticket and our support team will get back to you.</p>
+              <p className="text-on-surface-variant font-serif text-sm mb-8">
+                Submit a ticket and our support team will get back to you.
+              </p>
               {error && <p className="text-sm font-sans font-semibold text-red-600 mb-3">{error}</p>}
               {info && <p className="text-sm font-sans font-semibold text-emerald-700 mb-3">{info}</p>}
               <form onSubmit={handleGrievanceSubmit} className="space-y-4">
                 <div>
-                  <label className="block font-sans text-sm font-semibold text-primary mb-2">Subject</label>
+                  <label className={labelClass}>Subject</label>
                   <input
                     type="text"
                     required
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                     placeholder="E.g., Order delay, Product damage..."
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary/20 bg-slate-50 font-sans text-sm"
+                    className={inputClass}
                   />
                 </div>
                 <div>
-                  <label className="block font-sans text-sm font-semibold text-primary mb-2">Description</label>
+                  <label className={labelClass}>Description</label>
                   <textarea
                     required
                     rows={4}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Describe your issue in detail..."
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary/20 bg-slate-50 font-sans text-sm resize-none"
+                    className={`${inputClass} resize-none`}
                   />
                 </div>
                 <button
@@ -306,15 +572,13 @@ export default function Profile() {
                         <h4 className="font-sans font-bold text-primary text-sm">{ticket.subject}</h4>
                         <p className="font-sans text-[10px] uppercase tracking-wider text-primary/60 mt-1">{ticket.ticketId}</p>
                       </div>
-                      <span
-                        className={`px-2 py-1 rounded text-[10px] font-sans font-bold uppercase tracking-wider ${
-                          ticket.status === 'Resolved'
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : ticket.status === 'In Progress'
-                              ? 'bg-amber-100 text-amber-700'
-                              : 'bg-slate-200 text-slate-700'
-                        }`}
-                      >
+                      <span className={`px-2 py-1 rounded text-[10px] font-sans font-bold uppercase tracking-wider ${
+                        ticket.status === 'Resolved'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : ticket.status === 'In Progress'
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-slate-200 text-slate-700'
+                      }`}>
                         {ticket.status}
                       </span>
                     </div>
@@ -371,6 +635,7 @@ export default function Profile() {
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );

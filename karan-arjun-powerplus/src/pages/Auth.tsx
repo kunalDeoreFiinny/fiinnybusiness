@@ -23,12 +23,24 @@ function getSafeAuthMessage(error: unknown, context: 'signin' | 'signup' | 'goog
     return 'This email is already registered. Please sign in.';
   }
 
-  if (context === 'phone' && ['auth/invalid-phone-number', 'auth/too-many-requests'].includes(code)) {
+  if (context === 'phone') {
+    if (['auth/invalid-phone-number', 'auth/missing-phone-number'].includes(code)) {
+      return 'Invalid mobile number. Please enter a valid 10-digit Indian number.';
+    }
+    if (code === 'auth/too-many-requests' || code === 'auth/quota-exceeded') {
+      return 'Too many attempts. Please wait a few minutes before trying again.';
+    }
+    if (code === 'auth/captcha-check-failed' || code === 'auth/internal-error') {
+      return 'Verification check failed. Please refresh the page and try again.';
+    }
     return 'Could not send OTP. Please check the mobile number and try again.';
   }
 
-  if (context === 'otp' && ['auth/invalid-verification-code', 'auth/code-expired'].includes(code)) {
-    return 'Invalid OTP. Please try again.';
+  if (context === 'otp') {
+    if (['auth/invalid-verification-code', 'auth/code-expired'].includes(code)) {
+      return 'Invalid or expired OTP. Please try again.';
+    }
+    return 'OTP verification failed. Please try again.';
   }
 
   if (context === 'reset' && code === 'auth/user-not-found') {
@@ -58,6 +70,13 @@ export default function Auth() {
     return <Navigate to="/" replace />;
   }
 
+  const clearRecaptcha = () => {
+    if (recaptchaRef.current) {
+      try { recaptchaRef.current.clear(); } catch { /* ignore if already cleared */ }
+      recaptchaRef.current = null;
+    }
+  };
+
   const resetForm = () => {
     setError('');
     setInfo('');
@@ -65,6 +84,7 @@ export default function Auth() {
     setOtp('');
     setPhoneStep('number');
     setConfirmResult(null);
+    clearRecaptcha();
   };
 
   const switchMode = (next: AuthMode) => {
@@ -107,17 +127,18 @@ export default function Auth() {
     setError('');
     setIsSubmitting(true);
     try {
-      if (recaptchaRef.current) {
-        recaptchaRef.current.clear();
-        recaptchaRef.current = null;
+      // Only create a new verifier if one doesn't already exist
+      if (!recaptchaRef.current) {
+        recaptchaRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', { size: 'invisible' });
       }
-      recaptchaRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', { size: 'invisible' });
-      const fullPhone = phone.trim().startsWith('+') ? phone.trim() : `+91${phone.trim().replace(/\D/g, '')}`;
+      const fullPhone = `+91${phone.trim()}`;
       const result = await signInWithPhone(fullPhone, recaptchaRef.current);
       setConfirmResult(result);
       setPhoneStep('otp');
       setInfo(`OTP sent to ${fullPhone}`);
     } catch (err) {
+      // On failure the verifier is consumed — clear it so next attempt creates a fresh one
+      clearRecaptcha();
       setError(getSafeAuthMessage(err, 'phone'));
     } finally {
       setIsSubmitting(false);
@@ -363,7 +384,7 @@ export default function Auth() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setPhoneStep('number'); setOtp(''); setError(''); setInfo(''); }}
+                    onClick={() => { clearRecaptcha(); setPhoneStep('number'); setOtp(''); setConfirmResult(null); setError(''); setInfo(''); }}
                     className="w-full text-sm font-sans font-bold text-primary/60 hover:text-primary transition-colors"
                   >
                     ← Change number
