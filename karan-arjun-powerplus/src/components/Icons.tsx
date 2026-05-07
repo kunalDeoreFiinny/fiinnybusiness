@@ -1,9 +1,9 @@
-import { 
-  Leaf, 
-  ShoppingCart, 
-  User, 
-  Menu, 
-  MessageCircle, 
+import {
+  Leaf,
+  ShoppingCart,
+  User,
+  Menu,
+  MessageCircle,
   Search,
   CheckCircle2,
   Lock,
@@ -47,7 +47,10 @@ import {
   Send,
   LogIn,
   CheckCircle,
-  Globe
+  Globe,
+  CreditCard,
+  PackageCheck,
+  BadgeIndianRupee,
 } from 'lucide-react';
 
 export const Icons = {
@@ -99,5 +102,8 @@ export const Icons = {
   Send,
   LogIn,
   CheckCircle,
-  Globe
+  Globe,
+  CreditCard,
+  PackageCheck,
+  BadgeIndianRupee,
 };
