@@ -58,6 +58,8 @@ const FinancialReportsPage   = lazy(() => import('./pages/FinancialReportsPage')
 const WarehousePage          = lazy(() => import('./pages/WarehousePage'));
 const InventoryBatchPage     = lazy(() => import('./pages/InventoryBatchPage'));
 const BarcodePage            = lazy(() => import('./pages/BarcodePage'));
+const InventoryPage          = lazy(() => import('./pages/InventoryPage'));
+const AdministrationPage     = lazy(() => import('./pages/AdministrationPage'));
 const PricingPage            = lazy(() => import('./pages/PricingPage'));
 const PaymentLinkPage        = lazy(() => import('./pages/PaymentLinkPage'));
 const PaymentLandingPage     = lazy(() => import('./pages/PaymentLandingPage'));
@@ -70,6 +72,7 @@ const LoyaltyPage            = lazy(() => import('./pages/LoyaltyPage'));
 const CustomerFeedbackPage   = lazy(() => import('./pages/CustomerFeedbackPage'));
 const CustomerFeedbackSubmitPage = lazy(() => import('./pages/CustomerFeedbackSubmitPage'));
 const VCheckoutPage          = lazy(() => import('./pages/VCheckoutPage'));
+const KrishiDukanPage        = lazy(() => import('./pages/KrishiDukanPage'));
 
 // Full-page spinner shown while a lazy chunk is loading
 function PageLoader() {
@@ -169,6 +172,7 @@ function Layout({ children }: { children: React.ReactNode, currentTheme: 'light'
     { path: '/admin/invoice-settings', icon: <Palette size={17} />, label: 'Invoice Branding', screenKey: 'invoice_settings' },
     { path: '/admin/schema-builder', icon: <Database size={17} />, label: 'UI Layout Builder', screenKey: 'schema_builder' },
     { path: '/settings', icon: <Settings size={17} />, label: t('common.settings'), screenKey: 'settings' },
+    { path: '/krishidukan', icon: <Package size={17} />, label: '🌾 KrishiDukan', screenKey: 'krishidukan' },
   ].filter(item => {
     if (userRole && permissions && !permissions[userRole]?.[item.screenKey as AppScreen]) return false;
     return true;
@@ -422,6 +426,8 @@ function AppRoutes() {
       <Route path="/onboarding" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="retailers"><OnboardingPage /></ProtectedRoute>} />
       <Route path="/worklist" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="worklist"><WorklistPage /></ProtectedRoute>} />
       <Route path="/worklist/:id" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="worklist"><WorklistDetailsPage /></ProtectedRoute>} />
+      <Route path="/inventory" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="inventory"><InventoryPage /></ProtectedRoute>} />
+      <Route path="/administration" element={<ProtectedRoute requireRole={['admin']} appScreen="admin"><AdministrationPage /></ProtectedRoute>} />
       <Route path="/digital-khata" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="worklist"><DigitalKhataPage /></ProtectedRoute>} />
       <Route path="/sales-order/new" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="worklist"><SalesOrderPage /></ProtectedRoute>} />
       <Route path="/sales-order/:id" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="worklist"><SalesOrderPage /></ProtectedRoute>} />
@@ -458,6 +464,9 @@ function AppRoutes() {
       <Route path="/order-history" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="order_history"><OrderHistoryPage /></ProtectedRoute>} />
       <Route path="/online-orders" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="online_orders"><OnlineOrdersPage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute appScreen="settings"><SettingsPage /></ProtectedRoute>} />
+
+      {/* KrishiDukan marketplace module */}
+      <Route path="/krishidukan" element={<ProtectedRoute requireRole={['admin']} appScreen="krishidukan"><KrishiDukanPage /></ProtectedRoute>} />
 
       {/* Admin Routes */}
       <Route path="/admin" element={<ProtectedRoute requireRole={['admin']} appScreen="admin"><AdminPage /></ProtectedRoute>} />
