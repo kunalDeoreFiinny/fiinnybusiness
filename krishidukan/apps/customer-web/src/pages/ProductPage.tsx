@@ -1,10 +1,15 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Phone, Navigation, Star, List, Map, MessageCircle } from 'lucide-react';
-import { PRODUCTS, BRANDS, getRetailersForProduct, formatDistance } from '../demoData';
+import { ArrowLeft, MapPin, Phone, Navigation, Star, List, Map, MessageCircle, ShoppingCart, Heart, Zap } from 'lucide-react';
+import { BRANDS, formatDistance, type StockResult } from '../demoData';
 import type { Retailer } from '../demoData';
 import { useLocation } from '../LocationContext';
 import { RetailerMap } from '../components/RetailerMap';
+import { useRetailersForProduct } from '../hooks/useRetailersForProduct';
+import { useAuth } from '../contexts/AuthContext';
+import { useCart } from '../contexts/CartContext';
+import { ShopRowSkeleton } from '../components/SkeletonLoader';
+import { relativeTime } from '../hooks/useFormatTime';
 
 type ViewMode = 'map' | 'list';
 
@@ -14,15 +19,46 @@ export function ProductPage() {
   const { location, requestGps, requesting } = useLocation();
   const [viewMode, setViewMode] = useState<ViewMode>('map');
   const [selectedRetailer, setSelectedRetailer] = useState<Retailer | null>(null);
+  const { requireLogin } = useAuth();
+  const { addToCart, toggleWishlist, isWishlisted } = useCart();
 
-  const product = PRODUCTS.find((p) => p.id === id);
+  const { data, loading } = useRetailersForProduct(id, location.lat, location.lng);
+  const product = data?.product ?? null;
   const brand = product ? BRANDS.find((b) => b.id === product.brandId) : null;
-  const results = useMemo(
-    () => (id ? getRetailersForProduct(id, location.lat, location.lng) : []),
-    [id, location.lat, location.lng],
-  );
+  const results = data?.results ?? [];
   const inStock = results.filter((r) => r.stock.inStock);
   const outOfStock = results.filter((r) => !r.stock.inStock);
+
+  function handleAddToCart(retailerId: string) {
+    if (!product) return;
+    requireLogin(() => {
+      addToCart(product.id, retailerId, 1);
+      navigate('/cart');
+    }, 'add-to-cart');
+  }
+
+  function handleBuyNow(retailerId: string) {
+    if (!product) return;
+    requireLogin(() => {
+      addToCart(product.id, retailerId, 1);
+      navigate('/cart');
+    }, 'buy-now');
+  }
+
+  function handleWishlist() {
+    if (!product) return;
+    requireLogin(() => { toggleWishlist(product.id); }, 'wishlist');
+  }
+
+  if (loading && !data) {
+    return (
+      <div style={{ padding: 16 }}>
+        <ShopRowSkeleton />
+        <div style={{ height: 10 }} />
+        <ShopRowSkeleton />
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -35,9 +71,10 @@ export function ProductPage() {
     );
   }
 
+  const wishlisted = isWishlisted(product.id);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
-      {/* Back nav */}
       <div style={{ position: 'sticky', top: 60, zIndex: 30, background: '#fff', padding: '10px 16px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 8 }}>
         <button onClick={() => navigate(-1)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 4, color: '#374151' }}>
           <ArrowLeft size={20} />
@@ -45,7 +82,13 @@ export function ProductPage() {
         <span style={{ fontSize: 14, fontWeight: 600, color: '#111827', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {product.shortName}
         </span>
-        {/* Map / List toggle */}
+        <button
+          onClick={handleWishlist}
+          aria-label="Save to wishlist"
+          style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 4, color: wishlisted ? '#dc2626' : '#9ca3af' }}
+        >
+          <Heart size={18} fill={wishlisted ? '#dc2626' : 'none'} />
+        </button>
         <div style={{ display: 'flex', background: '#f3f4f6', borderRadius: 8, padding: 2, gap: 2 }}>
           <button
             onClick={() => setViewMode('map')}
@@ -62,7 +105,6 @@ export function ProductPage() {
         </div>
       </div>
 
-      {/* Product hero card */}
       <section style={{ padding: 16, background: '#fff', borderBottom: '1px solid #f3f4f6' }}>
         <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
           <div style={{
@@ -83,7 +125,6 @@ export function ProductPage() {
           </div>
         </div>
 
-        {/* Benefits */}
         <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
           {product.benefits.map((b) => (
             <span key={b} style={{ fontSize: 11, color: '#15803d', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '3px 8px', fontWeight: 500 }}>
@@ -92,7 +133,6 @@ export function ProductPage() {
           ))}
         </div>
 
-        {/* Pack sizes */}
         <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 500 }}>Available in:</span>
           {product.packSizes.map((s) => (
@@ -101,18 +141,24 @@ export function ProductPage() {
         </div>
       </section>
 
-      {/* Location bar */}
-      <div style={{ padding: '10px 16px', background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      {/* Location + scope bar */}
+      <div style={{ padding: '10px 16px', background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
           <MapPin size={13} style={{ color: '#15803d' }} />
-          <span style={{ fontSize: 12, color: '#15803d' }}>
+          <span style={{ fontSize: 12, color: '#15803d', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             Near <strong>{location.label}</strong> · {inStock.length} in stock
+            {data?.scope === 'radius' && data.radiusKm > 0 && ` · within ${data.radiusKm} km`}
+            {data?.scope === 'district' && ` · district-wide`}
+            {data?.scope === 'state' && ` · state-wide`}
           </span>
         </div>
         {location.source !== 'gps' && (
           <button onClick={requestGps} disabled={requesting} style={{ background: 'transparent', border: 'none', color: '#15803d', fontSize: 11, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}>
             {requesting ? 'Getting…' : 'Use my GPS'}
           </button>
+        )}
+        {data?.fromCache && data.cachedAt && (
+          <span style={{ fontSize: 10, color: '#92400e' }}>· Last updated {relativeTime(data.cachedAt)}</span>
         )}
       </div>
 
@@ -129,11 +175,12 @@ export function ProductPage() {
             />
           </div>
 
-          {/* Selected retailer drawer */}
           {selectedRetailer ? (
             <RetailerCard
               result={results.find((r) => r.retailer.id === selectedRetailer.id)!}
               onClose={() => setSelectedRetailer(null)}
+              onAddToCart={handleAddToCart}
+              onBuyNow={handleBuyNow}
             />
           ) : (
             <div style={{ padding: '14px 16px', background: '#fff' }}>
@@ -145,7 +192,6 @@ export function ProductPage() {
             </div>
           )}
 
-          {/* Quick list below map */}
           {results.length > 0 && (
             <div style={{ padding: '0 16px 16px', background: '#fff', borderTop: '1px solid #f3f4f6' }}>
               <p style={{ fontSize: 12, fontWeight: 600, color: '#9ca3af', marginBottom: 10, paddingTop: 14 }}>ALL RETAILERS</p>
@@ -167,7 +213,7 @@ export function ProductPage() {
       {/* List view */}
       {viewMode === 'list' && (
         <div style={{ padding: '16px' }}>
-          {inStock.length === 0 && outOfStock.length === 0 ? (
+          {results.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: '#9ca3af' }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>📍</div>
               <p style={{ fontSize: 15, fontWeight: 600, color: '#374151', marginBottom: 6 }}>No retailers found</p>
@@ -179,7 +225,7 @@ export function ProductPage() {
                 <>
                   <p style={{ fontSize: 12, fontWeight: 700, color: '#15803d', marginBottom: 10 }}>IN STOCK ({inStock.length})</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-                    {inStock.map((r) => <RetailerCard key={r.retailer.id} result={r} />)}
+                    {inStock.map((r) => <RetailerCard key={r.retailer.id} result={r} onAddToCart={handleAddToCart} onBuyNow={handleBuyNow} />)}
                   </div>
                 </>
               )}
@@ -187,7 +233,7 @@ export function ProductPage() {
                 <>
                   <p style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af', marginBottom: 10 }}>OUT OF STOCK ({outOfStock.length})</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10, opacity: 0.6 }}>
-                    {outOfStock.map((r) => <RetailerCard key={r.retailer.id} result={r} />)}
+                    {outOfStock.map((r) => <RetailerCard key={r.retailer.id} result={r} onAddToCart={handleAddToCart} onBuyNow={handleBuyNow} />)}
                   </div>
                 </>
               )}
@@ -201,7 +247,14 @@ export function ProductPage() {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function RetailerCard({ result, onClose }: { result: StockResult; onClose?: () => void }) {
+interface RetailerCardProps {
+  result: StockResult;
+  onClose?: () => void;
+  onAddToCart?: (retailerId: string) => void;
+  onBuyNow?: (retailerId: string) => void;
+}
+
+function RetailerCard({ result, onClose, onAddToCart, onBuyNow }: RetailerCardProps) {
   const { retailer, stock, distanceM: d } = result;
   function openMaps() {
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${retailer.lat},${retailer.lng}`, '_blank');
@@ -238,7 +291,7 @@ function RetailerCard({ result, onClose }: { result: StockResult; onClose?: () =
         <div style={{ fontSize: 11, color: '#dc2626', fontWeight: 700, marginBottom: 10 }}>✗ Out of stock</div>
       )}
 
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: stock.inStock && (onAddToCart || onBuyNow) ? 8 : 0 }}>
         <a href={`tel:${retailer.phone}`} style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '9px 12px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#15803d', textDecoration: 'none' }}>
           <Phone size={13} /> Call
         </a>
@@ -251,6 +304,27 @@ function RetailerCard({ result, onClose }: { result: StockResult; onClose?: () =
           <Navigation size={13} /> Directions
         </button>
       </div>
+
+      {stock.inStock && (onAddToCart || onBuyNow) && (
+        <div style={{ display: 'flex', gap: 8 }}>
+          {onAddToCart && (
+            <button
+              onClick={() => onAddToCart(retailer.id)}
+              style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '10px 12px', background: '#fff', border: '1px solid #16a34a', borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#16a34a', cursor: 'pointer' }}
+            >
+              <ShoppingCart size={13} /> Add to Cart
+            </button>
+          )}
+          {onBuyNow && (
+            <button
+              onClick={() => onBuyNow(retailer.id)}
+              style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '10px 12px', background: '#16a34a', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer' }}
+            >
+              <Zap size={13} /> Buy Now
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -275,6 +349,3 @@ function RetailerRow({ result, onSelect, isSelected }: { result: StockResult; on
     </button>
   );
 }
-
-// Re-export type for use in this file
-type StockResult = ReturnType<typeof getRetailersForProduct>[number];

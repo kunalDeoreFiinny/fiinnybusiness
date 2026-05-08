@@ -1,7 +1,11 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation as useRouterLocation } from 'react-router-dom';
-import { Search, MapPin, Home, Store, User, LocateFixed, X } from 'lucide-react';
+import { Search, MapPin, Home, Store, User, X, ShoppingCart } from 'lucide-react';
 import { useLocation } from '../LocationContext';
+import { useCart } from '../contexts/CartContext';
+import { useAuth } from '../contexts/AuthContext';
+import { LocationPickerModal } from './LocationPickerModal';
+import { OfflineBanner } from './OfflineBanner';
 
 const HEADER_HEIGHT = 60;
 const TABBAR_HEIGHT = 60;
@@ -9,16 +13,32 @@ const TABBAR_HEIGHT = 60;
 export function Layout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const router = useRouterLocation();
-  const { location, requesting, requestGps } = useLocation();
+  const { location, shouldAutoPrompt } = useLocation();
+  const { cartCount } = useCart();
+  const { isAuthenticated, requireLogin } = useAuth();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
+  const [autoPromptHandled, setAutoPromptHandled] = useState(false);
+
+  // First-open prompt (F1) — open the picker once when the user has no chosen location.
+  useEffect(() => {
+    if (autoPromptHandled) return;
+    if (shouldAutoPrompt) {
+      setLocationPickerOpen(true);
+      setAutoPromptHandled(true);
+    }
+  }, [shouldAutoPrompt, autoPromptHandled]);
 
   function submitSearch(e?: React.FormEvent) {
     e?.preventDefault();
     if (!searchQuery.trim()) return;
     navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
     setSearchOpen(false);
+  }
+
+  function goToCart() {
+    requireLogin(() => navigate('/cart'), 'add-to-cart');
   }
 
   return (
@@ -38,7 +58,6 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
         </Link>
 
-        {/* Location pill — desktop visible always; mobile only on home */}
         <button
           onClick={() => setLocationPickerOpen(true)}
           style={{
@@ -59,7 +78,25 @@ export function Layout({ children }: { children: ReactNode }) {
 
         <div style={{ flex: 1 }} />
 
-        {/* Search button (mobile) / search bar inline (wide) */}
+        {/* Cart icon (mobile-friendly tap target) */}
+        <button
+          onClick={goToCart}
+          aria-label="Cart"
+          style={{ background: 'transparent', border: 'none', color: '#fff', padding: 8, cursor: 'pointer', borderRadius: 8, position: 'relative' }}
+        >
+          <ShoppingCart size={20} />
+          {isAuthenticated && cartCount > 0 && (
+            <span style={{
+              position: 'absolute', top: 2, right: 2,
+              background: '#f59e0b', color: '#fff',
+              fontSize: 10, fontWeight: 700, lineHeight: 1,
+              padding: '2px 5px', borderRadius: 10, minWidth: 16, textAlign: 'center',
+            }}>
+              {cartCount > 9 ? '9+' : cartCount}
+            </span>
+          )}
+        </button>
+
         <button
           onClick={() => setSearchOpen(true)}
           aria-label="Search"
@@ -68,6 +105,9 @@ export function Layout({ children }: { children: ReactNode }) {
           <Search size={20} />
         </button>
       </header>
+
+      {/* Offline banner (sticky just below header) */}
+      <OfflineBanner />
 
       {/* Search modal overlay */}
       {searchOpen && (
@@ -110,35 +150,11 @@ export function Layout({ children }: { children: ReactNode }) {
       )}
 
       {/* Location picker modal */}
-      {locationPickerOpen && (
-        <div
-          onClick={() => setLocationPickerOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
-        >
-          <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 14, padding: 24, width: '100%', maxWidth: 380 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <h3 style={{ fontSize: 17, fontWeight: 700 }}>Choose Location</h3>
-              <button onClick={() => setLocationPickerOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 4 }}>
-                <X size={18} />
-              </button>
-            </div>
-            <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 16 }}>
-              We'll use this to find shops near you.
-            </p>
-            <button
-              disabled={requesting}
-              onClick={() => { requestGps(); setLocationPickerOpen(false); }}
-              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 16px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', marginBottom: 10 }}
-            >
-              <LocateFixed size={16} />
-              {requesting ? 'Getting location…' : 'Use my current location'}
-            </button>
-            <p style={{ fontSize: 12, color: '#9ca3af', textAlign: 'center', marginTop: 8 }}>
-              Currently: <strong style={{ color: '#374151' }}>{location.label}</strong>
-            </p>
-          </div>
-        </div>
-      )}
+      <LocationPickerModal
+        open={locationPickerOpen}
+        onClose={() => setLocationPickerOpen(false)}
+        required={!autoPromptHandled && shouldAutoPrompt}
+      />
 
       {/* Main content */}
       <main style={{ flex: 1, paddingBottom: TABBAR_HEIGHT + 16 }}>

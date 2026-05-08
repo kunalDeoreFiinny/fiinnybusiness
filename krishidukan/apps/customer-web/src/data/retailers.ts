@@ -1,0 +1,147 @@
+// Extended retailer dataset with district + villages for area-wise discovery (F2).
+// Source-of-truth lives here; demoData.ts re-exports a subset for back-compat.
+import type { Retailer } from '../demoData';
+
+export interface RetailerExtended extends Retailer {
+  district: string;
+  villages: string[];
+}
+
+export const RETAILERS_EXTENDED: RetailerExtended[] = [
+  {
+    id: 'r1',
+    businessName: 'Krishi Mitra Agro Centre',
+    ownerName: 'Ramesh Patil',
+    phone: '+919876543210',
+    whatsapp: '+919876543210',
+    addressLine: 'Plot 14, Market Road, Nashik Road',
+    city: 'Nashik',
+    state: 'Maharashtra',
+    pincode: '422001',
+    lat: 19.9975,
+    lng: 73.7898,
+    rating: 4.6,
+    totalRatings: 142,
+    openHours: 'Mon–Sat: 8 AM – 8 PM',
+    district: 'Nashik',
+    villages: ['Nashik Road', 'Deolali', 'Sinnar', 'Niphad', 'Pimpalgaon'],
+  },
+  {
+    id: 'r2',
+    businessName: 'Bhumi Krishi Seva Kendra',
+    ownerName: 'Sunita Deshmukh',
+    phone: '+919823456789',
+    addressLine: 'Gat No. 142, Pune-Solapur Highway',
+    city: 'Baramati',
+    state: 'Maharashtra',
+    pincode: '413102',
+    lat: 18.1514,
+    lng: 74.5778,
+    rating: 4.4,
+    totalRatings: 87,
+    openHours: 'Mon–Sun: 7 AM – 9 PM',
+    district: 'Pune',
+    villages: ['Baramati', 'Indapur', 'Daund', 'Malegaon', 'Supa'],
+  },
+  {
+    id: 'r3',
+    businessName: 'Annapurna Agri Inputs',
+    ownerName: 'Vijay Sawant',
+    phone: '+919812345678',
+    addressLine: 'Main Bazar, Tal. Karad',
+    city: 'Karad',
+    state: 'Maharashtra',
+    pincode: '415110',
+    lat: 17.2877,
+    lng: 74.1827,
+    rating: 4.7,
+    totalRatings: 218,
+    openHours: 'Mon–Sat: 7:30 AM – 7:30 PM',
+    district: 'Satara',
+    villages: ['Karad', 'Masur', 'Umbraj', 'Tasgaon', 'Patan'],
+  },
+  {
+    id: 'r4',
+    businessName: 'Shivaji Agro Mart',
+    ownerName: 'Ganesh Kulkarni',
+    phone: '+919887766554',
+    addressLine: 'Near Bus Stand, Main Market',
+    city: 'Sangli',
+    state: 'Maharashtra',
+    pincode: '416416',
+    lat: 16.8524,
+    lng: 74.5815,
+    rating: 4.5,
+    totalRatings: 96,
+    openHours: 'Mon–Sat: 8 AM – 8 PM',
+    district: 'Sangli',
+    villages: ['Sangli', 'Miraj', 'Tasgaon', 'Walwa', 'Kavathe Mahankal'],
+  },
+  {
+    id: 'r5',
+    businessName: 'Maharashtra Krishi Bhandar',
+    ownerName: 'Mahesh Jadhav',
+    phone: '+919776655443',
+    addressLine: 'Old Market Yard',
+    city: 'Kolhapur',
+    state: 'Maharashtra',
+    pincode: '416001',
+    lat: 16.7050,
+    lng: 74.2433,
+    rating: 4.3,
+    totalRatings: 64,
+    openHours: 'Mon–Sun: 8 AM – 7 PM',
+    district: 'Kolhapur',
+    villages: ['Kolhapur', 'Ichalkaranji', 'Hatkanangle', 'Shirol', 'Kagal'],
+  },
+  {
+    id: 'r6',
+    businessName: 'Pune Farm Store',
+    ownerName: 'Anil Bhosale',
+    phone: '+919665544332',
+    whatsapp: '+919665544332',
+    addressLine: 'Hadapsar Industrial Area, Near Magarpatta',
+    city: 'Pune',
+    state: 'Maharashtra',
+    pincode: '411028',
+    lat: 18.5089,
+    lng: 73.9260,
+    rating: 4.8,
+    totalRatings: 312,
+    openHours: 'Mon–Sat: 7 AM – 9 PM, Sun: 8 AM – 1 PM',
+    district: 'Pune',
+    villages: ['Hadapsar', 'Magarpatta', 'Wagholi', 'Manjari', 'Kharadi'],
+  },
+  {
+    id: 'r7',
+    businessName: 'Sahyadri Agri Supplies',
+    ownerName: 'Pradeep Kale',
+    phone: '+919554433221',
+    whatsapp: '+919554433221',
+    addressLine: 'Powai Naka, Station Road',
+    city: 'Satara',
+    state: 'Maharashtra',
+    pincode: '415001',
+    lat: 17.6805,
+    lng: 73.9933,
+    rating: 4.4,
+    totalRatings: 71,
+    openHours: 'Mon–Sat: 8 AM – 7 PM',
+    district: 'Satara',
+    villages: ['Satara', 'Wai', 'Koregaon', 'Khandala', 'Phaltan'],
+  },
+];
+
+export function findRetailerExtended(id: string): RetailerExtended | undefined {
+  return RETAILERS_EXTENDED.find((r) => r.id === id);
+}
+
+export function listDistricts(): string[] {
+  return Array.from(new Set(RETAILERS_EXTENDED.map((r) => r.district))).sort();
+}
+
+export function listVillagesForDistrict(district: string): string[] {
+  const set = new Set<string>();
+  RETAILERS_EXTENDED.filter((r) => r.district === district).forEach((r) => r.villages.forEach((v) => set.add(v)));
+  return Array.from(set).sort();
+}
