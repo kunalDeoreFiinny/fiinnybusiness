@@ -12,6 +12,7 @@ import Admin from './pages/Admin';
 import About from './pages/About';
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { CartDrawer } from './components/CartDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -65,6 +66,7 @@ function LayoutWrapper({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <ErrorBoundary>
+      <LanguageProvider>
       <AuthProvider>
         <CartProvider>
           <Router>
@@ -101,6 +103,7 @@ export default function App() {
           </Router>
         </CartProvider>
       </AuthProvider>
+      </LanguageProvider>
     </ErrorBoundary>
   );
 }

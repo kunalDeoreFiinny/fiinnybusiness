@@ -13,7 +13,9 @@ import {
   updateDoc,
   writeBatch,
 } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { Icons } from '../components/Icons';
+import { PaymentDetailModal, type PaymentDetailOrder } from '../components/PaymentDetailModal';
 import {
   initialAbout,
   initialBlogs,
@@ -22,12 +24,13 @@ import {
   type AboutInfo,
   type Blog,
   type Grievance,
+  type Order,
   type Product,
   type User,
 } from '../data/mockData';
 import { db } from '../lib/firebase';
 
-type AdminTab = 'Dashboard' | 'Users' | 'Products' | 'Blogs' | 'Support' | 'Company Info';
+type AdminTab = 'Dashboard' | 'Orders' | 'Users' | 'Products' | 'Blogs' | 'Support' | 'Company Info';
 
 interface ProductFormState {
   name: string;
@@ -120,6 +123,8 @@ export default function Admin() {
   const [products, setProducts] = useState<Product[]>([]);
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<PaymentDetailOrder | null>(null);
   const [grievances, setGrievances] = useState<Grievance[]>([]);
   const [about, setAbout] = useState<AboutInfo>(initialAbout);
   const [homeVideos, setHomeVideos] = useState<string[]>(initialHomeVideos);
@@ -200,6 +205,35 @@ export default function Admin() {
       setUsers(value);
     });
 
+    const unsubscribeOrders = onSnapshot(collection(db, 'orders'), (snapshot) => {
+      const value: Order[] = snapshot.docs.map((docItem) => {
+        const data = docItem.data();
+        return {
+          id: docItem.id,
+          uid: String(data.uid ?? ''),
+          customerName: String(data.customerName ?? ''),
+          customerPhone: String(data.customerPhone ?? ''),
+          customerEmail: String(data.customerEmail ?? ''),
+          state: String(data.state ?? ''),
+          district: String(data.district ?? ''),
+          address: String(data.address ?? ''),
+          pinCode: String(data.pinCode ?? ''),
+          items: Array.isArray(data.items) ? data.items : [],
+          totalAmount: Number(data.totalAmount ?? 0),
+          status: String(data.status ?? 'Placed'),
+          paymentStatus: (data.paymentStatus ?? 'pending') as Order['paymentStatus'],
+          razorpayPaymentId:  data.razorpayPaymentId  ? String(data.razorpayPaymentId)  : undefined,
+          razorpayOrderId:    data.razorpayOrderId    ? String(data.razorpayOrderId)    : undefined,
+          failureReason:      data.failureReason      ? String(data.failureReason)      : undefined,
+          shipmentStatus:     data.shipmentStatus     ? (data.shipmentStatus as Order['shipmentStatus']) : undefined,
+          trackingId:         data.trackingId         ? String(data.trackingId)         : undefined,
+          shiprocketOrderId:  data.shiprocketOrderId  ? String(data.shiprocketOrderId)  : undefined,
+          createdAt: data.createdAt?.toDate?.()?.toLocaleString('en-IN') ?? '-',
+        };
+      });
+      setOrders(value.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+    });
+
     const unsubscribeGrievances = onSnapshot(collection(db, 'grievances'), (snapshot) => {
       const value: Grievance[] = snapshot.docs.map((docItem) => {
         const data = docItem.data();
@@ -257,6 +291,7 @@ export default function Admin() {
       unsubscribeProducts();
       unsubscribeBlogs();
       unsubscribeUsers();
+      unsubscribeOrders();
       unsubscribeGrievances();
       unsubscribeCompany();
       unsubscribeHomepage();
@@ -568,6 +603,7 @@ export default function Admin() {
         <nav className="flex-grow space-y-2">
           {[
             { id: 'Dashboard', icon: Icons.LayoutDashboard, label: 'Dashboard' },
+            { id: 'Orders', icon: Icons.PackageCheck, label: 'Orders' },
             { id: 'Users', icon: Icons.Users, label: 'Users' },
             { id: 'Products', icon: Icons.Box, label: 'Products' },
             { id: 'Blogs', icon: Icons.FileText, label: 'Blogs' },
@@ -602,38 +638,52 @@ export default function Admin() {
         {status && <p className="mb-6 text-sm font-sans font-semibold text-emerald-700">{status}</p>}
 
         {activeTab === 'Dashboard' && (
-          <section className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-            <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100">
-              <div className="flex justify-between items-center mb-6">
-                <span className="text-[10px] font-sans font-black text-slate-400 uppercase tracking-widest">Total Users</span>
-                <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600">
-                  <Icons.Users className="w-4 h-4" />
+          <section className="space-y-8 mb-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100">
+                <div className="flex justify-between items-center mb-6">
+                  <span className="text-[10px] font-sans font-black text-slate-400 uppercase tracking-widest">Total Users</span>
+                  <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600">
+                    <Icons.Users className="w-4 h-4" />
+                  </div>
                 </div>
+                <h4 className="text-3xl font-sans font-black text-primary mb-2">{users.length}</h4>
+                <span className="text-emerald-600 text-xs font-sans font-bold">Active accounts</span>
               </div>
-              <h4 className="text-3xl font-sans font-black text-primary mb-2">{users.length}</h4>
-              <span className="text-emerald-600 text-xs font-sans font-bold">Active accounts</span>
-            </div>
-            <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100">
-              <div className="flex justify-between items-center mb-6">
-                <span className="text-[10px] font-sans font-black text-slate-400 uppercase tracking-widest">Products</span>
-                <div className="p-2 bg-amber-50 rounded-lg text-amber-600">
-                  <Icons.Box className="w-4 h-4" />
+              <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100">
+                <div className="flex justify-between items-center mb-6">
+                  <span className="text-[10px] font-sans font-black text-slate-400 uppercase tracking-widest">Orders</span>
+                  <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
+                    <Icons.PackageCheck className="w-4 h-4" />
+                  </div>
                 </div>
+                <h4 className="text-3xl font-sans font-black text-primary mb-2">{orders.length}</h4>
+                <span className="text-blue-600 text-xs font-sans font-bold">Total placed</span>
               </div>
-              <h4 className="text-3xl font-sans font-black text-primary mb-2">{products.length}</h4>
-              <span className="text-emerald-600 text-xs font-sans font-bold">In catalog</span>
-            </div>
-            <div className="bg-primary-container p-8 rounded-[2rem] shadow-xl text-white">
-              <div className="flex justify-between items-center mb-6">
-                <span className="text-[10px] font-sans font-black text-white/40 uppercase tracking-widest">Articles</span>
-                <div className="p-2 bg-white/10 rounded-lg text-secondary-container">
-                  <Icons.FileText className="w-4 h-4" />
+              <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100">
+                <div className="flex justify-between items-center mb-6">
+                  <span className="text-[10px] font-sans font-black text-slate-400 uppercase tracking-widest">Revenue</span>
+                  <div className="p-2 bg-amber-50 rounded-lg text-amber-600">
+                    <Icons.BadgeIndianRupee className="w-4 h-4" />
+                  </div>
                 </div>
+                <h4 className="text-3xl font-sans font-black text-primary mb-2">
+                  ₹{orders.filter((o) => o.paymentStatus === 'paid').reduce((s, o) => s + o.totalAmount, 0).toLocaleString('en-IN')}
+                </h4>
+                <span className="text-emerald-600 text-xs font-sans font-bold">Paid revenue</span>
               </div>
-              <h4 className="text-3xl font-sans font-black mb-2">{blogs.length}</h4>
-              <span className="text-emerald-400 text-xs font-sans font-bold">Published</span>
+              <div className="bg-primary-container p-8 rounded-[2rem] shadow-xl text-white">
+                <div className="flex justify-between items-center mb-6">
+                  <span className="text-[10px] font-sans font-black text-white/40 uppercase tracking-widest">Articles</span>
+                  <div className="p-2 bg-white/10 rounded-lg text-secondary-container">
+                    <Icons.FileText className="w-4 h-4" />
+                  </div>
+                </div>
+                <h4 className="text-3xl font-sans font-black mb-2">{blogs.length}</h4>
+                <span className="text-emerald-400 text-xs font-sans font-bold">Published</span>
+              </div>
             </div>
-            <div className="md:col-span-3">
+            <div>
               <button
                 onClick={() => void seedInitialData()}
                 className="bg-primary text-secondary-container px-5 py-3 rounded-xl font-sans font-bold text-sm hover:bg-primary-container transition-colors"
@@ -643,6 +693,104 @@ export default function Admin() {
             </div>
           </section>
         )}
+
+        {activeTab === 'Orders' && (
+          <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
+            <h2 className="font-sans text-xl font-bold text-primary mb-6">All Orders</h2>
+            {orders.length === 0 ? (
+              <p className="text-sm font-sans text-primary/60">No orders found yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left font-sans text-sm">
+                  <thead>
+                    <tr className="border-b border-primary/10">
+                      <th className="py-4 text-primary/60 font-semibold uppercase tracking-wider text-xs">Customer</th>
+                      <th className="py-4 text-primary/60 font-semibold uppercase tracking-wider text-xs">Phone</th>
+                      <th className="py-4 text-primary/60 font-semibold uppercase tracking-wider text-xs">Items</th>
+                      <th className="py-4 text-primary/60 font-semibold uppercase tracking-wider text-xs">Total</th>
+                      <th className="py-4 text-primary/60 font-semibold uppercase tracking-wider text-xs">Payment</th>
+                      <th className="py-4 text-primary/60 font-semibold uppercase tracking-wider text-xs">Status</th>
+                      <th className="py-4 text-primary/60 font-semibold uppercase tracking-wider text-xs">Date</th>
+                      <th className="py-4 text-primary/60 font-semibold uppercase tracking-wider text-xs">Payment ID</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.map((order) => (
+                      <tr
+                        key={order.id}
+                        onClick={() => setSelectedOrder(order)}
+                        className="border-b border-primary/5 hover:bg-slate-50 transition-colors cursor-pointer"
+                      >
+                        <td className="py-4 font-bold text-primary">
+                          <p>{order.customerName}</p>
+                          <p className="text-xs text-primary/50 font-normal">{order.customerEmail}</p>
+                          <p className="text-xs text-primary/50 font-normal">{order.district}, {order.state}</p>
+                        </td>
+                        <td className="py-4 text-primary/80">{order.customerPhone}</td>
+                        <td className="py-4 text-primary/80">
+                          {order.items.map((item) => (
+                            <p key={item.id} className="text-xs">{item.name} × {item.quantity}</p>
+                          ))}
+                        </td>
+                        <td className="py-4 font-bold text-primary">₹{order.totalAmount.toLocaleString('en-IN')}</td>
+                        <td className="py-4">
+                          <span className={`px-2 py-1 rounded text-[10px] font-sans font-bold uppercase tracking-wider ${
+                            order.paymentStatus === 'paid'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : order.paymentStatus === 'failed'
+                                ? 'bg-red-100 text-red-700'
+                                : 'bg-amber-100 text-amber-700'
+                          }`}>
+                            {order.paymentStatus}
+                          </span>
+                        </td>
+                        <td className="py-4">
+                          <span className="px-2 py-1 rounded text-[10px] font-sans font-bold uppercase tracking-wider bg-slate-100 text-slate-700">
+                            {order.status}
+                          </span>
+                        </td>
+                        <td className="py-4 text-primary/70 text-xs">{order.createdAt}</td>
+                        <td className="py-4 text-primary/50 text-xs font-mono">{order.razorpayPaymentId ?? '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        <PaymentDetailModal
+          order={selectedOrder}
+          onClose={() => setSelectedOrder(null)}
+          isAdmin
+          onShipmentUpdate={async (orderId, data) => {
+            await updateDoc(doc(db, 'orders', orderId), {
+              ...data,
+              updatedAt: serverTimestamp(),
+            });
+            // Reflect update in the currently-open modal
+            setSelectedOrder((prev) =>
+              prev ? { ...prev, ...(data as Partial<PaymentDetailOrder>) } : prev,
+            );
+          }}
+          onCreateShiprocket={async (orderId) => {
+            const fns = getFunctions();
+            const createShipment = httpsCallable<{ orderId: string }, { shiprocketOrderId: string }>(
+              fns, 'createShiprocketShipment',
+            );
+            const result = await createShipment({ orderId });
+            setSelectedOrder((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    shiprocketOrderId: result.data.shiprocketOrderId,
+                    shipmentStatus: 'processing',
+                  }
+                : prev,
+            );
+          }}
+        />
 
         {activeTab === 'Users' && (
           <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
