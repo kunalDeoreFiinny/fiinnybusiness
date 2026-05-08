@@ -71,6 +71,11 @@ export interface Order {
   status: string;
   paymentStatus: 'paid' | 'pending' | 'failed';
   razorpayPaymentId?: string;
+  razorpayOrderId?: string;
+  failureReason?: string;
+  shipmentStatus?: 'processing' | 'packed' | 'shipped' | 'out_for_delivery' | 'delivered' | 'cancelled';
+  trackingId?: string;
+  shiprocketOrderId?: string;
   createdAt: string;
 }
 

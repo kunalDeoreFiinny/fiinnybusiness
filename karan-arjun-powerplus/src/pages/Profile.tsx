@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { arrayUnion, collection, doc, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
 import { Icons } from '../components/Icons';
+import { PaymentDetailModal, type PaymentDetailOrder } from '../components/PaymentDetailModal';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
 import type { ProfileUpdates } from '../context/AuthContext';
@@ -22,7 +23,21 @@ interface OrderRecord {
   createdAt?: { seconds?: number };
   status?: string;
   totalAmount?: number;
-  items?: Array<{ name: string; quantity: number }>;
+  items?: Array<{ id?: string; name: string; quantity: number; price?: number }>;
+  paymentStatus?: 'paid' | 'pending' | 'failed';
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  address?: string;
+  state?: string;
+  district?: string;
+  pinCode?: string;
+  razorpayPaymentId?: string;
+  razorpayOrderId?: string;
+  failureReason?: string;
+  shipmentStatus?: 'processing' | 'packed' | 'shipped' | 'out_for_delivery' | 'delivered' | 'cancelled';
+  trackingId?: string;
+  shiprocketOrderId?: string;
 }
 
 interface TicketRecord {
@@ -59,6 +74,7 @@ export default function Profile() {
   const { user, profile, loading, updateUserProfile } = useAuth();
 
   const [orders, setOrders] = useState<OrderRecord[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<PaymentDetailOrder | null>(null);
   const [grievances, setGrievances] = useState<TicketRecord[]>([]);
   const [subject, setSubject] = useState('');
   const [description, setDescription] = useState('');
@@ -482,6 +498,7 @@ export default function Profile() {
                   <th className="py-4 text-primary/60 font-semibold uppercase tracking-wider text-xs">Order ID</th>
                   <th className="py-4 text-primary/60 font-semibold uppercase tracking-wider text-xs">Date</th>
                   <th className="py-4 text-primary/60 font-semibold uppercase tracking-wider text-xs">Items</th>
+                  <th className="py-4 text-primary/60 font-semibold uppercase tracking-wider text-xs">Payment</th>
                   <th className="py-4 text-primary/60 font-semibold uppercase tracking-wider text-xs">Status</th>
                   <th className="py-4 text-right text-primary/60 font-semibold uppercase tracking-wider text-xs">Total</th>
                 </tr>
@@ -493,10 +510,25 @@ export default function Profile() {
                     : '-';
                   const productLabel = order.items?.map((item) => `${item.name} x${item.quantity}`).join(', ') ?? '-';
                   return (
-                    <tr key={order.id} className="border-b border-primary/5 hover:bg-white/60 transition-colors">
+                    <tr
+                      key={order.id}
+                      onClick={() => setSelectedOrder(order)}
+                      className="border-b border-primary/5 hover:bg-white/60 transition-colors cursor-pointer"
+                    >
                       <td className="py-5 font-semibold text-primary">#{order.id.slice(0, 8).toUpperCase()}</td>
                       <td className="py-5 text-on-surface-variant font-medium">{date}</td>
                       <td className="py-5 font-semibold text-primary max-w-[260px] truncate">{productLabel}</td>
+                      <td className="py-5">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                          order.paymentStatus === 'paid'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : order.paymentStatus === 'failed'
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {order.paymentStatus ?? 'pending'}
+                        </span>
+                      </td>
                       <td className="py-5">
                         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border bg-amber-50 text-amber-700 border-amber-200">
                           <Icons.Truck className="w-3.5 h-3.5" />
@@ -511,13 +543,15 @@ export default function Profile() {
                 })}
                 {orders.length === 0 && (
                   <tr>
-                    <td className="py-6 text-on-surface-variant" colSpan={5}>No orders yet.</td>
+                    <td className="py-6 text-on-surface-variant" colSpan={6}>No orders yet.</td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
         </div>
+
+        <PaymentDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
 
         {/* Support Tickets */}
         <div className="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-sm">

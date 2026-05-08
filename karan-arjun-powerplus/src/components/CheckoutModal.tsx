@@ -98,6 +98,39 @@ export function CheckoutModal() {
       },
     });
 
+    rzp.on('payment.failed', async (response) => {
+      try {
+        await addDoc(collection(db, 'orders'), {
+          uid:               user.uid,
+          customerName:      delivery.fullName,
+          customerPhone:     delivery.phone,
+          state:             delivery.state,
+          district:          delivery.district,
+          address:           delivery.address,
+          pinCode:           delivery.pinCode,
+          customerEmail:     profile?.email ?? user.email ?? '',
+          items: items.map((item) => ({
+            id:       item.id,
+            name:     item.name,
+            price:    item.price,
+            quantity: item.quantity,
+          })),
+          totalAmount:       cartTotal,
+          status:            'Failed',
+          paymentStatus:     'failed',
+          razorpayPaymentId: response.error.metadata?.payment_id ?? '',
+          razorpayOrderId:   response.error.metadata?.order_id ?? '',
+          failureReason:     response.error.description ?? 'Payment failed',
+          createdAt:         serverTimestamp(),
+          updatedAt:         serverTimestamp(),
+        });
+      } catch {
+        // best-effort — don't block the error message
+      }
+      setIsSubmitting(false);
+      setError(`Payment failed: ${response.error.description ?? 'Unknown error'}. Please try again.`);
+    });
+
     rzp.open();
   };
 

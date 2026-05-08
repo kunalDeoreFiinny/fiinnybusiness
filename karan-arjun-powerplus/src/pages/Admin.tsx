@@ -13,7 +13,9 @@ import {
   updateDoc,
   writeBatch,
 } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { Icons } from '../components/Icons';
+import { PaymentDetailModal, type PaymentDetailOrder } from '../components/PaymentDetailModal';
 import {
   initialAbout,
   initialBlogs,
@@ -122,6 +124,7 @@ export default function Admin() {
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<PaymentDetailOrder | null>(null);
   const [grievances, setGrievances] = useState<Grievance[]>([]);
   const [about, setAbout] = useState<AboutInfo>(initialAbout);
   const [homeVideos, setHomeVideos] = useState<string[]>(initialHomeVideos);
@@ -219,7 +222,12 @@ export default function Admin() {
           totalAmount: Number(data.totalAmount ?? 0),
           status: String(data.status ?? 'Placed'),
           paymentStatus: (data.paymentStatus ?? 'pending') as Order['paymentStatus'],
-          razorpayPaymentId: data.razorpayPaymentId ? String(data.razorpayPaymentId) : undefined,
+          razorpayPaymentId:  data.razorpayPaymentId  ? String(data.razorpayPaymentId)  : undefined,
+          razorpayOrderId:    data.razorpayOrderId    ? String(data.razorpayOrderId)    : undefined,
+          failureReason:      data.failureReason      ? String(data.failureReason)      : undefined,
+          shipmentStatus:     data.shipmentStatus     ? (data.shipmentStatus as Order['shipmentStatus']) : undefined,
+          trackingId:         data.trackingId         ? String(data.trackingId)         : undefined,
+          shiprocketOrderId:  data.shiprocketOrderId  ? String(data.shiprocketOrderId)  : undefined,
           createdAt: data.createdAt?.toDate?.()?.toLocaleString('en-IN') ?? '-',
         };
       });
@@ -708,7 +716,11 @@ export default function Admin() {
                   </thead>
                   <tbody>
                     {orders.map((order) => (
-                      <tr key={order.id} className="border-b border-primary/5 hover:bg-slate-50 transition-colors">
+                      <tr
+                        key={order.id}
+                        onClick={() => setSelectedOrder(order)}
+                        className="border-b border-primary/5 hover:bg-slate-50 transition-colors cursor-pointer"
+                      >
                         <td className="py-4 font-bold text-primary">
                           <p>{order.customerName}</p>
                           <p className="text-xs text-primary/50 font-normal">{order.customerEmail}</p>
@@ -747,6 +759,38 @@ export default function Admin() {
             )}
           </div>
         )}
+
+        <PaymentDetailModal
+          order={selectedOrder}
+          onClose={() => setSelectedOrder(null)}
+          isAdmin
+          onShipmentUpdate={async (orderId, data) => {
+            await updateDoc(doc(db, 'orders', orderId), {
+              ...data,
+              updatedAt: serverTimestamp(),
+            });
+            // Reflect update in the currently-open modal
+            setSelectedOrder((prev) =>
+              prev ? { ...prev, ...(data as Partial<PaymentDetailOrder>) } : prev,
+            );
+          }}
+          onCreateShiprocket={async (orderId) => {
+            const fns = getFunctions();
+            const createShipment = httpsCallable<{ orderId: string }, { shiprocketOrderId: string }>(
+              fns, 'createShiprocketShipment',
+            );
+            const result = await createShipment({ orderId });
+            setSelectedOrder((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    shiprocketOrderId: result.data.shiprocketOrderId,
+                    shipmentStatus: 'processing',
+                  }
+                : prev,
+            );
+          }}
+        />
 
         {activeTab === 'Users' && (
           <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
