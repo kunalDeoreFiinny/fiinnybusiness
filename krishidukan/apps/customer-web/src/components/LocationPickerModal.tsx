@@ -1,6 +1,7 @@
 // Location picker (F1). Supports GPS or manual selection by village / city / pincode.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { LocateFixed, Search, X, MapPin } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useLocation } from '../LocationContext';
 import { searchLocationCatalog } from '../data/locationCatalog';
 
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export function LocationPickerModal({ open, onClose, required = false }: Props) {
+  const { t } = useTranslation();
   const { location, requesting, requestGps, setManualEntry, dismissPrompt } = useLocation();
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -52,11 +54,11 @@ export function LocationPickerModal({ open, onClose, required = false }: Props) 
         <div style={{ padding: '16px 18px 12px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <h3 style={{ fontSize: 16, fontWeight: 700, color: '#111827', marginBottom: 2 }}>
-              {required ? 'Where are you farming?' : 'Choose your location'}
+              {required ? t('location.promptTitleRequired') : t('location.promptTitle')}
             </h3>
-            <p style={{ fontSize: 12, color: '#6b7280' }}>We use this to find shops and stock near you.</p>
+            <p style={{ fontSize: 12, color: '#6b7280' }}>{t('location.promptBody')}</p>
           </div>
-          <button onClick={handleClose} aria-label="Close" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 4 }}>
+          <button onClick={handleClose} aria-label={t('location.closeAria')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 4 }}>
             <X size={18} />
           </button>
         </div>
@@ -73,12 +75,12 @@ export function LocationPickerModal({ open, onClose, required = false }: Props) 
             }}
           >
             <LocateFixed size={16} />
-            {requesting ? 'Getting location…' : 'Use my current location'}
+            {requesting ? t('search.gettingLocation') : t('location.useCurrent')}
           </button>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '4px 0 12px' }}>
             <div style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
-            <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, letterSpacing: '0.06em' }}>OR PICK MANUALLY</span>
+            <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, letterSpacing: '0.06em' }}>{t('location.pickManually')}</span>
             <div style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
           </div>
 
@@ -88,7 +90,7 @@ export function LocationPickerModal({ open, onClose, required = false }: Props) 
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Village, city or pincode…"
+              placeholder={t('location.searchPlaceholder')}
               style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: 14, color: '#111827' }}
               inputMode="search"
             />
@@ -98,7 +100,7 @@ export function LocationPickerModal({ open, onClose, required = false }: Props) 
         <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
           {matches.length === 0 ? (
             <p style={{ fontSize: 13, color: '#9ca3af', textAlign: 'center', padding: '24px 0' }}>
-              No matches. Try a different name or pincode.
+              {t('location.noMatches')}
             </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

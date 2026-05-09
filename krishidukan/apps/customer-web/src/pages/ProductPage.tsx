@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Phone, Navigation, Star, List, Map, MessageCircle, ShoppingCart, Heart, Zap } from 'lucide-react';
+import { ArrowLeft, MapPin, Phone, Navigation, Star, List, Map, MessageCircle, ShoppingCart, Heart, Zap, Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { BRANDS, formatDistance, type StockResult } from '../demoData';
 import type { Retailer } from '../demoData';
 import { useLocation } from '../LocationContext';
@@ -10,6 +11,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { ShopRowSkeleton } from '../components/SkeletonLoader';
 import { relativeTime } from '../hooks/useFormatTime';
+import { productIcon, ShopIcon } from '../components/icons';
 
 type ViewMode = 'map' | 'list';
 
@@ -23,6 +25,7 @@ export function ProductPage() {
   const { addToCart, toggleWishlist, isWishlisted } = useCart();
 
   const { data, loading } = useRetailersForProduct(id, location.lat, location.lng);
+  const { t } = useTranslation();
   const product = data?.product ?? null;
   const brand = product ? BRANDS.find((b) => b.id === product.brandId) : null;
   const results = data?.results ?? [];
@@ -63,9 +66,9 @@ export function ProductPage() {
   if (!product) {
     return (
       <div style={{ padding: 32, textAlign: 'center' }}>
-        <p style={{ color: '#dc2626', fontSize: 14 }}>Product not found</p>
+        <p style={{ color: '#dc2626', fontSize: 14 }}>{t('product.notFound')}</p>
         <button onClick={() => navigate('/')} style={{ marginTop: 12, padding: '8px 16px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}>
-          Back to home
+          {t('product.backHome')}
         </button>
       </div>
     );
@@ -84,7 +87,7 @@ export function ProductPage() {
         </span>
         <button
           onClick={handleWishlist}
-          aria-label="Save to wishlist"
+          aria-label={t('product.saveWishlistAria')}
           style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 4, color: wishlisted ? '#dc2626' : '#9ca3af' }}
         >
           <Heart size={18} fill={wishlisted ? '#dc2626' : 'none'} />
@@ -94,47 +97,47 @@ export function ProductPage() {
             onClick={() => setViewMode('map')}
             style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, background: viewMode === 'map' ? '#fff' : 'transparent', color: viewMode === 'map' ? '#111827' : '#6b7280', boxShadow: viewMode === 'map' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}
           >
-            <Map size={13} /> Map
+            <Map size={13} /> {t('product.map')}
           </button>
           <button
             onClick={() => setViewMode('list')}
             style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, background: viewMode === 'list' ? '#fff' : 'transparent', color: viewMode === 'list' ? '#111827' : '#6b7280', boxShadow: viewMode === 'list' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}
           >
-            <List size={13} /> List
+            <List size={13} /> {t('product.list')}
           </button>
         </div>
       </div>
 
-      <section style={{ padding: 16, background: '#fff', borderBottom: '1px solid #f3f4f6' }}>
+      <section style={{ padding: 16, background: '#fff', borderBottom: '1px solid #eef0f3' }}>
         <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
           <div style={{
-            width: 72, height: 72, borderRadius: 14, flexShrink: 0,
-            background: `linear-gradient(135deg, ${product.imageColor}20, ${product.imageColor}40)`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 38,
+            width: 76, height: 76, borderRadius: 16, flexShrink: 0,
+            background: `linear-gradient(135deg, ${product.imageColor}15, ${product.imageColor}30)`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            {product.emoji}
+            {(() => { const Icon = productIcon(product.id); return <Icon size={40} color={product.imageColor} strokeWidth={1.7} />; })()}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: brand?.color ?? '#16a34a', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: brand?.color ?? '#16a34a', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
               {brand?.name ?? 'KaranArjun PowerPlus'} · {product.categoryLabel}
             </div>
-            <h1 style={{ fontSize: 17, fontWeight: 700, color: '#111827', lineHeight: 1.3, marginBottom: 6 }}>
+            <h1 style={{ fontSize: 18, fontWeight: 800, color: '#111827', lineHeight: 1.3, marginBottom: 6, letterSpacing: '-0.01em' }}>
               {product.name}
             </h1>
-            <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.5 }}>{product.description}</p>
+            <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.55 }}>{product.description}</p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 6, marginTop: 14, flexWrap: 'wrap' }}>
           {product.benefits.map((b) => (
-            <span key={b} style={{ fontSize: 11, color: '#15803d', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '3px 8px', fontWeight: 500 }}>
-              ✓ {b}
+            <span key={b} style={{ fontSize: 11, color: '#15803d', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 999, padding: '4px 10px 4px 8px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <Check size={11} strokeWidth={2.6} /> {b}
             </span>
           ))}
         </div>
 
         <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 500 }}>Available in:</span>
+          <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 500 }}>{t('product.availableIn')}</span>
           {product.packSizes.map((s) => (
             <span key={s} style={{ fontSize: 11, color: '#374151', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 6, padding: '2px 8px' }}>{s}</span>
           ))}
@@ -146,19 +149,19 @@ export function ProductPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
           <MapPin size={13} style={{ color: '#15803d' }} />
           <span style={{ fontSize: 12, color: '#15803d', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            Near <strong>{location.label}</strong> · {inStock.length} in stock
-            {data?.scope === 'radius' && data.radiusKm > 0 && ` · within ${data.radiusKm} km`}
-            {data?.scope === 'district' && ` · district-wide`}
-            {data?.scope === 'state' && ` · state-wide`}
+            {t('product.locationNear', { label: location.label, count: inStock.length })}
+            {data?.scope === 'radius' && data.radiusKm > 0 && ` · ${t('product.scopeWithin', { km: data.radiusKm })}`}
+            {data?.scope === 'district' && ` · ${t('product.scopeDistrict')}`}
+            {data?.scope === 'state' && ` · ${t('product.scopeState')}`}
           </span>
         </div>
         {location.source !== 'gps' && (
           <button onClick={requestGps} disabled={requesting} style={{ background: 'transparent', border: 'none', color: '#15803d', fontSize: 11, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}>
-            {requesting ? 'Getting…' : 'Use my GPS'}
+            {requesting ? t('product.gettingShort') : t('product.useMyGps')}
           </button>
         )}
         {data?.fromCache && data.cachedAt && (
-          <span style={{ fontSize: 10, color: '#92400e' }}>· Last updated {relativeTime(data.cachedAt)}</span>
+          <span style={{ fontSize: 10, color: '#92400e' }}>· {t('home.lastUpdated', { when: relativeTime(data.cachedAt) })}</span>
         )}
       </div>
 
@@ -186,15 +189,15 @@ export function ProductPage() {
             <div style={{ padding: '14px 16px', background: '#fff' }}>
               <p style={{ fontSize: 13, color: '#6b7280', textAlign: 'center' }}>
                 {results.length > 0
-                  ? `Tap a pin to see retailer details · ${inStock.length} stocking this product`
-                  : 'No retailers found in your area'}
+                  ? t('product.tapPin', { count: inStock.length })
+                  : t('product.noRetailers')}
               </p>
             </div>
           )}
 
           {results.length > 0 && (
             <div style={{ padding: '0 16px 16px', background: '#fff', borderTop: '1px solid #f3f4f6' }}>
-              <p style={{ fontSize: 12, fontWeight: 600, color: '#9ca3af', marginBottom: 10, paddingTop: 14 }}>ALL RETAILERS</p>
+              <p style={{ fontSize: 12, fontWeight: 600, color: '#9ca3af', marginBottom: 10, paddingTop: 14 }}>{t('product.sectionAllRetailers')}</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {results.map((r) => (
                   <RetailerRow
@@ -215,15 +218,17 @@ export function ProductPage() {
         <div style={{ padding: '16px' }}>
           {results.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: '#9ca3af' }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>📍</div>
-              <p style={{ fontSize: 15, fontWeight: 600, color: '#374151', marginBottom: 6 }}>No retailers found</p>
-              <p style={{ fontSize: 13 }}>Try enabling GPS for more accurate results</p>
+              <div style={{ width: 64, height: 64, borderRadius: 18, background: '#f3f4f6', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+                <MapPin size={30} color="#6b7280" strokeWidth={1.8} />
+              </div>
+              <p style={{ fontSize: 15, fontWeight: 600, color: '#374151', marginBottom: 6 }}>{t('product.listEmptyTitle')}</p>
+              <p style={{ fontSize: 13 }}>{t('product.listEmptyBody')}</p>
             </div>
           ) : (
             <>
               {inStock.length > 0 && (
                 <>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: '#15803d', marginBottom: 10 }}>IN STOCK ({inStock.length})</p>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: '#15803d', marginBottom: 10 }}>{t('product.sectionInStock', { count: inStock.length })}</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
                     {inStock.map((r) => <RetailerCard key={r.retailer.id} result={r} onAddToCart={handleAddToCart} onBuyNow={handleBuyNow} />)}
                   </div>
@@ -231,7 +236,7 @@ export function ProductPage() {
               )}
               {outOfStock.length > 0 && (
                 <>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af', marginBottom: 10 }}>OUT OF STOCK ({outOfStock.length})</p>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af', marginBottom: 10 }}>{t('product.sectionOutOfStock', { count: outOfStock.length })}</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10, opacity: 0.6 }}>
                     {outOfStock.map((r) => <RetailerCard key={r.retailer.id} result={r} onAddToCart={handleAddToCart} onBuyNow={handleBuyNow} />)}
                   </div>
@@ -255,6 +260,7 @@ interface RetailerCardProps {
 }
 
 function RetailerCard({ result, onClose, onAddToCart, onBuyNow }: RetailerCardProps) {
+  const { t } = useTranslation();
   const { retailer, stock, distanceM: d } = result;
   function openMaps() {
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${retailer.lat},${retailer.lng}`, '_blank');
@@ -265,7 +271,9 @@ function RetailerCard({ result, onClose, onAddToCart, onBuyNow }: RetailerCardPr
         <button onClick={onClose} style={{ position: 'absolute', top: 10, right: 10, background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: 16, padding: 4 }}>✕</button>
       )}
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 10 }}>
-        <div style={{ width: 44, height: 44, borderRadius: 10, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>🏪</div>
+        <div style={{ width: 44, height: 44, borderRadius: 12, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <ShopIcon size={20} color="#16a34a" strokeWidth={1.9} />
+        </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 2 }}>{retailer.businessName}</div>
           <div style={{ fontSize: 12, color: '#6b7280', display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -285,23 +293,23 @@ function RetailerCard({ result, onClose, onAddToCart, onBuyNow }: RetailerCardPr
 
       {stock.inStock ? (
         <div style={{ fontSize: 11, color: '#15803d', fontWeight: 700, marginBottom: 10, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e' }} /> In stock · {stock.quantity} units
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e' }} /> {t('product.inStockUnits', { count: stock.quantity })}
         </div>
       ) : (
-        <div style={{ fontSize: 11, color: '#dc2626', fontWeight: 700, marginBottom: 10 }}>✗ Out of stock</div>
+        <div style={{ fontSize: 11, color: '#dc2626', fontWeight: 700, marginBottom: 10 }}>✗ {t('common.outOfStock')}</div>
       )}
 
       <div style={{ display: 'flex', gap: 8, marginBottom: stock.inStock && (onAddToCart || onBuyNow) ? 8 : 0 }}>
         <a href={`tel:${retailer.phone}`} style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '9px 12px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#15803d', textDecoration: 'none' }}>
-          <Phone size={13} /> Call
+          <Phone size={13} /> {t('actions.call')}
         </a>
         {retailer.whatsapp && (
           <a href={`https://wa.me/${retailer.whatsapp.replace('+', '')}`} target="_blank" rel="noopener noreferrer" style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '9px 12px', background: '#f0fff4', border: '1px solid #86efac', borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#15803d', textDecoration: 'none' }}>
-            <MessageCircle size={13} /> WhatsApp
+            <MessageCircle size={13} /> {t('actions.whatsapp')}
           </a>
         )}
         <button onClick={openMaps} style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '9px 12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#1d4ed8', cursor: 'pointer' }}>
-          <Navigation size={13} /> Directions
+          <Navigation size={13} /> {t('actions.directions')}
         </button>
       </div>
 
@@ -312,7 +320,7 @@ function RetailerCard({ result, onClose, onAddToCart, onBuyNow }: RetailerCardPr
               onClick={() => onAddToCart(retailer.id)}
               style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '10px 12px', background: '#fff', border: '1px solid #16a34a', borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#16a34a', cursor: 'pointer' }}
             >
-              <ShoppingCart size={13} /> Add to Cart
+              <ShoppingCart size={13} /> {t('product.addToCart')}
             </button>
           )}
           {onBuyNow && (
@@ -320,7 +328,7 @@ function RetailerCard({ result, onClose, onAddToCart, onBuyNow }: RetailerCardPr
               onClick={() => onBuyNow(retailer.id)}
               style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '10px 12px', background: '#16a34a', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer' }}
             >
-              <Zap size={13} /> Buy Now
+              <Zap size={13} /> {t('product.buyNow')}
             </button>
           )}
         </div>
@@ -330,13 +338,14 @@ function RetailerCard({ result, onClose, onAddToCart, onBuyNow }: RetailerCardPr
 }
 
 function RetailerRow({ result, onSelect, isSelected }: { result: StockResult; onSelect: () => void; isSelected: boolean }) {
+  const { t } = useTranslation();
   const { retailer, stock, distanceM: d } = result;
   return (
     <button
       onClick={onSelect}
       style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: isSelected ? '#f0fdf4' : '#f9fafb', border: `1px solid ${isSelected ? '#bbf7d0' : '#e5e7eb'}`, borderRadius: 10, cursor: 'pointer', textAlign: 'left' }}
     >
-      <div style={{ fontSize: 18 }}>🏪</div>
+      <ShopIcon size={18} color="#16a34a" strokeWidth={1.9} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{retailer.businessName}</div>
         <div style={{ fontSize: 11, color: '#6b7280' }}>{retailer.city} · {formatDistance(d)}</div>
@@ -344,7 +353,7 @@ function RetailerRow({ result, onSelect, isSelected }: { result: StockResult; on
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
         {stock.inStock
           ? <span style={{ fontSize: 11, color: '#15803d', fontWeight: 700, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '2px 7px' }}>₹{stock.price}</span>
-          : <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600 }}>Out of stock</span>}
+          : <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600 }}>{t('common.outOfStock')}</span>}
       </div>
     </button>
   );

@@ -1,10 +1,13 @@
 import { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Phone, Navigation, Star, Clock, MessageCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { RETAILERS, getRetailerProducts, formatDistance, distanceM } from '../demoData';
 import { useLocation } from '../LocationContext';
+import { ShopIcon, productIcon } from '../components/icons';
 
 export function RetailerPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { location } = useLocation();
@@ -15,8 +18,8 @@ export function RetailerPage() {
   if (!retailer) {
     return (
       <div style={{ padding: 32, textAlign: 'center' }}>
-        <p style={{ color: '#dc2626', fontSize: 14 }}>Retailer not found</p>
-        <button onClick={() => navigate('/')} style={{ marginTop: 12, padding: '8px 16px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Back</button>
+        <p style={{ color: '#dc2626', fontSize: 14 }}>{t('retailer.notFound')}</p>
+        <button onClick={() => navigate('/')} style={{ marginTop: 12, padding: '8px 16px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}>{t('common.back')}</button>
       </div>
     );
   }
@@ -41,7 +44,9 @@ export function RetailerPage() {
 
       <section style={{ background: '#fff', padding: 16, borderBottom: '1px solid #f3f4f6' }}>
         <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', marginBottom: 14 }}>
-          <div style={{ width: 64, height: 64, borderRadius: 14, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, flexShrink: 0 }}>🏪</div>
+          <div style={{ width: 64, height: 64, borderRadius: 16, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <ShopIcon size={30} color="#16a34a" strokeWidth={1.9} />
+          </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <h1 style={{ fontSize: 18, fontWeight: 700, color: '#111827', marginBottom: 4, lineHeight: 1.3 }}>{retailer.businessName}</h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#6b7280', flexWrap: 'wrap' }}>
@@ -49,7 +54,7 @@ export function RetailerPage() {
               <span style={{ fontWeight: 700, color: '#374151' }}>{retailer.rating.toFixed(1)}</span>
               <span>({retailer.totalRatings})</span>
               <span>·</span>
-              <span style={{ color: '#16a34a', fontWeight: 600 }}>{formatDistance(d)} away</span>
+              <span style={{ color: '#16a34a', fontWeight: 600 }}>{formatDistance(d)} {t('retailer.away')}</span>
             </div>
           </div>
         </div>
@@ -69,23 +74,23 @@ export function RetailerPage() {
 
         <div style={{ display: 'flex', gap: 8 }}>
           <a href={`tel:${retailer.phone}`} style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
-            <Phone size={15} /> Call
+            <Phone size={15} /> {t('actions.call')}
           </a>
           {retailer.whatsapp && (
             <a href={`https://wa.me/${retailer.whatsapp.replace('+', '')}`} target="_blank" rel="noopener noreferrer" style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px', background: '#dcfce7', border: '1px solid #86efac', borderRadius: 10, fontSize: 14, fontWeight: 600, color: '#15803d', textDecoration: 'none' }}>
-              <MessageCircle size={15} /> WhatsApp
+              <MessageCircle size={15} /> {t('actions.whatsapp')}
             </a>
           )}
           <button onClick={openMaps} style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, fontSize: 14, fontWeight: 600, color: '#1d4ed8', cursor: 'pointer' }}>
-            <Navigation size={15} /> Directions
+            <Navigation size={15} /> {t('actions.directions')}
           </button>
         </div>
       </section>
 
       <section style={{ padding: '16px 16px 32px' }}>
-        <h2 style={{ fontSize: 15, fontWeight: 700, color: '#111827', marginBottom: 12 }}>KaranArjun PowerPlus Products Here</h2>
+        <h2 style={{ fontSize: 15, fontWeight: 700, color: '#111827', marginBottom: 12 }}>{t('retailer.productsHere')}</h2>
         {products.length === 0 ? (
-          <p style={{ fontSize: 13, color: '#9ca3af', textAlign: 'center', padding: '30px 0' }}>No products listed for this retailer</p>
+          <p style={{ fontSize: 13, color: '#9ca3af', textAlign: 'center', padding: '30px 0' }}>{t('retailer.noProducts')}</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {products.map(({ product, stock }) => (
@@ -94,12 +99,14 @@ export function RetailerPage() {
                 onClick={() => navigate(`/product/${product.id}`)}
                 style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 14, cursor: 'pointer', textAlign: 'left', opacity: stock.inStock ? 1 : 0.55 }}
               >
-                <div style={{ width: 48, height: 48, borderRadius: 10, background: `linear-gradient(135deg, ${product.imageColor}15, ${product.imageColor}35)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0 }}>{product.emoji}</div>
+                <div style={{ width: 48, height: 48, borderRadius: 12, background: `linear-gradient(135deg, ${product.imageColor}15, ${product.imageColor}35)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  {(() => { const Icon = productIcon(product.id); return <Icon size={24} color={product.imageColor} strokeWidth={1.9} />; })()}
+                </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: '#111827', marginBottom: 3 }}>{product.shortName}</div>
                   {stock.inStock
-                    ? <div style={{ fontSize: 11, color: '#15803d', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e' }} />{stock.quantity} units in stock</div>
-                    : <div style={{ fontSize: 11, color: '#dc2626', fontWeight: 600 }}>Out of stock</div>}
+                    ? <div style={{ fontSize: 11, color: '#15803d', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e' }} />{t('product.inStockUnits', { count: stock.quantity })}</div>
+                    : <div style={{ fontSize: 11, color: '#dc2626', fontWeight: 600 }}>{t('common.outOfStock')}</div>}
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   <div style={{ fontSize: 16, fontWeight: 700, color: '#16a34a' }}>₹{stock.price}</div>

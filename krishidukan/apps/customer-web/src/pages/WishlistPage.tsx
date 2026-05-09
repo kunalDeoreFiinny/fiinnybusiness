@@ -1,11 +1,13 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Heart, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { PRODUCTS } from '../demoData';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 
 export function WishlistPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { isAuthenticated, requireLogin } = useAuth();
   const { wishlist, toggleWishlist } = useCart();
@@ -24,19 +26,21 @@ export function WishlistPage() {
         <button onClick={() => navigate(-1)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 4, color: '#374151' }}>
           <ArrowLeft size={20} />
         </button>
-        <span style={{ fontSize: 15, fontWeight: 700, color: '#111827', flex: 1 }}>My Wishlist</span>
+        <span style={{ fontSize: 15, fontWeight: 700, color: '#111827', flex: 1 }}>{t('wishlist.title')}</span>
       </div>
 
       {items.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 20px', color: '#9ca3af' }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>💚</div>
-          <p style={{ fontSize: 15, fontWeight: 600, color: '#374151', marginBottom: 6 }}>No saved products yet</p>
-          <p style={{ fontSize: 13, marginBottom: 20 }}>Tap the <Heart size={13} style={{ display: 'inline', verticalAlign: -2 }} /> icon on any product to save it.</p>
+          <div style={{ width: 64, height: 64, borderRadius: 18, background: '#fef2f2', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+            <Heart size={30} color="#dc2626" strokeWidth={1.8} />
+          </div>
+          <p style={{ fontSize: 15, fontWeight: 600, color: '#374151', marginBottom: 6 }}>{t('wishlist.empty')}</p>
+          <p style={{ fontSize: 13, marginBottom: 20 }}>{t('wishlist.emptyBody')}</p>
           <button
             onClick={() => navigate('/')}
             style={{ padding: '10px 18px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
           >
-            Browse products
+            {t('wishlist.browse')}
           </button>
         </div>
       ) : (
@@ -54,7 +58,7 @@ export function WishlistPage() {
               </button>
               <button
                 onClick={() => toggleWishlist(product.id)}
-                aria-label="Remove from wishlist"
+                aria-label={t('wishlist.removeAria')}
                 style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#dc2626', padding: 6 }}
               >
                 <Trash2 size={16} />

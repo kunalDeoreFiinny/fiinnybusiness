@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Phone, Star, Navigation, MessageCircle, Map, List } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { formatDistance } from '../demoData';
 import type { StockResult } from '../demoData';
 import { useLocation } from '../LocationContext';
@@ -8,10 +9,12 @@ import { useNearbyShops } from '../hooks/useNearbyShops';
 import { ShopRowSkeleton } from '../components/SkeletonLoader';
 import { RetailerMap } from '../components/RetailerMap';
 import { relativeTime } from '../hooks/useFormatTime';
+import { ShopIcon } from '../components/icons';
 
 type ViewMode = 'list' | 'map';
 
 export function ShopsPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { location } = useLocation();
   const [query, setQuery] = useState('');
@@ -47,19 +50,19 @@ export function ShopsPage() {
     <div>
       <div style={{ background: '#fff', padding: '16px 16px 12px', borderBottom: '1px solid #e5e7eb', position: 'sticky', top: 60, zIndex: 30 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <h1 style={{ fontSize: 18, fontWeight: 700, color: '#111827' }}>Shops Near You</h1>
+          <h1 style={{ fontSize: 18, fontWeight: 700, color: '#111827' }}>{t('shops.title')}</h1>
           <div style={{ display: 'flex', background: '#f3f4f6', borderRadius: 8, padding: 2, gap: 2 }}>
             <button
               onClick={() => setView('list')}
               style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, background: view === 'list' ? '#fff' : 'transparent', color: view === 'list' ? '#111827' : '#6b7280', boxShadow: view === 'list' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}
             >
-              <List size={13} /> List
+              <List size={13} /> {t('product.list')}
             </button>
             <button
               onClick={() => setView('map')}
               style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, background: view === 'map' ? '#fff' : 'transparent', color: view === 'map' ? '#111827' : '#6b7280', boxShadow: view === 'map' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}
             >
-              <Map size={13} /> Map
+              <Map size={13} /> {t('product.map')}
             </button>
           </div>
         </div>
@@ -68,7 +71,7 @@ export function ShopsPage() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by name, village, city or district..."
+            placeholder={t('shops.searchPlaceholder')}
             style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: 14, color: '#111827' }}
           />
         </div>
@@ -92,18 +95,18 @@ export function ShopsPage() {
         <div style={{ padding: '14px 16px' }}>
           <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>
             {loading && !data
-              ? 'Looking for shops near you…'
-              : `${shops.length} shop${shops.length !== 1 ? 's' : ''} found near `}
+              ? t('shops.looking')
+              : `${t('shops.foundCount', { count: shops.length })} `}
             {!loading || data ? <strong>{location.label}</strong> : null}
           </p>
 
           {data && (
             <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 14 }}>
-              {data.scope === 'radius' && data.radiusKm > 0 && `Within ${data.radiusKm} km`}
-              {data.scope === 'district' && `Showing district-wide results`}
-              {data.scope === 'state' && `Showing all shops in your state`}
+              {data.scope === 'radius' && data.radiusKm > 0 && t('shops.scopeRadius', { km: data.radiusKm })}
+              {data.scope === 'district' && t('shops.scopeDistrict')}
+              {data.scope === 'state' && t('shops.scopeState')}
               {data.fromCache && data.cachedAt && (
-                <span style={{ marginLeft: 6, color: '#92400e' }}>· Last updated {relativeTime(data.cachedAt)}</span>
+                <span style={{ marginLeft: 6, color: '#92400e' }}>· {t('home.lastUpdated', { when: relativeTime(data.cachedAt) })}</span>
               )}
             </p>
           )}
@@ -116,9 +119,11 @@ export function ShopsPage() {
             </div>
           ) : shops.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: '#9ca3af' }}>
-              <div style={{ fontSize: 36, marginBottom: 12 }}>🏪</div>
-              <p style={{ fontSize: 15, fontWeight: 600, color: '#374151', marginBottom: 6 }}>No shops match</p>
-              <p style={{ fontSize: 13 }}>Try a different search term</p>
+              <div style={{ width: 60, height: 60, borderRadius: 18, background: '#f0fdf4', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+                <ShopIcon size={28} color="#16a34a" strokeWidth={1.8} />
+              </div>
+              <p style={{ fontSize: 15, fontWeight: 600, color: '#374151', marginBottom: 6 }}>{t('shops.emptyTitle')}</p>
+              <p style={{ fontSize: 13 }}>{t('shops.emptyBody')}</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -129,7 +134,9 @@ export function ShopsPage() {
                   style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, padding: 14, cursor: 'pointer' }}
                 >
                   <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-                    <div style={{ width: 52, height: 52, borderRadius: 12, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0 }}>🏪</div>
+                    <div style={{ width: 52, height: 52, borderRadius: 14, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <ShopIcon size={24} color="#16a34a" strokeWidth={1.9} />
+                    </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 14, fontWeight: 600, color: '#111827', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {shop.businessName}
@@ -141,7 +148,7 @@ export function ShopsPage() {
                         <span>·</span>
                         <span>{shop.city}</span>
                         <span>·</span>
-                        <span style={{ color: '#15803d', fontWeight: 600 }}>● In Stock</span>
+                        <span style={{ color: '#15803d', fontWeight: 600 }}>● {t('shops.inStockBadge')}</span>
                       </div>
                     </div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: '#16a34a', flexShrink: 0 }}>
@@ -155,7 +162,7 @@ export function ShopsPage() {
                       onClick={(e) => e.stopPropagation()}
                       style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '8px 12px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#15803d', textDecoration: 'none' }}
                     >
-                      <Phone size={13} /> Call
+                      <Phone size={13} /> {t('actions.call')}
                     </a>
                     {shop.whatsapp && (
                       <a
@@ -165,14 +172,14 @@ export function ShopsPage() {
                         onClick={(e) => e.stopPropagation()}
                         style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '8px 12px', background: '#f0fff4', border: '1px solid #86efac', borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#15803d', textDecoration: 'none' }}
                       >
-                        <MessageCircle size={13} /> WhatsApp
+                        <MessageCircle size={13} /> {t('actions.whatsapp')}
                       </a>
                     )}
                     <button
                       onClick={(e) => openDirections(e, shop.lat, shop.lng)}
                       style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '8px 12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#1d4ed8', cursor: 'pointer' }}
                     >
-                      <Navigation size={13} /> Directions
+                      <Navigation size={13} /> {t('actions.directions')}
                     </button>
                   </div>
                 </div>
