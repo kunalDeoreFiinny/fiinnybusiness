@@ -32,6 +32,25 @@ import { db } from '../lib/firebase';
 
 type AdminTab = 'Dashboard' | 'Orders' | 'Users' | 'Products' | 'Blogs' | 'Support' | 'Company Info';
 
+interface AdminUser extends User {
+  email: string;
+  role: 'admin' | 'customer';
+  village: string;
+  district: string;
+  state: string;
+  pincode: string;
+}
+
+interface UserEditFormState {
+  name: string;
+  phone: string;
+  village: string;
+  district: string;
+  state: string;
+  pincode: string;
+  role: 'admin' | 'customer';
+}
+
 interface ProductFormState {
   name: string;
   desc: string;
@@ -122,7 +141,7 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState<AdminTab>('Dashboard');
   const [products, setProducts] = useState<Product[]>([]);
   const [blogs, setBlogs] = useState<Blog[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<PaymentDetailOrder | null>(null);
   const [grievances, setGrievances] = useState<Grievance[]>([]);
@@ -146,6 +165,19 @@ export default function Admin() {
   const [pendingBlogDeleteId, setPendingBlogDeleteId] = useState<string | null>(null);
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [replyingTicketId, setReplyingTicketId] = useState<string | null>(null);
+
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editingUserEmail, setEditingUserEmail] = useState('');
+  const [isSavingUser, setIsSavingUser] = useState(false);
+  const [userEditForm, setUserEditForm] = useState<UserEditFormState>({
+    name: '',
+    phone: '',
+    village: '',
+    district: '',
+    state: '',
+    pincode: '',
+    role: 'customer',
+  });
 
   useEffect(() => {
     const unsubscribeProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
@@ -192,12 +224,18 @@ export default function Admin() {
     });
 
     const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
-      const value: User[] = snapshot.docs.map((docItem) => {
+      const value: AdminUser[] = snapshot.docs.map((docItem) => {
         const data = docItem.data();
         return {
           id: docItem.id,
           name: String(data.name ?? 'Unknown'),
-          phone: String(data.phone ?? '-'),
+          phone: String(data.phone ?? ''),
+          email: String(data.email ?? ''),
+          role: (data.role === 'admin' ? 'admin' : 'customer') as 'admin' | 'customer',
+          village: String(data.village ?? ''),
+          district: String(data.district ?? ''),
+          state: String(data.state ?? ''),
+          pincode: String(data.pincode ?? ''),
           totalOrders: Number(data.totalOrders ?? 0),
           joinDate: String(data.createdAt?.toDate?.()?.toISOString?.().slice(0, 10) ?? '-'),
         };
@@ -488,6 +526,49 @@ export default function Admin() {
     } finally {
       setReplyingTicketId(null);
     }
+  };
+
+  const resetUserEditForm = () => {
+    setEditingUserId(null);
+    setEditingUserEmail('');
+    setUserEditForm({ name: '', phone: '', village: '', district: '', state: '', pincode: '', role: 'customer' });
+  };
+
+  const handleEditUser = (account: AdminUser) => {
+    setEditingUserId(account.id);
+    setEditingUserEmail(account.email);
+    setUserEditForm({
+      name: account.name,
+      phone: account.phone,
+      village: account.village,
+      district: account.district,
+      state: account.state,
+      pincode: account.pincode,
+      role: account.role,
+    });
+  };
+
+  const handleSaveUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUserId) return;
+    if (!userEditForm.name.trim()) {
+      setStatus('User name is required.');
+      return;
+    }
+    setIsSavingUser(true);
+    await updateDoc(doc(db, 'users', editingUserId), {
+      name: userEditForm.name.trim(),
+      phone: userEditForm.phone.trim(),
+      village: userEditForm.village.trim(),
+      district: userEditForm.district.trim(),
+      state: userEditForm.state.trim(),
+      pincode: userEditForm.pincode.trim(),
+      role: userEditForm.role,
+      updatedAt: serverTimestamp(),
+    });
+    setIsSavingUser(false);
+    setStatus('User updated successfully.');
+    resetUserEditForm();
   };
 
   const handleSaveCompanyInfo = async (e: React.FormEvent) => {
@@ -793,29 +874,146 @@ export default function Admin() {
         />
 
         {activeTab === 'Users' && (
-          <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
-            <h2 className="font-sans text-xl font-bold text-primary mb-6">Registered Users</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left font-sans text-sm">
-                <thead>
-                  <tr className="border-b border-primary/10">
-                    <th className="py-4 text-primary/60 font-semibold uppercase tracking-wider text-xs">Name</th>
-                    <th className="py-4 text-primary/60 font-semibold uppercase tracking-wider text-xs">Phone</th>
-                    <th className="py-4 text-primary/60 font-semibold uppercase tracking-wider text-xs">Join Date</th>
-                    <th className="py-4 text-right text-primary/60 font-semibold uppercase tracking-wider text-xs">Orders</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((account) => (
-                    <tr key={account.id} className="border-b border-primary/5 hover:bg-slate-50 transition-colors">
-                      <td className="py-4 font-bold text-primary">{account.name}</td>
-                      <td className="py-4 text-primary/80">{account.phone || '-'}</td>
-                      <td className="py-4 text-primary/80">{account.joinDate}</td>
-                      <td className="py-4 text-right font-bold text-primary">{account.totalOrders}</td>
+          <div className="space-y-6">
+            <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm">
+              <h2 className="font-sans text-xl font-bold text-primary mb-6">Registered Users</h2>
+
+              {editingUserId && (
+                <form onSubmit={handleSaveUser} className="space-y-4 mb-8 p-5 rounded-2xl border border-slate-200 bg-slate-50/70">
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-sans text-lg font-bold text-primary">Edit User</h3>
+                    <button
+                      type="button"
+                      onClick={resetUserEditForm}
+                      className="px-3 py-2 text-xs rounded-lg border border-slate-300 font-sans font-semibold hover:bg-white"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  <div className="mb-2">
+                    <span className="font-sans text-xs text-primary/50 font-semibold uppercase tracking-wider">Email (read-only)</span>
+                    <p className="font-sans text-sm text-primary/80 mt-1">{editingUserEmail || '-'}</p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block font-sans text-sm font-semibold text-primary mb-2">Name</label>
+                      <input
+                        type="text"
+                        value={userEditForm.name}
+                        onChange={(e) => setUserEditForm((prev) => ({ ...prev, name: e.target.value }))}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-sans text-sm font-semibold text-primary mb-2">Phone</label>
+                      <input
+                        type="text"
+                        value={userEditForm.phone}
+                        onChange={(e) => setUserEditForm((prev) => ({ ...prev, phone: e.target.value }))}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-sans text-sm font-semibold text-primary mb-2">Village</label>
+                      <input
+                        type="text"
+                        value={userEditForm.village}
+                        onChange={(e) => setUserEditForm((prev) => ({ ...prev, village: e.target.value }))}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-sans text-sm font-semibold text-primary mb-2">District</label>
+                      <input
+                        type="text"
+                        value={userEditForm.district}
+                        onChange={(e) => setUserEditForm((prev) => ({ ...prev, district: e.target.value }))}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-sans text-sm font-semibold text-primary mb-2">State</label>
+                      <input
+                        type="text"
+                        value={userEditForm.state}
+                        onChange={(e) => setUserEditForm((prev) => ({ ...prev, state: e.target.value }))}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-sans text-sm font-semibold text-primary mb-2">Pincode</label>
+                      <input
+                        type="text"
+                        value={userEditForm.pincode}
+                        onChange={(e) => setUserEditForm((prev) => ({ ...prev, pincode: e.target.value }))}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-sans text-sm font-semibold text-primary mb-2">Role</label>
+                      <select
+                        value={userEditForm.role}
+                        onChange={(e) => setUserEditForm((prev) => ({ ...prev, role: e.target.value as 'admin' | 'customer' }))}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm"
+                      >
+                        <option value="customer">Customer</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isSavingUser}
+                    className="bg-primary text-secondary-container px-6 py-2 rounded-xl font-sans font-bold text-sm hover:bg-primary-container transition-colors disabled:opacity-60"
+                  >
+                    {isSavingUser ? 'Saving…' : 'Save Changes'}
+                  </button>
+                </form>
+              )}
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left font-sans text-sm">
+                  <thead>
+                    <tr className="border-b border-primary/10">
+                      <th className="py-4 text-primary/60 font-semibold uppercase tracking-wider text-xs">Name</th>
+                      <th className="py-4 text-primary/60 font-semibold uppercase tracking-wider text-xs">Email</th>
+                      <th className="py-4 text-primary/60 font-semibold uppercase tracking-wider text-xs">Phone</th>
+                      <th className="py-4 text-primary/60 font-semibold uppercase tracking-wider text-xs">Role</th>
+                      <th className="py-4 text-primary/60 font-semibold uppercase tracking-wider text-xs">Join Date</th>
+                      <th className="py-4 text-right text-primary/60 font-semibold uppercase tracking-wider text-xs">Orders</th>
+                      <th className="py-4 text-right text-primary/60 font-semibold uppercase tracking-wider text-xs">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {users.map((account) => (
+                      <tr
+                        key={account.id}
+                        className={`border-b border-primary/5 hover:bg-slate-50 transition-colors ${editingUserId === account.id ? 'bg-slate-50' : ''}`}
+                      >
+                        <td className="py-4 font-bold text-primary">{account.name}</td>
+                        <td className="py-4 text-primary/80 text-xs">{account.email || '-'}</td>
+                        <td className="py-4 text-primary/80">{account.phone || '-'}</td>
+                        <td className="py-4">
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${account.role === 'admin' ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-primary/60'}`}>
+                            {account.role}
+                          </span>
+                        </td>
+                        <td className="py-4 text-primary/80">{account.joinDate}</td>
+                        <td className="py-4 text-right font-bold text-primary">{account.totalOrders}</td>
+                        <td className="py-4 text-right">
+                          <button
+                            onClick={() => editingUserId === account.id ? resetUserEditForm() : handleEditUser(account)}
+                            className="px-3 py-1.5 text-xs rounded-lg border border-slate-300 font-sans font-semibold hover:bg-white transition-colors"
+                          >
+                            {editingUserId === account.id ? 'Cancel' : 'Edit'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
