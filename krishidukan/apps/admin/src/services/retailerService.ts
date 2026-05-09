@@ -1,4 +1,4 @@
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, collection, getDocs, type Timestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 export interface CreateRetailerPayload {
@@ -58,4 +58,36 @@ export async function createRetailerDocs(payload: CreateRetailerPayload): Promis
     // Re-throw so the caller (AddRetailerPage) can surface it in the UI
     throw err;
   }
+}
+
+// ── Read ──────────────────────────────────────────────────────────────────────
+
+export interface RetailerDoc {
+  uid: string;
+  shopName: string;
+  ownerName: string;
+  phone: string;
+  email: string;
+  address: string;
+  location: { lat: number; lng: number };
+  createdAt: Date | null;
+}
+
+export async function fetchAllRetailers(): Promise<RetailerDoc[]> {
+  const snapshot = await getDocs(collection(db, 'retailers'));
+  return snapshot.docs.map((d) => {
+    const data = d.data();
+    // Firestore Timestamp → JS Date; fall back gracefully if missing
+    const ts = data['createdAt'] as Timestamp | undefined;
+    return {
+      uid: d.id,
+      shopName: data['shopName'] ?? '',
+      ownerName: data['ownerName'] ?? '',
+      phone: data['phone'] ?? '',
+      email: data['email'] ?? '',
+      address: data['address'] ?? '',
+      location: data['location'] ?? { lat: 0, lng: 0 },
+      createdAt: ts?.toDate?.() ?? null,
+    };
+  });
 }
