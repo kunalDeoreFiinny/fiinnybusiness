@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { api } from '../api';
+import { createRetailer } from '../services/retailerService';
+import { updateUser } from '../services/userService';
 import { INDIAN_STATES } from '@krishidukan/shared';
 
 const CARD: React.CSSProperties = { background: '#fff', borderRadius: 12, padding: 28, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 20 };
@@ -55,13 +56,26 @@ export function RegisterShopPage() {
     setError('');
     setLoading(true);
     try {
-      await api.post('/shops', {
-        ...form,
-        lat: parseFloat(form.lat),
-        lng: parseFloat(form.lng),
+      // Write directly to Firestore
+      const uid = user && 'uid' in user ? user.uid : '';
+      const retailerId = `retailer_${uid}`;
+
+      await createRetailer(retailerId, {
+        shopName: form.businessName,
+        ownerName: form.ownerName,
+        phone: form.phone,
+        address: `${form.addressLine}, ${form.city}, ${form.state} ${form.pincode}`,
+        location: {
+          lat: parseFloat(form.lat),
+          lng: parseFloat(form.lng),
+        },
       });
+
+      // Link retailer to user document
+      await updateUser(uid, { retailerId, name: form.ownerName });
+
       await refreshShop();
-      navigate('/pending');
+      navigate('/');
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Registration failed';
       setError(msg);
