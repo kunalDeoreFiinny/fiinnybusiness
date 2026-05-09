@@ -3,6 +3,7 @@
 // Architecture: Brands → Products → Retailers → RetailerStock
 // This multi-brand structure means other companies can pay to list products later.
 // ---------------------------------------------------------------------------
+import { distanceM } from './utils/distance';
 
 // ── Brands ──────────────────────────────────────────────────────────────────
 export interface Brand {
@@ -235,6 +236,40 @@ export const RETAILERS: Retailer[] = [
     totalRatings: 71,
     openHours: 'Mon–Sat: 8 AM – 7 PM',
   },
+  // ── Demo pair: nearby vs far, same product (kapl-gold) ───────────────────
+  // r8 is ~0.5 km from the default Pune centre (lat 18.5204, lng 73.8567).
+  {
+    id: 'r8',
+    businessName: 'Shivneri Krishi Kendra (Nearby)',
+    ownerName: 'Suresh Mane',
+    phone: '+919011223344',
+    whatsapp: '+919011223344',
+    addressLine: 'Shop 3, Shivaji Market, Deccan Gymkhana',
+    city: 'Pune',
+    state: 'Maharashtra',
+    pincode: '411004',
+    lat: 18.5230,
+    lng: 73.8610,
+    rating: 4.5,
+    totalRatings: 58,
+    openHours: 'Mon–Sat: 8 AM – 8 PM',
+  },
+  // r9 is ~250 km away in Aurangabad — the "far" retailer.
+  {
+    id: 'r9',
+    businessName: 'Marathwada Agri Depot (Far)',
+    ownerName: 'Kishor Pawar',
+    phone: '+919922334455',
+    addressLine: 'Kranti Chowk, Station Road',
+    city: 'Aurangabad',
+    state: 'Maharashtra',
+    pincode: '431001',
+    lat: 19.8762,
+    lng: 75.3433,
+    rating: 4.2,
+    totalRatings: 33,
+    openHours: 'Mon–Sat: 9 AM – 7 PM',
+  },
 ];
 
 // ── Retailer Stock ────────────────────────────────────────────────────────────
@@ -251,7 +286,8 @@ export interface RetailerStock {
 export const RETAILER_STOCK: RetailerStock[] = (() => {
   const MRP_TABLE = [180, 320, 450, 650, 980, 1200];
   const rows: RetailerStock[] = [];
-  RETAILERS.forEach((r, ri) => {
+  // Auto-generate stock for r1–r7
+  RETAILERS.filter((r) => !['r8', 'r9'].includes(r.id)).forEach((r, ri) => {
     PRODUCTS.forEach((p, pi) => {
       if ((ri + pi) % 5 === 0) return; // ~80% coverage
       const mrp = MRP_TABLE[pi % MRP_TABLE.length] ?? 500;
@@ -268,24 +304,22 @@ export const RETAILER_STOCK: RetailerStock[] = (() => {
       });
     });
   });
+
+  // Explicit demo pair — same product (kapl-gold), nearby vs far
+  rows.push(
+    { retailerId: 'r8', productId: 'kapl-gold', price: 171, mrp: 180, inStock: true, quantity: 45 },
+    { retailerId: 'r8', productId: 'kapl-shield', price: 304, mrp: 320, inStock: true, quantity: 20 },
+    { retailerId: 'r8', productId: 'kapl-boost', price: 427, mrp: 450, inStock: false, quantity: 0 },
+    { retailerId: 'r9', productId: 'kapl-gold', price: 162, mrp: 180, inStock: true, quantity: 12 },
+    { retailerId: 'r9', productId: 'kapl-rootmax', price: 617, mrp: 650, inStock: true, quantity: 8 },
+  );
+
   return rows;
 })();
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-export function distanceM(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371000;
-  const φ1 = (lat1 * Math.PI) / 180;
-  const φ2 = (lat2 * Math.PI) / 180;
-  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-  const Δλ = ((lng2 - lng1) * Math.PI) / 180;
-  const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-export function formatDistance(meters: number): string {
-  if (meters < 1000) return `${Math.round(meters)} m`;
-  return `${(meters / 1000).toFixed(1)} km`;
-}
+// Re-export from utils/distance so all existing importers continue to work.
+export { distanceM, formatDistance } from './utils/distance';
 
 export const DEFAULT_LOCATION = { lat: 18.5204, lng: 73.8567, label: 'Pune, Maharashtra' };
 

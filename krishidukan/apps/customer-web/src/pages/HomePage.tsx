@@ -1,17 +1,17 @@
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Phone, Star } from 'lucide-react';
-import { PRODUCTS, BRANDS, RETAILERS, distanceM, formatDistance } from '../demoData';
+import { PRODUCTS, BRANDS, formatDistance } from '../demoData';
 import { useLocation } from '../LocationContext';
+import { useNearbyShops } from '../hooks/useNearbyShops';
+import { NearbyRowSkeleton } from '../components/SkeletonLoader';
+import { relativeTime } from '../hooks/useFormatTime';
 
 export function HomePage() {
   const navigate = useNavigate();
   const { location, requestGps } = useLocation();
   const brand = BRANDS[0]!;
-
-  const nearby = RETAILERS
-    .map((r) => ({ retailer: r, d: distanceM(location.lat, location.lng, r.lat, r.lng) }))
-    .sort((a, b) => a.d - b.d)
-    .slice(0, 4);
+  const { data, loading } = useNearbyShops(location.lat, location.lng);
+  const nearby = (data?.shops ?? []).slice(0, 4);
 
   return (
     <div>
@@ -90,36 +90,61 @@ export function HomePage() {
 
       {/* Nearby retailers */}
       <section style={{ padding: '20px 16px 32px', background: '#fafafa' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
           <h2 style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>Retailers Near You</h2>
           <button onClick={() => navigate('/retailers')} style={{ background: 'none', border: 'none', color: '#16a34a', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
             See all
           </button>
         </div>
+
+        {/* Scope + freshness label (F4/F7) */}
+        {data && (
+          <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 12 }}>
+            {data.scope === 'radius' && data.radiusKm > 0 && `Within ${data.radiusKm} km of ${location.label}`}
+            {data.scope === 'district' && `District-wide results · no shops in your immediate area`}
+            {data.scope === 'state' && `Showing all shops in your state`}
+            {data.fromCache && data.cachedAt && (
+              <span style={{ marginLeft: 6, color: '#92400e' }}>· Last updated {relativeTime(data.cachedAt)}</span>
+            )}
+          </p>
+        )}
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {nearby.map(({ retailer, d }) => (
-            <button
-              key={retailer.id}
-              onClick={() => navigate(`/retailer/${retailer.id}`)}
-              style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 14, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', textAlign: 'left', width: '100%' }}
-            >
-              <div style={{ width: 44, height: 44, borderRadius: 10, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>🏪</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#111827', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{retailer.businessName}</div>
-                <div style={{ fontSize: 12, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <Star size={11} fill="#f59e0b" stroke="none" />
-                  <span style={{ fontWeight: 600, color: '#374151' }}>{retailer.rating.toFixed(1)}</span>
-                  <span>· {retailer.city}</span>
+          {loading && !data ? (
+            <>
+              <NearbyRowSkeleton />
+              <NearbyRowSkeleton />
+              <NearbyRowSkeleton />
+            </>
+          ) : nearby.length === 0 ? (
+            <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 24, textAlign: 'center', color: '#6b7280', fontSize: 13 }}>
+              No retailers indexed yet for your area. Try expanding your search.
+            </div>
+          ) : (
+            nearby.map(({ retailer, distanceM: d }) => (
+              <button
+                key={retailer.id}
+                onClick={() => navigate(`/retailer/${retailer.id}`)}
+                style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 14, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', textAlign: 'left', width: '100%' }}
+              >
+                <div style={{ width: 44, height: 44, borderRadius: 10, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>🏪</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: '#111827', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{retailer.businessName}</div>
+                  <div style={{ fontSize: 12, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Star size={11} fill="#f59e0b" stroke="none" />
+                    <span style={{ fontWeight: 600, color: '#374151' }}>{retailer.rating.toFixed(1)}</span>
+                    <span>· {retailer.city}</span>
+                  </div>
                 </div>
-              </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#16a34a' }}>{formatDistance(d)}</div>
-                <a href={`tel:${retailer.phone}`} onClick={(e) => e.stopPropagation()} style={{ marginTop: 3, display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, color: '#6b7280', textDecoration: 'none' }}>
-                  <Phone size={11} /> Call
-                </a>
-              </div>
-            </button>
-          ))}
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#16a34a' }}>{formatDistance(d)}</div>
+                  <a href={`tel:${retailer.phone}`} onClick={(e) => e.stopPropagation()} style={{ marginTop: 3, display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, color: '#6b7280', textDecoration: 'none' }}>
+                    <Phone size={11} /> Call
+                  </a>
+                </div>
+              </button>
+            ))
+          )}
         </div>
       </section>
 
