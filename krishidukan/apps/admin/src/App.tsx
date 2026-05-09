@@ -6,6 +6,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { ShopsPage } from './pages/ShopsPage';
 import { ShopDetailPage } from './pages/ShopDetailPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
+import { AddRetailerPage } from './pages/AddRetailerPage';
 
 function Layout() {
   return (
@@ -17,6 +18,7 @@ function Layout() {
           <Route path="/shops" element={<ShopsPage />} />
           <Route path="/shops/:id" element={<ShopDetailPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/retailers/new" element={<AddRetailerPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

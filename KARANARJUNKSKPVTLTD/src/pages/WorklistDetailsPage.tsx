@@ -75,7 +75,7 @@ export default function WorklistDetailsPage() {
     const [retailer, setRetailer] = useState<Retailer | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'notes' | 'orders'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'notes' | 'orders'>('orders');
     const [tasks, setTasks] = useState<Task[]>([]);
     const [notes, setNoteData] = useState<Note[]>([]);
     const [orders, setOrders] = useState<Order[]>([]);
@@ -100,7 +100,6 @@ export default function WorklistDetailsPage() {
 
     // Advanced Order Form States
     const [dbProducts, setDbProducts] = useState<any[]>([]);
-    const [newOrderProductId, setNewOrderProductId] = useState<string>('');
 
     // Quick-update inline payment notes per order
     const [orderNotes, setOrderNotes] = useState<Record<string, string>>({});
@@ -131,42 +130,56 @@ export default function WorklistDetailsPage() {
         fetchRetailer();
 
         // Fetch Products
-        const unsubProducts = onSnapshot(getTenantCollection(db, tenantId!, 'products'), (snap) => {
-            const p = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setDbProducts(p);
-            if (p.length > 0 && !newOrderProductId) {
-                setNewOrderProductId(p[0].id);
-            }
-        });
+        const unsubProducts = onSnapshot(
+            getTenantCollection(db, tenantId!, 'products'),
+            (snap) => { setDbProducts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))); },
+            (err) => console.error('Products listener error:', err)
+        );
 
         // Real-time listeners for subcollections
         const tasksQuery = query(getTenantCollection(db, tenantId!, 'retailers', id, 'tasks'), orderBy('createdAt', 'desc'));
-        const unsubTasks = onSnapshot(tasksQuery, (snap) => {
-            setTasks(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task)));
-        });
+        const unsubTasks = onSnapshot(
+            tasksQuery,
+            (snap) => { setTasks(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task))); },
+            (err) => console.error('Tasks listener error:', err)
+        );
 
         const notesQuery = query(getTenantCollection(db, tenantId!, 'retailers', id, 'notes'), orderBy('createdAt', 'desc'));
-        const unsubNotes = onSnapshot(notesQuery, (snap) => {
-            setNoteData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Note)));
-        });
+        const unsubNotes = onSnapshot(
+            notesQuery,
+            (snap) => { setNoteData(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Note))); },
+            (err) => console.error('Notes listener error:', err)
+        );
 
+        // orderBy removed — composite index not available; sort client-side instead
         const ordersQuery = query(
             getTenantCollection(db, tid, 'orders'),
-            where('retailerId', '==', id),
-            orderBy('createdAt', 'desc')
+            where('retailerId', '==', id)
         );
-        const unsubOrders = onSnapshot(ordersQuery, (snap) => {
-            setOrders(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order)));
-        });
+        const unsubOrders = onSnapshot(
+            ordersQuery,
+            (snap) => {
+                const docs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+                docs.sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
+                setOrders(docs);
+            },
+            (err) => console.error('Orders listener error:', err)
+        );
 
         const salesOrdersQuery = query(
             getTenantCollection(db, tid, 'salesOrders'),
-            where('retailerId', '==', id),
-            orderBy('createdAt', 'desc')
+            where('retailerId', '==', id)
         );
-        const unsubSalesOrders = onSnapshot(salesOrdersQuery, (snap) => {
-            setSalesOrders(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        });
+        const unsubSalesOrders = onSnapshot(
+            salesOrdersQuery,
+            (snap) => {
+                type SODoc = { id: string; createdAt?: { seconds?: number }; [key: string]: unknown };
+                const docs: SODoc[] = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SODoc));
+                docs.sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
+                setSalesOrders(docs);
+            },
+            (err) => console.error('SalesOrders listener error:', err)
+        );
 
         return () => {
             unsubTasks();
@@ -175,7 +188,7 @@ export default function WorklistDetailsPage() {
             unsubSalesOrders();
             unsubProducts();
         };
-    }, [id]);
+    }, [id, tenantId]);
 
     const handleWhatsApp = () => {
         if (!retailer?.number) return;
@@ -492,7 +505,7 @@ export default function WorklistDetailsPage() {
             {/* Financial Overview Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
                 <div className="glass-panel" style={{ padding: '1.5rem', borderLeft: '4px solid var(--secondary)' }}>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>{t('common.total_sales')}</div>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Total Sales</div>
                     <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>₹{Number(retailer.totalSales || 0).toLocaleString()}</div>
                 </div>
                 <div className="glass-panel" style={{ padding: '1.5rem', borderLeft: '4px solid var(--primary)' }}>
@@ -597,10 +610,10 @@ export default function WorklistDetailsPage() {
             {/* Tabs Navigation */}
             <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--surface-border)', marginBottom: '2rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
                 {[
-                    { id: 'overview', label: t('common.overview'), icon: User },
+                    { id: 'orders', label: 'B2B Orders', icon: ShoppingCart, count: salesOrders.length },
+                    { id: 'overview', label: 'Overview', icon: User },
                     { id: 'tasks', label: t('worklist_details.tasks'), icon: CheckSquare, count: tasks.length },
-                    { id: 'notes', label: t('worklist_details.notes'), icon: FileText, count: notes.length },
-                    { id: 'orders', label: 'B2B Orders', icon: ShoppingCart, count: salesOrders.length }
+                    { id: 'notes', label: t('worklist_details.notes'), icon: FileText, count: notes.length }
                 ].map(tab => (
                     <button
                         key={tab.id}
@@ -815,12 +828,13 @@ export default function WorklistDetailsPage() {
                             </div>
                         )}
 
-                        {/* Sales Orders */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '3rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                        {/* Sales Orders Table */}
+                        <div style={{ marginBottom: '3rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                                 <h3 style={{ fontSize: '1.15rem', margin: 0 }}>Sales Orders ({salesOrders.length})</h3>
-                                <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>Click any order to edit or regenerate invoice</span>
+                                <span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>Edit status &amp; payment inline → Save remarks</span>
                             </div>
+
                             {salesOrders.length === 0 ? (
                                 <div className="glass-panel" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
                                     <ShoppingCart size={40} color="var(--surface-border)" style={{ margin: '0 auto 1rem', display: 'block' }} />
