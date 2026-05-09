@@ -1,7 +1,14 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
+import { resolve } from 'path';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   server: { port: 5175, host: true },
+  resolve: {
+    alias: {
+      '@krishidukan/shared': resolve(__dirname, '../../packages/shared/src/index.ts'),
+    },
+  },
 });
