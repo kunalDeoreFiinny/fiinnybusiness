@@ -106,7 +106,7 @@ export function RetailerMap({ results, userLat, userLng, onSelect, selected }: P
             <a href="https://www.google.com/maps/dir/?api=1&destination=${retailer.lat},${retailer.lng}"
                target="_blank"
                style="display:inline-block;background:#1d4ed8;color:#fff;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none">
-              🗺 Get Directions
+              Get Directions →
             </a>
           </div>
         `)

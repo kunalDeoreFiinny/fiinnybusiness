@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { IS_DEMO } from '../demoMode';
+import { initRecaptcha, destroyRecaptcha } from '../firebase/auth';
 
 const STYLES = {
   page: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0fdf4', padding: 20 } as React.CSSProperties,
@@ -13,11 +14,25 @@ const STYLES = {
 
 export function LoginPage() {
   const { sendOtp, confirmOtp } = useAuth();
-  const [phone, setPhone] = useState('+919876543210');
+  const [phone, setPhone] = useState('+91');
   const [otp, setOtp] = useState('');
   const [confirmation, setConfirmation] = useState<unknown>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Initialize reCAPTCHA once on mount, destroy on unmount
+  useEffect(() => {
+    if (!IS_DEMO) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        initRecaptcha('recaptcha-container');
+      }, 300);
+      return () => {
+        clearTimeout(timer);
+        destroyRecaptcha();
+      };
+    }
+  }, []);
 
   async function handleSendOtp() {
     setError('');
@@ -74,7 +89,6 @@ export function LoginPage() {
               placeholder="+91XXXXXXXXXX"
               type="tel"
             />
-            {!IS_DEMO && <div id="recaptcha-container" />}
             <button style={STYLES.btn} onClick={() => void handleSendOtp()} disabled={loading}>
               {loading ? 'Sending...' : 'Send OTP'}
             </button>
@@ -105,6 +119,9 @@ export function LoginPage() {
             </button>
           </>
         )}
+
+        {/* reCAPTCHA container — always in DOM, never inside conditional render */}
+        <div id="recaptcha-container" />
       </div>
     </div>
   );

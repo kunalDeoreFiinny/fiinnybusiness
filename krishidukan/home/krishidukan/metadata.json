@@ -1,0 +1,12 @@
+{
+  "name": "Krishidukan",
+  "description": "A modern organic agricultural marketplace bridging traditional farming with digital efficiency.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "Product discovery",
+    "Local store mapping",
+    "Agronomy hub"
+  ]
+}

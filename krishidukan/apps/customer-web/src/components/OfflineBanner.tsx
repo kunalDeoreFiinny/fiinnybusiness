@@ -1,8 +1,9 @@
-// Non-intrusive offline indicator (F7).
 import { WifiOff } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useLocation } from '../LocationContext';
 
 export function OfflineBanner() {
+  const { t } = useTranslation();
   const { online } = useLocation();
   if (online) return null;
   return (
@@ -16,7 +17,7 @@ export function OfflineBanner() {
       }}
     >
       <WifiOff size={13} />
-      <span>Offline mode · Showing your last-saved data</span>
+      <span>{t('offline.banner')}</span>
     </div>
   );
 }

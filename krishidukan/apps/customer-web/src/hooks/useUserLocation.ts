@@ -1,28 +1,24 @@
+// Brief-named hook. Thin adapter over LocationContext exposing the GPS-relevant slice
+// + a request() helper. The full context (manual picker, district, etc.) stays available
+// via useLocation(); this is the minimal surface for product-search UIs.
 import { useLocation } from '../LocationContext';
+import type { GeoCoords } from '../utils/location';
 
-export interface UserLocationHook {
-  lat: number;
-  lng: number;
+export interface UserLocationState {
+  coords: GeoCoords;
   label: string;
   source: 'gps' | 'manual' | 'default';
-  requesting: boolean;
-  needsLocation: boolean;
-  requestGps: () => Promise<void>;
+  loading: boolean;
+  request: () => Promise<void>;
 }
 
-/**
- * Thin wrapper over LocationContext that exposes only the fields needed
- * for location-based product search.
- */
-export function useUserLocation(): UserLocationHook {
-  const { location, requesting, needsLocation, requestGps } = useLocation();
+export function useUserLocation(): UserLocationState {
+  const { location, requesting, requestGps } = useLocation();
   return {
-    lat: location.lat,
-    lng: location.lng,
+    coords: { lat: location.lat, lng: location.lng },
     label: location.label,
     source: location.source,
-    requesting,
-    needsLocation,
-    requestGps,
+    loading: requesting,
+    request: requestGps,
   };
 }
