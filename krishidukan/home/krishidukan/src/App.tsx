@@ -10,14 +10,16 @@ import MarketView from './views/MarketView';
 import HubView from './views/HubView';
 import ProductDetailView from './views/ProductDetailView';
 import StoreLocatorView from './views/StoreLocatorView';
+import AboutView from './views/AboutView';
 import { motion, AnimatePresence } from 'motion/react';
 
-type View = 'home' | 'market' | 'hub' | 'orders' | 'product' | 'map';
+type View = 'home' | 'market' | 'hub' | 'orders' | 'product' | 'map' | 'about';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('home');
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
+  const [locationQuery, setLocationQuery] = useState('Pune, Maharashtra');
 
   const navigateToProduct = (id: string) => {
     setSelectedProductId(id);
@@ -41,6 +43,8 @@ export default function App() {
         return <ProductDetailView productId={selectedProductId} onBack={() => setCurrentView('market')} onStoreClick={navigateToMap} />;
       case 'map':
         return <StoreLocatorView onBack={() => setCurrentView('home')} selectedStoreId={selectedStoreId} />;
+      case 'about':
+        return <AboutView />;
       default:
         return <HomeView onProductClick={navigateToProduct} onHubClick={() => setCurrentView('hub')} />;
     }
@@ -63,7 +67,8 @@ export default function App() {
             { id: 'home', label: 'Home' },
             { id: 'market', label: 'Market' },
             { id: 'hub', label: 'Hub' },
-            { id: 'orders', label: 'Orders' }
+            { id: 'orders', label: 'Orders' },
+            { id: 'about', label: 'About' }
           ].map((item) => (
             <button
               key={item.id}
@@ -80,18 +85,28 @@ export default function App() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-4">
-          <div className="hidden md:flex relative group">
-            <ICONS.Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-outline group-focus-within:text-primary transition-colors" />
-            <input 
-              type="text" 
-              placeholder="Search..." 
-              className="pl-10 pr-4 py-2 bg-surface-container-low border border-outline-variant rounded-full text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary w-64 transition-all"
-            />
+        <div className="flex items-center gap-3">
+          {/* Location search for nearby stores */}
+          <div className="hidden md:flex items-center bg-surface-container-low border border-outline-variant rounded-2xl overflow-hidden shadow-sm group focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+            <div className="flex items-center px-3 py-2 gap-2 flex-1">
+              <ICONS.Location className="w-4 h-4 text-outline group-focus-within:text-primary transition-colors shrink-0" />
+              <input
+                type="text"
+                value={locationQuery}
+                onChange={e => setLocationQuery(e.target.value)}
+                className="bg-transparent border-none w-44 focus:ring-0 text-sm text-on-surface font-semibold"
+              />
+            </div>
+            <button
+              onClick={() => setCurrentView('map')}
+              className="bg-primary text-white font-bold px-4 py-2 text-sm hover:bg-primary/90 transition-colors whitespace-nowrap flex items-center gap-1"
+            >
+              <ICONS.Search className="w-3.5 h-3.5" /> Find Stores
+            </button>
           </div>
-          
-          <button 
-            className="p-2 hover:bg-surface-container rounded-full transition-colors text-primary"
+
+          <button
+            className="p-2 hover:bg-surface-container rounded-full transition-colors text-primary md:hidden"
             onClick={() => setCurrentView('map')}
           >
             <ICONS.Location className="w-5 h-5" />
@@ -133,7 +148,8 @@ export default function App() {
           { id: 'home', icon: ICONS.Home, label: 'Home' },
           { id: 'market', icon: ICONS.Market, label: 'Market' },
           { id: 'hub', icon: ICONS.Hub, label: 'Hub' },
-          { id: 'orders', icon: ICONS.Orders, label: 'Orders' }
+          { id: 'orders', icon: ICONS.Orders, label: 'Orders' },
+          { id: 'about', icon: ICONS.Info, label: 'About' }
         ].map((item) => (
           <button
             key={item.id}
