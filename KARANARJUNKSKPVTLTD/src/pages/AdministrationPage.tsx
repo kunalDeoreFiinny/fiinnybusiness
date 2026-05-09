@@ -17,26 +17,25 @@ import SchemaBuilderPage from './SchemaBuilderPage';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type AdminTab =
-    | 'users'
-    | 'roles'
     | 'retailers'
-    | 'manufacturers'
+    | 'schema-builder'
+    | 'users'
     | 'store'
+    | 'manufacturers'
     | 'invoice-templates'
     | 'invoice-branding'
-    | 'schema-builder';
+    | 'roles';
 
 const ADMIN_TABS: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'users',             label: 'Manage Users',      icon: <Users size={16} /> },
-    { id: 'roles',             label: 'Role Matrix',        icon: <ShieldAlert size={16} /> },
     { id: 'retailers',         label: 'Manage Retailers',   icon: <UserCog size={16} /> },
-    { id: 'manufacturers',     label: 'Manufacturers',      icon: <Factory size={16} /> },
+    { id: 'schema-builder',    label: 'UI Layout Builder',  icon: <Database size={16} /> },
+    { id: 'users',             label: 'Manage Users',       icon: <Users size={16} /> },
     { id: 'store',             label: 'Manage Store',       icon: <Store size={16} /> },
+    { id: 'manufacturers',     label: 'Manufacturers',      icon: <Factory size={16} /> },
     { id: 'invoice-templates', label: 'Invoice Templates',  icon: <Layers size={16} /> },
     { id: 'invoice-branding',  label: 'Invoice Branding',   icon: <Palette size={16} /> },
-    { id: 'schema-builder',    label: 'UI Layout Builder',  icon: <Database size={16} /> }
+    { id: 'roles',             label: 'Role Matrix',        icon: <ShieldAlert size={16} /> },
 ];
-
 // ─── Scroll Arrow Button ──────────────────────────────────────────────────────
 
 function ScrollArrow({ dir, onClick }: { dir: 'left' | 'right'; onClick: () => void }) {
@@ -173,14 +172,14 @@ export default function AdministrationPage() {
             </div>
 
             {/* ── Tab Content ── */}
-            {activeTab === 'users'             && <AdminPage />}
-            {activeTab === 'roles'             && <ManageRolesPage />}
-            {activeTab === 'retailers'         && <ManageRetailersPage />}
-            {activeTab === 'manufacturers'     && <ManufacturersPage />}
-            {activeTab === 'store'             && <AdminStoreProductsPage />}
-            {activeTab === 'invoice-templates' && <InvoiceTemplateBuilderPage />}
-            {activeTab === 'invoice-branding'  && <InvoiceSettingsPage />}
-            {activeTab === 'schema-builder'    && <SchemaBuilderPage />}
+{activeTab === 'retailers'         && <ManageRetailersPage />}
+{activeTab === 'schema-builder'    && <SchemaBuilderPage />}
+{activeTab === 'users'             && <AdminPage />}
+{activeTab === 'store'             && <AdminStoreProductsPage />}
+{activeTab === 'manufacturers'     && <ManufacturersPage />}
+{activeTab === 'invoice-templates' && <InvoiceTemplateBuilderPage />}
+{activeTab === 'invoice-branding'  && <InvoiceSettingsPage />}
+{activeTab === 'roles'             && <ManageRolesPage />}
         </div>
     );
 }

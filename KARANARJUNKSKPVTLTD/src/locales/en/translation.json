@@ -66,7 +66,8 @@
                       "sales_analytics":  "Sales Analytics",
                       "revenue_trend":  "Daily Revenue Trend",
                       "amount":  "Amount",
-                      "date":  "Date"
+                      "date":  "Date",
+                      "outstanding" : "Outstanding"
                   },
     "auth":  {
                  "login":  "Login",
