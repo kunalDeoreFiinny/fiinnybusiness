@@ -1,102 +1,97 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { api } from '../api';
-import { ShopStatus } from '@krishidukan/shared';
+import { Store } from 'lucide-react';
+import { fetchAllRetailers, type RetailerDoc } from '../services/retailerService';
 
-interface Shop {
-  id: string;
-  businessName: string;
-  ownerName: string;
-  city: string;
-  state: string;
-  phone: string;
-  status: ShopStatus;
-  createdAt: string;
-  licenses: { id: string }[];
-}
-
-const STATUS_COLORS: Record<string, string> = {
-  pending_review: '#f59e0b',
-  active: '#22c55e',
-  suspended: '#f87171',
-  rejected: '#94a3b8',
-};
+type LoadState = 'loading' | 'ready' | 'error';
 
 export function ShopsPage() {
-  const [shops, setShops] = useState<Shop[]>([]);
-  const [total, setTotal] = useState(0);
-  const [filter, setFilter] = useState<string>('pending_review');
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const [retailers, setRetailers] = useState<RetailerDoc[]>([]);
+  const [state, setState] = useState<LoadState>('loading');
+  const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
-    setLoading(true);
-    api.get<{ shops: Shop[]; total: number }>('/admin/shops', { params: { status: filter } })
-      .then((r) => { setShops(r.data.shops); setTotal(r.data.total); })
-      .finally(() => setLoading(false));
-  }, [filter]);
-
-  const FILTERS = ['pending_review', 'active', 'suspended', 'rejected', ''];
+    fetchAllRetailers()
+      .then((data) => { setRetailers(data); setState('ready'); })
+      .catch((err: unknown) => {
+        console.error('[ShopsPage] Failed to fetch retailers:', err);
+        setErrorMsg(err instanceof Error ? err.message : 'Failed to load retailers');
+        setState('error');
+      });
+  }, []);
 
   return (
     <div style={{ padding: 32 }}>
-      <h1 style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9', marginBottom: 20 }}>
-        Shops ({total})
-      </h1>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
-        {FILTERS.map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            style={{
-              padding: '6px 14px', borderRadius: 6, border: '1px solid',
-              fontSize: 13, cursor: 'pointer',
-              borderColor: filter === f ? '#22c55e' : '#334155',
-              background: filter === f ? 'rgba(34,197,94,0.1)' : 'transparent',
-              color: filter === f ? '#22c55e' : '#94a3b8',
-            }}
-          >
-            {f || 'All'}
-          </button>
-        ))}
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
+        <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(34,197,94,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Store size={20} color="#22c55e" />
+        </div>
+        <div>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: '#f1f5f9' }}>
+            Retailers {state === 'ready' && <span style={{ fontSize: 14, fontWeight: 400, color: '#64748b' }}>({retailers.length})</span>}
+          </h1>
+          <p style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>All registered retailer accounts from Firestore</p>
+        </div>
       </div>
-      {loading ? (
-        <div style={{ color: '#64748b' }}>Loading...</div>
-      ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid #334155' }}>
-              {['Business', 'Owner', 'Location', 'Phone', 'Licenses', 'Status', 'Registered'].map((h) => (
-                <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 12, color: '#64748b', fontWeight: 600 }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {shops.map((shop) => (
-              <tr
-                key={shop.id}
-                onClick={() => navigate(`/shops/${shop.id}`)}
-                style={{ borderBottom: '1px solid #1e293b', cursor: 'pointer' }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = '#1e293b')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-              >
-                <td style={{ padding: '12px', fontSize: 14, color: '#f1f5f9', fontWeight: 500 }}>{shop.businessName}</td>
-                <td style={{ padding: '12px', fontSize: 13, color: '#94a3b8' }}>{shop.ownerName}</td>
-                <td style={{ padding: '12px', fontSize: 13, color: '#94a3b8' }}>{shop.city}, {shop.state}</td>
-                <td style={{ padding: '12px', fontSize: 13, color: '#94a3b8' }}>{shop.phone}</td>
-                <td style={{ padding: '12px', fontSize: 13, color: '#94a3b8' }}>{shop.licenses.length}</td>
-                <td style={{ padding: '12px' }}>
-                  <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 4, background: `${STATUS_COLORS[shop.status]}20`, color: STATUS_COLORS[shop.status] }}>
-                    {shop.status}
-                  </span>
-                </td>
-                <td style={{ padding: '12px', fontSize: 12, color: '#475569' }}>
-                  {new Date(shop.createdAt).toLocaleDateString('en-IN')}
-                </td>
+
+      {/* Loading */}
+      {state === 'loading' && (
+        <div style={{ color: '#64748b', fontSize: 14, padding: '40px 0', textAlign: 'center' }}>
+          Loading retailers…
+        </div>
+      )}
+
+      {/* Error */}
+      {state === 'error' && (
+        <div style={{ background: '#450a0a', border: '1px solid #991b1b', borderRadius: 8, padding: '14px 18px', color: '#fca5a5', fontSize: 14 }}>
+          {errorMsg}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {state === 'ready' && retailers.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '60px 20px', color: '#475569' }}>
+          <Store size={40} style={{ marginBottom: 12, opacity: 0.4 }} />
+          <p style={{ fontSize: 15, fontWeight: 600, color: '#64748b', marginBottom: 6 }}>No retailers yet</p>
+          <p style={{ fontSize: 13 }}>Add a retailer using the "Add Retailer" page.</p>
+        </div>
+      )}
+
+      {/* Table */}
+      {state === 'ready' && retailers.length > 0 && (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #334155' }}>
+                {['Shop Name', 'Owner Name', 'Phone', 'Address', 'Lat', 'Lng', 'Created At'].map((h) => (
+                  <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {retailers.map((r) => (
+                <tr
+                  key={r.uid}
+                  style={{ borderBottom: '1px solid #1e293b' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = '#1e293b')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <td style={{ padding: '13px 14px', color: '#f1f5f9', fontWeight: 600 }}>{r.shopName}</td>
+                  <td style={{ padding: '13px 14px', color: '#94a3b8' }}>{r.ownerName}</td>
+                  <td style={{ padding: '13px 14px', color: '#94a3b8', whiteSpace: 'nowrap' }}>{r.phone}</td>
+                  <td style={{ padding: '13px 14px', color: '#94a3b8', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.address}</td>
+                  <td style={{ padding: '13px 14px', color: '#64748b', fontFamily: 'monospace' }}>{r.location.lat.toFixed(4)}</td>
+                  <td style={{ padding: '13px 14px', color: '#64748b', fontFamily: 'monospace' }}>{r.location.lng.toFixed(4)}</td>
+                  <td style={{ padding: '13px 14px', color: '#475569', whiteSpace: 'nowrap' }}>
+                    {r.createdAt ? r.createdAt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

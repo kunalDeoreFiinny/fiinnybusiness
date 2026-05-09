@@ -155,7 +155,7 @@ export default function ManageRetailersPage() {
                             <th style={{ padding: '1rem', fontWeight: 600 }}>{t('manage_retailers.table_retailer_name')}</th>
                             <th style={{ padding: '1rem', fontWeight: 600 }}>{t('manage_retailers.table_contact_info')}</th>
                             <th style={{ padding: '1rem', fontWeight: 600 }}>{t('manage_retailers.table_location')}</th>
-                            <th style={{ padding: '1rem', fontWeight: 600, textAlign: 'right' }}>{t('dashboard.outstanding')}</th>
+                            <th style={{ padding: '1rem', fontWeight: 600, textAlign: 'center'  }}>{t('dashboard.outstanding')}</th>
                             <th style={{ padding: '1rem', fontWeight: 600, textAlign: 'center' }}>{t('common.actions')}</th>
                         </tr>
                     </thead>

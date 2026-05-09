@@ -35,17 +35,18 @@ export default function HorizontalNavbar() {
     <nav
   aria-label="Priority navigation"
   style={{
-    opacity:0.9,
     position: 'sticky',
-    top: 0, // 👈 cha₹nge to '64px' if you have a top header
+    top: 0,
     zIndex: 100,
     display: 'flex',
     alignItems: 'center',
     gap: '0.125rem',
     padding: '0 1rem',
-    background: 'rgba(0, 0, 0, 0.9)',
+    background: 'var(--surface-base)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
     borderBottom: '1px solid var(--surface-border)',
-    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)', // 👈 makes it feel real
+    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)',
     overflowX: 'auto',
     scrollbarWidth: 'none',
     flexShrink: 0,
