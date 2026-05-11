@@ -17,11 +17,12 @@ import AboutView from './views/AboutView';
 import LoginView from './views/LoginView';
 import SignupView from './views/SignupView';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchMarketplaceProducts, fetchStores, syncInitialData } from './firebase';
+import { auth, fetchMarketplaceProducts, fetchStores, syncInitialData, getUserProfile } from './firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { MarketplaceProduct } from '../types/product';
 
 type View = 'home' | 'market' | 'hub' | 'product' | 'map' | 'about' | 'profile' | 'login' | 'signup';
-type UserRole = 'retailer' | 'manufacturer';
+type UserRole = 'customer' | 'retailer' | 'manufacturer';
 type UserProfile = {
   name: string;
   phone: string;
@@ -36,6 +37,8 @@ export default function App() {
   const [productSearch, setProductSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [language, setLanguage] = useState('EN');
+  
+  const [user, setUser] = useState<any>(null);
   const [userRole, setUserRole] = useState<UserRole>('customer');
   const [userProfile, setUserProfile] = useState<UserProfile>({ name: '', phone: '', email: '' });
   
@@ -83,21 +86,49 @@ export default function App() {
   };
 
   useEffect(() => {
-    const savedRole = localStorage.getItem('krishidukan-user-role');
-    const savedProfile = localStorage.getItem('krishidukan-user-profile');
-    if (savedRole === 'customer' || savedRole === 'retailer') {
-      setUserRole(savedRole);
-    }
-    if (savedProfile) {
-      try {
-        const parsed = JSON.parse(savedProfile) as UserProfile;
-        setUserProfile(parsed);
-      } catch (error) {
-        console.error('Failed to parse saved user profile:', error);
+    // Firebase Auth Listener
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        setUser(firebaseUser);
+        const profileData = await getUserProfile(firebaseUser.uid);
+        if (profileData) {
+          setUserRole(profileData.role as UserRole);
+          setUserProfile({
+            name: profileData.name || '',
+            email: profileData.email || firebaseUser.email || '',
+            phone: profileData.phone || ''
+          });
+        }
+      } else {
+        setUser(null);
+        setUserRole('customer');
+        setUserProfile({ name: '', phone: '', email: '' });
       }
-    }
+    });
+
     void loadData();
+    return () => unsubscribe();
   }, []);
+
+  const handleAuthSuccess = (firebaseUser: any, profile: any) => {
+    setUser(firebaseUser);
+    setUserRole(profile.role);
+    setUserProfile({
+      name: profile.name,
+      email: profile.email,
+      phone: profile.phone || ''
+    });
+    setCurrentView('home');
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setCurrentView('home');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
 
   const filteredProducts = useMemo(() => {
     return allProducts.filter(p => {
@@ -112,14 +143,8 @@ export default function App() {
     });
   }, [allProducts, productSearch, selectedCategory]);
 
-  const handleRoleChange = (role: UserRole) => {
-    setUserRole(role);
-    localStorage.setItem('krishidukan-user-role', role);
-  };
-
   const handleProfileSave = (profile: UserProfile) => {
     setUserProfile(profile);
-    localStorage.setItem('krishidukan-user-profile', JSON.stringify(profile));
   };
 
   const navigateToProduct = (id: string) => {
@@ -178,15 +203,15 @@ export default function App() {
           <ProfileView
             role={userRole}
             profile={userProfile}
-            onRoleChange={handleRoleChange}
+            onRoleChange={setUserRole}
             onProfileSave={handleProfileSave}
             onRetailerProductSaved={loadData}
           />
         );
       case 'login':
-        return <LoginView onBack={() => setCurrentView('home')} onNavigateToSignup={() => setCurrentView('signup')} />;
+        return <LoginView onBack={() => setCurrentView('home')} onNavigateToSignup={() => setCurrentView('signup')} onSuccess={handleAuthSuccess} />;
       case 'signup':
-        return <SignupView onBack={() => setCurrentView('home')} onNavigateToLogin={() => setCurrentView('login')} />;
+        return <SignupView onBack={() => setCurrentView('home')} onNavigateToLogin={() => setCurrentView('login')} onSuccess={handleAuthSuccess} />;
       case 'about':
         return <AboutView />;
       default:
@@ -269,12 +294,29 @@ export default function App() {
             <ICONS.Location className="w-5 h-5" />
           </button>
 
-          <button 
-            onClick={() => setCurrentView('login')}
-            className="bg-primary text-white text-xs font-bold px-5 py-2 rounded-xl hover:scale-105 transition-all shadow-md active:scale-95"
-          >
-            Login
-          </button>
+          {user ? (
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setCurrentView('profile')}
+                className="bg-surface-container-high text-on-surface text-xs font-bold px-4 py-2 rounded-xl hover:bg-surface-container-highest transition-all"
+              >
+                {userProfile.name || 'Profile'}
+              </button>
+              <button 
+                onClick={handleLogout}
+                className="bg-primary/10 text-primary text-xs font-bold px-4 py-2 rounded-xl hover:bg-primary/20 transition-all"
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <button 
+              onClick={() => setCurrentView('login')}
+              className="bg-primary text-white text-xs font-bold px-5 py-2 rounded-xl hover:scale-105 transition-all shadow-md active:scale-95"
+            >
+              Login
+            </button>
+          )}
         </div>
       </header>
 

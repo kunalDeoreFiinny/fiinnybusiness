@@ -211,6 +211,23 @@ export async function fetchStores(): Promise<Store[]> {
   }
 }
 
+export async function saveUserProfile(uid: string, profile: { name: string, email: string, role: string }) {
+  await setDoc(doc(db, 'users', uid), {
+    ...profile,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+}
+
+export async function getUserProfile(uid: string) {
+  const docRef = doc(db, 'users', uid);
+  const docSnap = await getDoc(docRef);
+  if (docSnap.exists()) {
+    return docSnap.data();
+  }
+  return null;
+}
+
 export async function syncInitialData(products: any[], stores: any[], inventory: any[] = []) {
   try {
     const productsSnap = await getDocs(collection(db, 'products'));
