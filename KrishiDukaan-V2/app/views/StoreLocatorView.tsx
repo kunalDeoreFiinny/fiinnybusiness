@@ -6,11 +6,16 @@ import { useState } from 'react';
 interface StoreLocatorViewProps {
   onBack: () => void;
   selectedStoreId?: string | null;
+  stores?: any[];
 }
 
-export default function StoreLocatorView({ onBack, selectedStoreId }: StoreLocatorViewProps) {
-  const focusedStore = STORES.find(s => s.id === selectedStoreId) || STORES[0];
+export default function StoreLocatorView({ onBack, selectedStoreId, stores = [] }: StoreLocatorViewProps) {
+  const focusedStore = (stores.length > 0 ? (stores.find(s => s.id === selectedStoreId) || stores[0]) : null);
   const [location, setLocation] = useState('Pune, Maharashtra');
+
+  if (!focusedStore && stores.length === 0) {
+    return <div className="p-20 text-center">No stores found.</div>;
+  }
 
   return (
     <div className="flex flex-col md:flex-row h-[calc(100vh-64px)] overflow-hidden">
@@ -50,7 +55,7 @@ export default function StoreLocatorView({ onBack, selectedStoreId }: StoreLocat
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4 bg-surface-container-lowest">
-          {STORES.map((store, i) => (
+          {stores.map((store, i) => (
             <motion.div 
               key={store.id}
               initial={{ x: -20, opacity: 0 }}

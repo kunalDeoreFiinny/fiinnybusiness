@@ -5,8 +5,8 @@
 
 'use client'
 
-import { useEffect, useState } from 'react';
-import { ICONS, PRODUCTS } from './constants';
+import { useEffect, useState, useMemo } from 'react';
+import { ICONS, PRODUCTS, STORES, INVENTORY } from './constants';
 import HomeView from './views/HomeView';
 import MarketView from './views/MarketView';
 import HubView from './views/HubView';
@@ -14,12 +14,14 @@ import ProductDetailView from './views/ProductDetailView';
 import StoreLocatorView from './views/StoreLocatorView';
 import ProfileView from './views/ProfileView';
 import AboutView from './views/AboutView';
+import LoginView from './views/LoginView';
+import SignupView from './views/SignupView';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchMarketplaceProducts } from './firebase';
+import { fetchMarketplaceProducts, fetchStores, syncInitialData } from './firebase';
 import { MarketplaceProduct } from '../types/product';
 
-type View = 'home' | 'market' | 'hub' | 'product' | 'map' | 'about' | 'profile';
-type UserRole = 'customer' | 'retailer';
+type View = 'home' | 'market' | 'hub' | 'product' | 'map' | 'about' | 'profile' | 'login' | 'signup';
+type UserRole = 'retailer' | 'manufacturer';
 type UserProfile = {
   name: string;
   phone: string;
@@ -32,19 +34,51 @@ export default function App() {
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [locationQuery, setLocationQuery] = useState('Pune, Maharashtra');
   const [productSearch, setProductSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [language, setLanguage] = useState('EN');
   const [userRole, setUserRole] = useState<UserRole>('customer');
   const [userProfile, setUserProfile] = useState<UserProfile>({ name: '', phone: '', email: '' });
-  const [retailerProducts, setRetailerProducts] = useState<MarketplaceProduct[]>([]);
+  
+  const [allProducts, setAllProducts] = useState<MarketplaceProduct[]>([]);
+  const [allStores, setAllStores] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const allProducts = [...PRODUCTS, ...retailerProducts];
-
-  const loadRetailerProducts = async () => {
+  const loadData = async () => {
     try {
-      const items = await fetchMarketplaceProducts();
-      setRetailerProducts(items);
-    } catch (error) {
-      console.error('Failed to load retailer products:', error);
+      setLoading(true);
+      setErrorMsg(null);
+
+      console.log('Fetching products and stores...');
+      let products = await fetchMarketplaceProducts();
+      let stores = await fetchStores();
+
+      if (products.length === 0 || stores.length === 0) {
+        console.log('Firebase data incomplete, attempting sync...', { 
+          productsCount: products.length, 
+          storesCount: stores.length 
+        });
+        await syncInitialData(PRODUCTS, STORES, INVENTORY);
+        // Fetch again after sync
+        products = await fetchMarketplaceProducts();
+        stores = await fetchStores();
+      }
+
+      console.log('Data loaded successfully:', { 
+        products: products.length, 
+        stores: stores.length 
+      });
+      setAllProducts(products);
+      setAllStores(stores);
+      
+      if (products.length === 0) {
+        setErrorMsg('No products found in database even after sync. Please check your Firestore rules.');
+      }
+    } catch (error: any) {
+      console.error('Failed to load data from Firebase:', error);
+      setErrorMsg(`Firebase Connection Error: ${error.message || 'Unknown error'}. Check your browser console for details.`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -62,8 +96,21 @@ export default function App() {
         console.error('Failed to parse saved user profile:', error);
       }
     }
-    void loadRetailerProducts();
+    void loadData();
   }, []);
+
+  const filteredProducts = useMemo(() => {
+    return allProducts.filter(p => {
+      const matchesSearch = !productSearch.trim() || 
+        p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+        (p.description && p.description.toLowerCase().includes(productSearch.toLowerCase())) ||
+        (p.category && p.category.toLowerCase().includes(productSearch.toLowerCase()));
+      
+      const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
+      
+      return matchesSearch && matchesCategory;
+    });
+  }, [allProducts, productSearch, selectedCategory]);
 
   const handleRoleChange = (role: UserRole) => {
     setUserRole(role);
@@ -86,17 +133,46 @@ export default function App() {
   };
 
   const renderView = () => {
+    if (loading) return (
+      <div className="p-20 text-center">
+        <div className="animate-spin w-10 h-10 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+        <p className="font-bold text-primary">Connecting to Firebase...</p>
+      </div>
+    );
+
+    if (errorMsg) return (
+      <div className="p-20 text-center">
+        <div className="bg-red-50 text-red-700 p-6 rounded-2xl border border-red-100 max-w-lg mx-auto">
+          <h3 className="text-xl font-bold mb-2">Data Loading Issue</h3>
+          <p className="mb-4">{errorMsg}</p>
+          <button 
+            onClick={loadData}
+            className="bg-red-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-red-700 transition-colors"
+          >
+            Retry Connection
+          </button>
+        </div>
+      </div>
+    );
+
     switch (currentView) {
       case 'home':
-        return <HomeView products={allProducts} onProductClick={navigateToProduct} onHubClick={() => setCurrentView('hub')} />;
+        return <HomeView products={filteredProducts} onProductClick={navigateToProduct} onHubClick={() => setCurrentView('hub')} />;
       case 'market':
-        return <MarketView products={allProducts} onProductClick={navigateToProduct} />;
+        return (
+          <MarketView 
+            products={filteredProducts} 
+            onProductClick={navigateToProduct} 
+            selectedCategory={selectedCategory}
+            onCategoryChange={setSelectedCategory}
+          />
+        );
       case 'hub':
         return <HubView />;
       case 'product':
         return <ProductDetailView products={allProducts} productId={selectedProductId} onBack={() => setCurrentView('market')} onStoreClick={navigateToMap} />;
       case 'map':
-        return <StoreLocatorView onBack={() => setCurrentView('home')} selectedStoreId={selectedStoreId} />;
+        return <StoreLocatorView onBack={() => setCurrentView('home')} selectedStoreId={selectedStoreId} stores={allStores} />;
       case 'profile':
         return (
           <ProfileView
@@ -104,13 +180,17 @@ export default function App() {
             profile={userProfile}
             onRoleChange={handleRoleChange}
             onProfileSave={handleProfileSave}
-            onRetailerProductSaved={loadRetailerProducts}
+            onRetailerProductSaved={loadData}
           />
         );
+      case 'login':
+        return <LoginView onBack={() => setCurrentView('home')} onNavigateToSignup={() => setCurrentView('signup')} />;
+      case 'signup':
+        return <SignupView onBack={() => setCurrentView('home')} onNavigateToLogin={() => setCurrentView('login')} />;
       case 'about':
         return <AboutView />;
       default:
-        return <HomeView products={allProducts} onProductClick={navigateToProduct} onHubClick={() => setCurrentView('hub')} />;
+        return <HomeView products={filteredProducts} onProductClick={navigateToProduct} onHubClick={() => setCurrentView('hub')} />;
     }
   };
 
@@ -189,21 +269,12 @@ export default function App() {
             <ICONS.Location className="w-5 h-5" />
           </button>
 
-          <button className="p-1.5 hover:bg-surface-container rounded-full transition-colors relative text-primary">
-            <ICONS.Cart className="w-5 h-5" />
-            <span className="absolute top-0.5 right-0.5 bg-secondary text-white text-[8px] font-bold h-3.5 w-3.5 rounded-full flex items-center justify-center">2</span>
-          </button>
-          
-          <div
-            className="w-7 h-7 rounded-full overflow-hidden border border-outline-variant cursor-pointer hover:border-primary transition-colors"
-            onClick={() => setCurrentView('profile')}
+          <button 
+            onClick={() => setCurrentView('login')}
+            className="bg-primary text-white text-xs font-bold px-5 py-2 rounded-xl hover:scale-105 transition-all shadow-md active:scale-95"
           >
-            <img 
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuAwu2tK62uBNx8gSF2_Y7xXctwg1gU4uMZwYKtUu0CtR284mgV0EtsVT3FZ9XpY9PZcfLq14DMlYnCult-Ov6-dnfp6gCJXMAF4UESW2oYc51Cn20GjPms6L77SMQv3RGQNC0ZWoinA4OX1-_G6HxIU-lzahWMaHzIjigR0W1nn7OzMTbDfDXF0PJrPjgVKUkUOc5kH2kj3oJmWrDnKDYAQngtfEs8nG1Uxaw9avdCRjz7t2C6JT1S5rddh2Cve2JuYPILT0qavRjTF" 
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
-          </div>
+            Login
+          </button>
         </div>
       </header>
 

@@ -76,7 +76,7 @@ export default function HomeView({ products = PRODUCTS, onProductClick, onHubCli
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {products.map((product) => (
+          {products.length > 0 ? products.map((product) => (
             <motion.div 
               key={product.id}
               className="bg-surface rounded-3xl overflow-hidden shadow-ambient border border-surface-container flex flex-col group cursor-pointer"
@@ -95,14 +95,15 @@ export default function HomeView({ products = PRODUCTS, onProductClick, onHubCli
                 </div>
                 <p className="text-on-surface-variant text-sm mb-6 flex-1 line-clamp-2">{product.description}</p>
                 <div className="flex gap-3">
-                  <button className="flex-1 bg-surface-container-high text-on-surface font-bold py-3 rounded-xl hover:bg-surface-container transition-colors">Details</button>
-                  <button className="flex-1 bg-secondary text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-on-secondary-container transition-colors">
-                    <ICONS.AddToCart className="w-4 h-4" /> Add
-                  </button>
+                  <button className="flex-1 bg-primary text-white font-bold py-3 rounded-xl hover:bg-primary/90 transition-colors">View Details</button>
                 </div>
               </div>
             </motion.div>
-          ))}
+          )) : (
+            <div className="col-span-full py-10 text-center bg-surface-container-low rounded-3xl border border-dashed border-surface-container">
+              <p className="text-on-surface-variant font-medium">No trending products found in your area.</p>
+            </div>
+          )}
         </div>
       </section>
 

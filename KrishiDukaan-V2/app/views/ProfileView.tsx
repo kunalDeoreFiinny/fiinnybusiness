@@ -3,7 +3,7 @@ import { FormEvent, useState } from 'react';
 import { ICONS } from '../constants';
 import { saveRetailerProduct, saveRetailerProfile } from '../firebase';
 
-type UserRole = 'customer' | 'retailer';
+type UserRole = 'retailer' | 'manufacturer';
 
 interface UserProfile {
   name: string;
@@ -137,7 +137,7 @@ export default function ProfileView({
           <div>
             <h1 className="text-3xl font-bold text-on-surface">My Profile</h1>
             <p className="text-on-surface-variant text-sm mt-1">
-              Customer users see only profile details. Retailers can add products with images.
+              Manage your business profile and product listings.
             </p>
           </div>
           <div className="flex items-center gap-2 bg-surface-container-low border border-outline-variant rounded-xl px-3 py-2">
@@ -150,8 +150,8 @@ export default function ProfileView({
               onChange={(e) => onRoleChange(e.target.value as UserRole)}
               className="bg-transparent text-sm font-semibold text-on-surface border-none focus:ring-0"
             >
-              <option value="customer">Customer</option>
               <option value="retailer">Retailer</option>
+              <option value="manufacturer">Distributor / Mfg</option>
             </select>
           </div>
         </div>
@@ -190,53 +190,49 @@ export default function ProfileView({
         </form>
       </div>
 
-      {role === 'retailer' && (
-        <>
-          <div className="bg-white rounded-3xl border border-surface-container p-6 md:p-8 shadow-ambient">
-            <h2 className="text-xl font-bold text-on-surface mb-4">Retailer Details</h2>
-            <form onSubmit={handleRetailerSubmit} className="grid md:grid-cols-2 gap-4">
-              <input type="text" required value={retailerForm.ownerName} onChange={(e) => setRetailerForm((p) => ({ ...p, ownerName: e.target.value }))} placeholder="Owner Name" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-              <input type="text" required value={retailerForm.shopName} onChange={(e) => setRetailerForm((p) => ({ ...p, shopName: e.target.value }))} placeholder="Shop Name" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-              <input type="tel" required value={retailerForm.phone} onChange={(e) => setRetailerForm((p) => ({ ...p, phone: e.target.value }))} placeholder="Retailer Phone" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-              <input type="email" required value={retailerForm.email} onChange={(e) => setRetailerForm((p) => ({ ...p, email: e.target.value }))} placeholder="Retailer Email" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-              <input type="text" required value={retailerForm.address} onChange={(e) => setRetailerForm((p) => ({ ...p, address: e.target.value }))} placeholder="Address" className="md:col-span-2 bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-              <input type="text" required value={retailerForm.city} onChange={(e) => setRetailerForm((p) => ({ ...p, city: e.target.value }))} placeholder="City" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-              <input type="text" required value={retailerForm.state} onChange={(e) => setRetailerForm((p) => ({ ...p, state: e.target.value }))} placeholder="State" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-              <input type="text" required value={retailerForm.pincode} onChange={(e) => setRetailerForm((p) => ({ ...p, pincode: e.target.value }))} placeholder="Pincode" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-              <input type="number" step="any" required value={retailerForm.latitude} onChange={(e) => setRetailerForm((p) => ({ ...p, latitude: e.target.value }))} placeholder="Latitude" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-              <input type="number" step="any" required value={retailerForm.longitude} onChange={(e) => setRetailerForm((p) => ({ ...p, longitude: e.target.value }))} placeholder="Longitude" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-              <button
-                type="submit"
-                disabled={loadingProfile}
-                className="md:col-span-2 bg-secondary text-white font-semibold px-5 py-3 rounded-xl hover:bg-on-secondary-container transition-colors disabled:opacity-60"
-              >
-                {loadingProfile ? 'Saving...' : 'Save Retailer Details'}
-              </button>
-            </form>
-          </div>
+      <div className="bg-white rounded-3xl border border-surface-container p-6 md:p-8 shadow-ambient">
+        <h2 className="text-xl font-bold text-on-surface mb-4">Retailer Details</h2>
+        <form onSubmit={handleRetailerSubmit} className="grid md:grid-cols-2 gap-4">
+          <input type="text" required value={retailerForm.ownerName} onChange={(e) => setRetailerForm((p) => ({ ...p, ownerName: e.target.value }))} placeholder="Owner Name" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+          <input type="text" required value={retailerForm.shopName} onChange={(e) => setRetailerForm((p) => ({ ...p, shopName: e.target.value }))} placeholder="Shop Name" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+          <input type="tel" required value={retailerForm.phone} onChange={(e) => setRetailerForm((p) => ({ ...p, phone: e.target.value }))} placeholder="Retailer Phone" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+          <input type="email" required value={retailerForm.email} onChange={(e) => setRetailerForm((p) => ({ ...p, email: e.target.value }))} placeholder="Retailer Email" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+          <input type="text" required value={retailerForm.address} onChange={(e) => setRetailerForm((p) => ({ ...p, address: e.target.value }))} placeholder="Address" className="md:col-span-2 bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+          <input type="text" required value={retailerForm.city} onChange={(e) => setRetailerForm((p) => ({ ...p, city: e.target.value }))} placeholder="City" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+          <input type="text" required value={retailerForm.state} onChange={(e) => setRetailerForm((p) => ({ ...p, state: e.target.value }))} placeholder="State" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+          <input type="text" required value={retailerForm.pincode} onChange={(e) => setRetailerForm((p) => ({ ...p, pincode: e.target.value }))} placeholder="Pincode" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+          <input type="number" step="any" required value={retailerForm.latitude} onChange={(e) => setRetailerForm((p) => ({ ...p, latitude: e.target.value }))} placeholder="Latitude" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+          <input type="number" step="any" required value={retailerForm.longitude} onChange={(e) => setRetailerForm((p) => ({ ...p, longitude: e.target.value }))} placeholder="Longitude" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+          <button
+            type="submit"
+            disabled={loadingProfile}
+            className="md:col-span-2 bg-secondary text-white font-semibold px-5 py-3 rounded-xl hover:bg-on-secondary-container transition-colors disabled:opacity-60"
+          >
+            {loadingProfile ? 'Saving...' : 'Save Retailer Details'}
+          </button>
+        </form>
+      </div>
 
-          <div className="bg-white rounded-3xl border border-surface-container p-6 md:p-8 shadow-ambient">
-            <h2 className="text-xl font-bold text-on-surface mb-4">Add Product for Customers</h2>
-            <form onSubmit={handleProductSubmit} className="grid md:grid-cols-2 gap-4">
-              <input type="text" required value={productForm.name} onChange={(e) => setProductForm((p) => ({ ...p, name: e.target.value }))} placeholder="Product Name" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-              <input type="number" required min="1" value={productForm.price} onChange={(e) => setProductForm((p) => ({ ...p, price: e.target.value }))} placeholder="Price (₹)" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-              <input type="text" required value={productForm.category} onChange={(e) => setProductForm((p) => ({ ...p, category: e.target.value }))} placeholder="Category (seeds/fertilizers/tools)" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-              <input type="text" required value={productForm.stock} onChange={(e) => setProductForm((p) => ({ ...p, stock: e.target.value }))} placeholder="Stock Status (In Stock)" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-              <input type="text" required value={productForm.distance} onChange={(e) => setProductForm((p) => ({ ...p, distance: e.target.value }))} placeholder="Distance (e.g. 2.5km)" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-              <input type="url" required value={productForm.image} onChange={(e) => setProductForm((p) => ({ ...p, image: e.target.value }))} placeholder="Product Image URL" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-              <textarea value={productForm.description} required onChange={(e) => setProductForm((p) => ({ ...p, description: e.target.value }))} placeholder="Product Description" className="md:col-span-2 bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm min-h-24 focus:outline-none focus:ring-1 focus:ring-primary" />
-              <button
-                type="submit"
-                disabled={loadingProduct}
-                className="md:col-span-2 inline-flex items-center justify-center gap-2 bg-primary text-white font-semibold px-5 py-3 rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-60"
-              >
-                <ICONS.AddToCart className="w-4 h-4" />
-                {loadingProduct ? 'Publishing...' : 'Publish Product'}
-              </button>
-            </form>
-          </div>
-        </>
-      )}
+      <div className="bg-white rounded-3xl border border-surface-container p-6 md:p-8 shadow-ambient">
+        <h2 className="text-xl font-bold text-on-surface mb-4">Add Product for Customers</h2>
+        <form onSubmit={handleProductSubmit} className="grid md:grid-cols-2 gap-4">
+          <input type="text" required value={productForm.name} onChange={(e) => setProductForm((p) => ({ ...p, name: e.target.value }))} placeholder="Product Name" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+          <input type="number" required min="1" value={productForm.price} onChange={(e) => setProductForm((p) => ({ ...p, price: e.target.value }))} placeholder="Price (₹)" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+          <input type="text" required value={productForm.category} onChange={(e) => setProductForm((p) => ({ ...p, category: e.target.value }))} placeholder="Category (seeds/fertilizers/tools)" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+          <input type="text" required value={productForm.stock} onChange={(e) => setProductForm((p) => ({ ...p, stock: e.target.value }))} placeholder="Stock Status (In Stock)" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+          <input type="text" required value={productForm.distance} onChange={(e) => setProductForm((p) => ({ ...p, distance: e.target.value }))} placeholder="Distance (e.g. 2.5km)" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+          <input type="url" required value={productForm.image} onChange={(e) => setProductForm((p) => ({ ...p, image: e.target.value }))} placeholder="Product Image URL" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+          <textarea value={productForm.description} required onChange={(e) => setProductForm((p) => ({ ...p, description: e.target.value }))} placeholder="Product Description" className="md:col-span-2 bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm min-h-24 focus:outline-none focus:ring-1 focus:ring-primary" />
+          <button
+            type="submit"
+            disabled={loadingProduct}
+            className="md:col-span-2 inline-flex items-center justify-center gap-2 bg-primary text-white font-semibold px-5 py-3 rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-60"
+          >
+            <ICONS.AddToCart className="w-4 h-4" />
+            {loadingProduct ? 'Publishing...' : 'Publish Product'}
+          </button>
+        </form>
+      </div>
 
       {status && (
         <div

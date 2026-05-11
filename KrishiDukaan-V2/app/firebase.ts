@@ -3,24 +3,39 @@ import {
   addDoc,
   collection,
   doc,
+  getDoc,
   getDocs,
   getFirestore,
   serverTimestamp,
   setDoc
 } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { getAnalytics, isSupported } from 'firebase/analytics';
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyDh_Y67TDJc2KLLJ8Wcc2JvEeHzmfVL778',
-  authDomain: 'krishidukan-e8315.firebaseapp.com',
-  projectId: 'krishidukan-e8315',
-  storageBucket: 'krishidukan-e8315.firebasestorage.app',
-  messagingSenderId: '650303885415',
-  appId: '1:650303885415:web:7db7619260aa478b2b84c2',
-  measurementId: 'G-7MEFGCD4EX'
+  apiKey: "AIzaSyDh_Y67TDJc2KLLJ8Wcc2JvEeHzmfVL778",
+  authDomain: "krishidukan-e8315.firebaseapp.com",
+  projectId: "krishidukan-e8315",
+  storageBucket: "krishidukan-e8315.firebasestorage.app",
+  messagingSenderId: "650303885415",
+  appId: "1:650303885415:web:7db7619260aa478b2b84c2",
+  measurementId: "G-7MEFGCD4EX"
 };
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+
+// Initialize analytics safely
+if (typeof window !== 'undefined') {
+  isSupported().then((supported) => {
+    if (supported) {
+      getAnalytics(app);
+    }
+  });
+}
+
+export { db, auth };
 
 export type RetailerProduct = {
   name: string;
@@ -143,22 +158,98 @@ export async function saveRetailerProduct(
 }
 
 export async function fetchMarketplaceProducts(): Promise<MarketplaceProduct[]> {
-  const snapshot = await getDocs(collection(db, 'products'));
-  return snapshot.docs
-    .map((item) => {
-      const data = item.data();
-      return {
-        id: item.id,
-        name: String(data.name || ''),
-        fullName: data.fullName ? String(data.fullName) : undefined,
-        price: Number(data.price || 0),
-        category: String(data.category || 'general'),
-        description: String(data.description || ''),
-        image: String(data.image || ''),
-        stock: String(data.stock || 'In Stock'),
-        store: String(data.store || 'Local Store'),
-        distance: String(data.distance || 'Nearby')
-      };
-    })
-    .filter((product) => product.name && product.image && Number.isFinite(product.price) && product.price > 0);
+  try {
+    const snapshot = await getDocs(collection(db, 'products'));
+    return snapshot.docs
+      .map((item) => {
+        const data = item.data();
+        return {
+          id: item.id,
+          name: String(data.name || ''),
+          fullName: data.fullName ? String(data.fullName) : undefined,
+          price: Number(data.price || 0),
+          oldPrice: data.oldPrice ? Number(data.oldPrice) : undefined,
+          category: String(data.category || 'general'),
+          description: String(data.description || ''),
+          image: String(data.image || ''),
+          stock: String(data.stock || 'In Stock'),
+          store: String(data.store || 'Local Store'),
+          distance: String(data.distance || 'Nearby'),
+          availability: data.availability || undefined
+        } as MarketplaceProduct;
+      })
+      .filter((product) => product.name && product.image && Number.isFinite(product.price));
+  } catch (error) {
+    console.error('Error fetching products from Firestore:', error);
+    throw error;
+  }
+}
+
+export type Store = {
+  id: string;
+  name: string;
+  ownerName?: string;
+  phone?: string;
+  address?: string;
+  distance: string;
+  status: string;
+  stock: string[];
+  isHot?: boolean;
+  location: { lat: number; lng: number };
+};
+
+export async function fetchStores(): Promise<Store[]> {
+  try {
+    const snapshot = await getDocs(collection(db, 'stores'));
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data()
+    } as Store));
+  } catch (error) {
+    console.error('Error fetching stores from Firestore:', error);
+    throw error;
+  }
+}
+
+export async function syncInitialData(products: any[], stores: any[], inventory: any[] = []) {
+  try {
+    const productsSnap = await getDocs(collection(db, 'products'));
+    if (productsSnap.empty) {
+      console.log('Firebase: Syncing initial products...');
+      for (const product of products) {
+        await addDoc(collection(db, 'products'), {
+          ...product,
+          createdAt: serverTimestamp(),
+          source: 'initial_sync'
+        });
+      }
+    }
+
+    const storesSnap = await getDocs(collection(db, 'stores'));
+    if (storesSnap.empty) {
+      console.log('Firebase: Syncing initial stores...');
+      for (const store of stores) {
+        await addDoc(collection(db, 'stores'), {
+          ...store,
+          createdAt: serverTimestamp(),
+          source: 'initial_sync'
+        });
+      }
+    }
+
+    const inventorySnap = await getDocs(collection(db, 'inventory'));
+    if (inventorySnap.empty && inventory.length > 0) {
+      console.log('Firebase: Syncing initial inventory...');
+      for (const item of inventory) {
+        await addDoc(collection(db, 'inventory'), {
+          ...item,
+          createdAt: serverTimestamp(),
+          source: 'initial_sync'
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Firebase Sync Error (Check your Firestore Rules):', error);
+    throw error;
+  }
 }

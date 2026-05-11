@@ -184,23 +184,8 @@ export default function ProductDetailView({ products = PRODUCTS, productId, onBa
           </div>
 
           <div className="flex items-center gap-4 sm:ml-auto">
-            <div className="flex items-center bg-surface-container-low border-2 border-surface-container rounded-2xl h-12 overflow-hidden">
-              <button
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="w-10 h-full flex items-center justify-center hover:bg-surface-container transition-colors"
-              >
-                <ICONS.Minus className="w-4 h-4 text-on-surface" />
-              </button>
-              <span className="w-10 text-center font-black text-on-surface">{quantity}</span>
-              <button
-                onClick={() => setQuantity(quantity + 1)}
-                className="w-10 h-full flex items-center justify-center hover:bg-surface-container transition-colors"
-              >
-                <ICONS.Plus className="w-4 h-4 text-on-surface" />
-              </button>
-            </div>
             <button className="h-12 px-8 bg-primary text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2">
-              <ICONS.AddToCart className="w-5 h-5" /> Add to Order
+              <ICONS.Phone className="w-5 h-5" /> Contact for Availability
             </button>
           </div>
         </div>

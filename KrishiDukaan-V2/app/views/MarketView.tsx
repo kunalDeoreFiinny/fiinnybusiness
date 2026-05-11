@@ -5,9 +5,16 @@ import { motion } from 'framer-motion';
 interface MarketViewProps {
   products?: MarketplaceProduct[];
   onProductClick: (id: string) => void;
+  selectedCategory: string;
+  onCategoryChange: (category: string) => void;
 }
 
-export default function MarketView({ products = PRODUCTS, onProductClick }: MarketViewProps) {
+export default function MarketView({ 
+  products = PRODUCTS, 
+  onProductClick, 
+  selectedCategory, 
+  onCategoryChange 
+}: MarketViewProps) {
   const categories = [
     { id: 'all', name: 'All Products', icon: null },
     { id: 'seeds', name: 'Seeds', icon: ICONS.Sprout },
@@ -27,8 +34,9 @@ export default function MarketView({ products = PRODUCTS, onProductClick }: Mark
           {categories.map((cat) => (
             <button 
               key={cat.id}
+              onClick={() => onCategoryChange(cat.id)}
               className={`flex-shrink-0 px-6 py-2.5 rounded-full font-bold text-sm flex items-center gap-2 transition-all shadow-sm ${
-                cat.id === 'all' 
+                selectedCategory === cat.id 
                   ? 'bg-primary text-white shadow-primary/20' 
                   : 'bg-white text-on-surface border border-surface-container-highest hover:bg-surface-container-low'
               }`}
@@ -52,7 +60,7 @@ export default function MarketView({ products = PRODUCTS, onProductClick }: Mark
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {[...products, ...products].map((product, idx) => (
+        {products.length > 0 ? products.map((product, idx) => (
           <motion.article 
             key={`${product.id}-${idx}`}
             initial={{ opacity: 0, scale: 0.95 }}
@@ -83,13 +91,16 @@ export default function MarketView({ products = PRODUCTS, onProductClick }: Mark
                   <span className="text-[10px] text-outline font-bold uppercase tracking-widest">Per unit</span>
                   <span className="text-lg font-bold text-secondary">₹{product.price}</span>
                 </div>
-                <button className="bg-primary text-white p-2 rounded-full shadow-sm hover:bg-primary-container transition-all active:scale-90">
-                  <ICONS.Plus className="w-5 h-5" />
-                </button>
               </div>
             </div>
           </motion.article>
-        ))}
+        )) : (
+          <div className="col-span-full py-20 text-center bg-white rounded-3xl border border-dashed border-surface-container">
+            <ICONS.Search className="w-10 h-10 text-outline-variant mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-on-surface mb-2">No products found</h3>
+            <p className="text-on-surface-variant">Try adjusting your filters or search terms.</p>
+          </div>
+        )}
       </div>
     </div>
   );
