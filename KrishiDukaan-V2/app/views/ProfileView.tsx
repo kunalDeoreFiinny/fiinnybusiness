@@ -147,11 +147,12 @@ export default function ProfileView({
             <select
               id="roleSelect"
               value={role}
-              onChange={(e) => onRoleChange(e.target.value as UserRole)}
-              className="bg-transparent text-sm font-semibold text-on-surface border-none focus:ring-0"
+              disabled={true}
+              className="bg-transparent text-sm font-semibold text-on-surface border-none focus:ring-0 opacity-70 cursor-not-allowed"
             >
               <option value="retailer">Retailer</option>
               <option value="manufacturer">Distributor / Mfg</option>
+              <option value="customer">Customer</option>
             </select>
           </div>
         </div>
