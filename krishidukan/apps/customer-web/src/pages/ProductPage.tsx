@@ -1,14 +1,11 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, List, Map, Heart } from 'lucide-react';
-import { BRANDS, type StockResult } from '../demoData';
 import { ArrowLeft, MapPin, Phone, Navigation, Star, List, Map, MessageCircle, ShoppingCart, Heart, Zap, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { BRANDS, formatDistance, type StockResult } from '../demoData';
+import { BRANDS, type StockResult } from '../demoData';
 import type { Retailer } from '../demoData';
 import { useLocation } from '../LocationContext';
 import { RetailerMap } from '../components/RetailerMap';
-import { RetailerCard } from '../components/RetailerCard';
 import { useRetailersForProduct } from '../hooks/useRetailersForProduct';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
