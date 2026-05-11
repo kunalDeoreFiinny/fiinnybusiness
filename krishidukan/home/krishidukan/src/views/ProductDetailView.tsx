@@ -3,13 +3,14 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useState } from 'react';
 
 interface ProductDetailViewProps {
+  products?: typeof PRODUCTS;
   productId: string | null;
   onBack: () => void;
   onStoreClick: (storeId: string) => void;
 }
 
-export default function ProductDetailView({ productId, onBack, onStoreClick }: ProductDetailViewProps) {
-  const product = PRODUCTS.find(p => p.id === productId) || PRODUCTS[0];
+export default function ProductDetailView({ products = PRODUCTS, productId, onBack, onStoreClick }: ProductDetailViewProps) {
+  const product = products.find(p => p.id === productId) || products[0];
   const [quantity, setQuantity] = useState(1);
   const [expandedStoreId, setExpandedStoreId] = useState<string | null>(null);
 

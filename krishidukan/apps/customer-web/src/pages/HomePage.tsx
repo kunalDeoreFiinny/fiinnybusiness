@@ -1,15 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Handshake, Zap, MapPin } from 'lucide-react';
-import { PRODUCTS, CATEGORIES } from '../demoData';
+import { PRODUCTS } from '../demoData';
+import { CROPS } from '../data/cropCatalog';
 import { useLocation } from '../LocationContext';
 import { motion } from 'motion/react';
-
-const CROP_ITEMS = [
-  { id: 'fertilizers', name: 'Fertilizers', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDSGbELbnV8HdsslJ8hy2mq0a_hvzZrr4cwUKHrze-GEeDpv0Z0VAvA62LryAUopIvuvGVeMWJJbVbRbtq1vKgcoaC4k3njelp3OPJb4_vjrijsdG-_1eEve_PojVdVNedf02IxptPKFjsUkGRH1oiP1H0007UHuQJ18mVTW7N6Vr0wdS7106fBV-qwwwXtBDWxaYcfvkouSyItxhdz24OL3GaUYJVj1YAyxMbObWYCQ7RpC1_QTpxN-wK8fDzDpx5JjUPaRwkLJq3m' },
-  { id: 'seeds', name: 'Seeds', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAGRxeg57dLoYXGSyDjQg4KIlhXhDoSLcH2TL8JTunYEXVl92RlHqTVRxoaRdOAkh3zaNzYyWA_A6fqz_nGVpYX89iPffRc3YZiMWnP3sK_95HetWGqVfdRImiWjILpEm4QSjNlbAjMj-OUvIStUKdMz3rJIgBpfZfwS_bvvqnp4MW5nmL3clqHayheyeb4JjIMAQ-gLUSD5MwF4wfv6V6n8zzhE4j4TuAAZTe6ghT4RN968zaDf-5pElvcbSJgD-qRjSWhoK-bxv2E' },
-  { id: 'pesticides', name: 'Pesticides', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAqKjRa6JNKk1ATRrRh-34rnzxN5NuF1db88XkLpgwid9VCayDeG7-CfYbyq33aukNBgreqb0c5M1Int2-qanv5_m-SOu2lBMifHXZZH-RkGgsKGAFKGT4r5Nog_CeGGEI5cwu7us5a6k3pdYmXKuO71MT-e41ku3KL7OkdDlJTeQtkq8qzokwhrXf4vzscnmQVRktLp-RhAVdgE10R9kSDmAf-j8yl9-6ONkKTzkj3c4RrUIIUYJjM2l3q8EFdtQT0CPWTr3JIG98a' },
-  { id: 'tools', name: 'Tools', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAi13WleIFmuHicYHUY0W-rwufSddyMDo6kb2AcbrntT8BejZDYLjTxaKtV_Y7mnIsnnZJB27-jLhcDJJ-INGrThJKx-ezn-v1eICtCBg9KvmrOIjxCzqye2mi_tIn2fzO64bWu8QByBgH2JQTivKMjxsEsgphoj0fCIMsFB7enUvlyLg-6IkDTTWxfnEszM37GZrGUGaIDzJCwiztMcbaYmVPS8EIuSqQY0ewtQb8oZbCMTLeltwk9U7G9_lPwLTyFLt5WcDAd8f1r' },
-];
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -28,33 +22,42 @@ export function HomePage() {
             <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary/40" />
           </div>
           <div className="relative z-10 max-w-2xl">
-            <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-              className="text-white text-5xl md:text-7xl font-bold tracking-tight leading-[1.1] mb-4">
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-white text-5xl md:text-7xl font-bold font-sans tracking-tight leading-[1.1] mb-4"
+            >
               Modern Produce,<br />Rooted Locally.
             </motion.h1>
-            <p className="text-white/80 text-lg md:text-xl max-w-lg mb-8">
-              Find the freshest harvest and agricultural supplies directly from local stores near {location.label}.
+            <p className="text-on-primary-container text-lg md:text-xl max-w-lg mb-8">
+              Find the freshest harvest and agricultural supplies directly from local stores near <span className="font-black text-white">{location.label.split(',')[0]}</span>.
             </p>
-            <button onClick={() => navigate('/market')}
-              className="bg-white text-primary font-bold px-8 py-3 rounded-xl w-full sm:w-auto hover:bg-surface transition-colors flex items-center justify-center gap-2 shadow-xl max-w-xs">
+            <button 
+              onClick={() => navigate('/market')}
+              className="bg-white text-primary font-bold px-8 py-3 rounded-xl w-full sm:w-auto hover:bg-primary-container hover:text-white transition-colors flex items-center justify-center gap-2 shadow-xl max-w-xs"
+            >
               <ArrowRight className="w-5 h-5" /> Explore Products
             </button>
           </div>
         </div>
       </section>
 
-      {/* Shop by Category */}
+      {/* Shop by Crop */}
       <section className="px-4 md:px-10 max-w-7xl mx-auto w-full">
-        <h2 className="text-3xl font-bold text-on-surface mb-8">Shop by Category</h2>
+        <h2 className="text-3xl font-bold text-on-surface mb-8">Shop by Crop</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {CROP_ITEMS.map((crop) => (
-            <motion.button key={crop.id} whileHover={{ y: -5 }} onClick={() => navigate(`/market`)}
-              className="group bg-surface-container-low rounded-3xl p-6 flex flex-col items-center gap-4 shadow-sm hover:shadow-ambient hover:bg-surface-container transition-all border border-transparent hover:border-outline-variant">
-              <div className="w-20 h-20 rounded-full bg-white shadow-sm overflow-hidden border border-surface-container group-hover:scale-110 transition-transform">
-                <img src={crop.image} alt={crop.name} className="w-full h-full object-cover" />
-              </div>
-              <span className="font-bold text-on-surface">{crop.name}</span>
-            </motion.button>
+          {CROPS.map((crop) => (
+            <motion.button 
+              key={crop.id} 
+               whileHover={{ y: -5 }} 
+               onClick={() => navigate(`/market`)}
+               className="group bg-surface-container-low rounded-3xl p-6 flex flex-col items-center gap-4 shadow-sm hover:shadow-ambient hover:bg-surface-container transition-all border border-transparent hover:border-outline-variant"
+             >
+               <div className="w-20 h-20 rounded-full bg-white shadow-sm overflow-hidden border border-surface-container-highest group-hover:scale-110 transition-transform">
+                 <img src={crop.image} alt={crop.name} className="w-full h-full object-cover" />
+               </div>
+               <span className="font-bold text-on-surface">{crop.name}</span>
+             </motion.button>
           ))}
         </div>
       </section>
@@ -62,30 +65,30 @@ export function HomePage() {
       {/* Trending Products */}
       <section className="px-4 md:px-10 max-w-7xl mx-auto w-full py-10 bg-white shadow-sm border-y border-surface-container">
         <div className="flex justify-between items-end mb-8">
-          <h2 className="text-3xl font-bold text-on-surface">Trending Products</h2>
+          <h2 className="text-3xl font-bold text-on-surface">Trending Near You</h2>
           <button onClick={() => navigate('/market')} className="text-primary font-bold flex items-center gap-2 hover:translate-x-1 transition-transform">
             View All <ArrowRight className="w-4 h-4" />
           </button>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {PRODUCTS.slice(0, 4).map((product) => (
-            <motion.div key={product.id} whileHover={{ y: -4 }}
+            <motion.div 
+              key={product.id}
               className="bg-surface rounded-3xl overflow-hidden shadow-ambient border border-surface-container flex flex-col group cursor-pointer"
               onClick={() => navigate(`/product/${product.id}`)}>
-              <div className="h-48 relative overflow-hidden flex items-center justify-center"
-                style={{ background: `linear-gradient(135deg, ${product.imageColor}12, ${product.imageColor}28)` }}>
-                <span style={{ fontSize: 64 }}>{product.emoji}</span>
+              <div className="h-56 relative overflow-hidden">
+                <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 <div className="absolute top-4 left-4 bg-primary-container/90 text-on-primary-container backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold shadow-sm">
                   {product.categoryLabel}
                 </div>
               </div>
-              <div className="p-5 flex flex-col flex-1">
-                <h3 className="text-lg font-bold text-on-surface line-clamp-1 mb-1">{product.shortName}</h3>
-                <p className="text-on-surface-variant text-sm mb-4 flex-1 line-clamp-2">{product.description}</p>
+              <div className="p-6 flex flex-col flex-1">
+                <h3 className="text-xl font-bold text-on-surface line-clamp-1 mb-2">{product.shortName}</h3>
+                <p className="text-on-surface-variant text-sm mb-6 flex-1 line-clamp-2">{product.description}</p>
                 <div className="flex gap-3">
-                  <button className="flex-1 bg-surface-container-high text-on-surface font-bold py-2.5 rounded-xl hover:bg-surface-container transition-colors text-sm">Details</button>
-                  <button className="flex-1 bg-primary text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-1.5 hover:bg-primary-container transition-colors text-sm">
-                    + Add
+                  <button className="flex-1 bg-surface-container-high text-on-surface font-bold py-3 rounded-xl hover:bg-surface-container transition-colors">Details</button>
+                  <button className="flex-1 bg-secondary text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-on-secondary-container transition-colors">
+                    <Zap className="w-4 h-4 fill-current" /> Add
                   </button>
                 </div>
               </div>
@@ -94,7 +97,7 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* Why Krishidukan */}
+      {/* Value Proposition */}
       <section className="px-4 md:px-10 max-w-7xl mx-auto w-full mb-10">
         <div className="bg-surface-container-low rounded-3xl p-8 md:p-16 flex flex-col md:flex-row gap-12 items-center">
           <div className="flex-1">
@@ -106,7 +109,7 @@ export function HomePage() {
               {[
                 { icon: Handshake, title: 'Local Trust', desc: 'Connect directly with verified sellers in your farming community.' },
                 { icon: Zap, title: 'Digital Efficiency', desc: 'Fast, frictionless ordering and tracking designed for your device.' },
-                { icon: MapPin, title: 'Near You', desc: `Showing stores and products available near ${location.label}.` },
+                { icon: MapPin, title: 'Near You', desc: `Showing stores and products available near ${location.label.split(',')[0]}.` },
               ].map((prop, i) => (
                 <div key={i} className="flex items-start gap-4">
                   <div className="bg-primary-container text-white p-3 rounded-2xl shadow-sm">
@@ -121,10 +124,14 @@ export function HomePage() {
             </div>
           </div>
           <div className="flex-1 w-full relative">
-            <div className="w-full max-w-md mx-auto relative z-10 hover:scale-105 transition-transform duration-500">
-              <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcJewaf8J1gWZEdY6ipzy3p0M5aZoePmxCri9BSh7nbzy4FW-i7Azi-fBl6G0vr9TDZY9Q0XxD_GHq2_mJECmXU0oGsqJSZEnh1-5IRtoFi-mxGzKT9SHQH5HJW6wrhRD4Z98Wjo19TKEXGiIpyPXcFVZVvSuhCD9bXXV1kQRL_o0HNQ6-7KIySLLVdAddKSxPd14-jD0W8uG58KaJpjHYahRINJqJMRzG_CvOOiM2CGpIBu5yKjDn4P8gspnpRXThlkMm_JgsHX0L"
-                alt="Farmer" className="w-full h-auto rounded-3xl object-cover shadow-ambient" />
+            <div className="w-full max-w-md mx-auto relative z-10 transition-transform hover:scale-105 duration-500 scale-110 drop-shadow-2xl">
+              <img 
+                src="/src/assets/images/regenerated_image_1778300850830.png" 
+                alt="Farmer with Agricultural Supplies"
+                className="w-full h-auto object-contain"
+              />
             </div>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-primary/5 rounded-full blur-3xl opacity-50 z-0" />
           </div>
         </div>
       </section>

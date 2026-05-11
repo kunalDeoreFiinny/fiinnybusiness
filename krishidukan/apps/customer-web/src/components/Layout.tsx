@@ -35,11 +35,11 @@ export function Layout({ children }: { children: ReactNode }) {
   }
 
   const navItems = [
-    { to: '/', label: 'Home', icon: Home },
-    { to: '/market', label: 'Market', icon: Store },
-    { to: '/hub', label: 'Hub', icon: BrainCircuit },
-    { to: '/retailers', label: 'Stores', icon: MapPin },
-    { to: '/about', label: 'About', icon: Info },
+    { to: '/', label: 'Home' },
+    { to: '/market', label: 'Market' },
+    { to: '/hub', label: 'Hub' },
+    { to: '/retailers', label: 'Stores' },
+    { to: '/about', label: 'About' },
   ];
 
   const mobileNavItems = [
@@ -57,42 +57,52 @@ export function Layout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col bg-surface">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-surface-container shadow-sm px-4 py-3 md:px-8 flex justify-between items-center">
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-surface-container shadow-sm px-4 py-3 md:px-10 flex justify-between items-center transition-colors">
         <Link to="/" className="font-bold text-2xl text-primary tracking-tight hover:scale-105 transition-transform no-underline">
           Krishidukan
         </Link>
 
         {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-6">
+        <nav className="hidden md:flex items-center gap-8">
           {navItems.map((item) => (
             <Link
               key={item.to}
               to={item.to}
-              className={`text-sm font-semibold transition-colors hover:text-primary no-underline flex flex-col items-center ${isActive(item.to) ? 'text-primary' : 'text-on-surface-variant'}`}
+              className={`text-sm font-semibold transition-colors hover:text-primary no-underline relative ${isActive(item.to) ? 'text-primary' : 'text-on-surface-variant'}`}
             >
               {item.label}
-              {isActive(item.to) && <motion.div layoutId="activeTab" className="h-0.5 bg-primary mt-0.5 rounded-full w-full" />}
+              {isActive(item.to) && (
+                <motion.div layoutId="activeTab" className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
+              )}
             </Link>
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
-          {/* Location button */}
+        <div className="flex items-center gap-3">
+          {/* Desktop Search/Location Bar */}
+          <div className="hidden md:flex items-center bg-surface-container-low border border-outline-variant rounded-2xl overflow-hidden shadow-sm group focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+            <div className="flex items-center px-3 py-2 gap-2 flex-1">
+              <MapPin className="w-4 h-4 text-outline group-focus-within:text-primary transition-colors shrink-0" />
+              <button 
+                onClick={() => setLocationPickerOpen(true)}
+                className="bg-transparent border-none text-left w-36 focus:ring-0 text-sm text-on-surface font-semibold truncate"
+              >
+                {location.label.split(',')[0]}
+              </button>
+            </div>
+            <button
+              onClick={() => navigate('/market')}
+              className="bg-primary text-white font-bold px-4 py-2 text-sm hover:bg-primary/90 transition-colors whitespace-nowrap flex items-center gap-1"
+            >
+              <Search className="w-3.5 h-3.5" /> {t('common.browse')}
+            </button>
+          </div>
+
           <button
             onClick={() => setLocationPickerOpen(true)}
-            className="hidden md:flex items-center gap-1 bg-surface-container-low border border-outline-variant rounded-xl px-3 py-2 text-sm font-semibold text-on-surface hover:border-primary transition-all max-w-[200px]"
+            className="p-2 hover:bg-surface-container rounded-full transition-colors text-primary md:hidden"
           >
-            <MapPin className="w-4 h-4 text-primary shrink-0" />
-            <span className="truncate">{location.label}</span>
-            <ChevronDown className="w-3.5 h-3.5 text-outline shrink-0" />
-          </button>
-
-          {/* Search button */}
-          <button
-            onClick={() => setSearchOpen(true)}
-            className="p-2 hover:bg-surface-container rounded-xl transition-colors text-on-surface-variant"
-          >
-            <Search className="w-5 h-5" />
+            <MapPin className="w-5 h-5" />
           </button>
 
           <LanguageSwitcher />
@@ -100,7 +110,7 @@ export function Layout({ children }: { children: ReactNode }) {
           {/* Account */}
           <button
             onClick={() => requireLogin(() => navigate('/account'), 'generic')}
-            className="p-2 hover:bg-surface-container rounded-xl transition-colors text-on-surface-variant"
+            className="p-2 hover:bg-surface-container rounded-full transition-colors text-on-surface-variant"
           >
             <CircleUser className="w-5 h-5" />
           </button>
@@ -108,11 +118,11 @@ export function Layout({ children }: { children: ReactNode }) {
           {/* Cart */}
           <button
             onClick={() => requireLogin(() => navigate('/cart'), 'add-to-cart')}
-            className="relative p-2 bg-primary text-white rounded-xl hover:bg-primary-container transition-colors"
+            className="relative p-2 hover:bg-surface-container rounded-full transition-colors text-primary"
           >
             <ShoppingCart className="w-5 h-5" />
             {isAuthenticated && cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-harvest text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center">
+              <span className="absolute top-1 right-1 bg-secondary text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center">
                 {cartCount > 9 ? '9+' : cartCount}
               </span>
             )}
@@ -159,15 +169,23 @@ export function Layout({ children }: { children: ReactNode }) {
       </main>
 
       {/* Mobile Bottom Nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-surface-container flex items-center justify-around px-2 z-50">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-surface-container flex items-center justify-around px-4 z-50">
         {mobileNavItems.map((item) => (
           <Link
             key={item.to}
             to={item.to}
-            className={`flex flex-col items-center gap-1 py-1 px-2 rounded-xl transition-colors no-underline ${isActive(item.to) ? 'text-primary' : 'text-on-surface-variant'}`}
+            className={`flex flex-col items-center gap-1 transition-colors relative no-underline ${isActive(item.to) ? 'text-primary' : 'text-on-surface-variant'}`}
           >
-            <item.icon className="w-5 h-5" strokeWidth={isActive(item.to) ? 2.4 : 1.9} />
+            <item.icon className={`w-5 h-5 ${isActive(item.to) ? 'fill-primary/20' : ''}`} />
             <span className="text-[10px] font-bold uppercase tracking-wider">{item.label}</span>
+            {isActive(item.to) && (
+              <motion.div 
+                layoutId="activeBubble" 
+                className="absolute -z-10 w-12 h-12 bg-primary-container/10 rounded-full"
+                initial={false}
+                transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+              />
+            )}
           </Link>
         ))}
       </nav>

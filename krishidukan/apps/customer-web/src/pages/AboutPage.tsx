@@ -1,4 +1,4 @@
-import { MapPin, Phone, MessageSquare, ArrowRight, Handshake, Zap, Sprout, Microscope } from 'lucide-react';
+import { MapPin, Phone, MessageSquare, ArrowRight, Handshake, Zap, Sprout, Microscope, CheckCircle2 } from 'lucide-react';
 import { motion } from 'motion/react';
 
 const stats = [
@@ -9,10 +9,33 @@ const stats = [
 ];
 
 const values = [
-  { icon: Handshake, title: 'Local Trust', desc: 'We partner exclusively with verified, government-registered agricultural stores. Every seller is vetted to ensure quality and authenticity.' },
-  { icon: Zap, title: 'Digital Efficiency', desc: 'From browsing to checkout to delivery tracking — every step is designed for the farmer on the go.' },
-  { icon: Sprout, title: 'Farmer First', desc: 'Krishidukan was built by farmers, for farmers. Our pricing is transparent, our information is honest.' },
-  { icon: Microscope, title: 'Quality Assured', desc: 'Every product listed passes our quality checks. We work with certified suppliers and display lab-verified data.' },
+  { 
+    icon: Handshake, 
+    title: 'Local Trust', 
+    desc: 'We partner exclusively with verified, government-registered agricultural stores in your area. Every seller is vetted to ensure quality and authenticity.' 
+  },
+  { 
+    icon: Zap, 
+    title: 'Digital Efficiency', 
+    desc: 'From browsing to checkout to delivery tracking — every step is designed for the farmer on the go. Fast, frictionless, and built for low-bandwidth environments.' 
+  },
+  { 
+    icon: Sprout, 
+    title: 'Farmer First', 
+    desc: 'Krishidukan was built by farmers, for farmers. Our pricing is transparent, our information is honest, and our support is in your local language.' 
+  },
+  { 
+    icon: Microscope, 
+    title: 'Quality Assured', 
+    desc: 'Every product listed on Krishidukan passes our quality checks. We work with certified suppliers and display lab-verified composition data on every listing.' 
+  },
+];
+
+const team = [
+  { name: 'Rajesh Kumar', role: 'Founder & CEO', location: 'Pune, Maharashtra' },
+  { name: 'Priya Sharma', role: 'Head of Operations', location: 'Nashik, Maharashtra' },
+  { name: 'Ankit Desai', role: 'Technology Lead', location: 'Pune, Maharashtra' },
+  { name: 'Sunita Patil', role: 'Farmer Relations', location: 'Kolhapur, Maharashtra' }
 ];
 
 export function AboutPage() {
@@ -26,7 +49,7 @@ export function AboutPage() {
         </div>
         <div className="relative z-10 px-4 md:px-10 max-w-7xl mx-auto w-full py-16">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <span className="text-white/60 text-xs font-black uppercase tracking-widest mb-4 block">Our Story</span>
+            <span className="text-primary-container text-xs font-black uppercase tracking-widest mb-4 block">Our Story</span>
             <h1 className="text-white text-5xl md:text-6xl font-bold tracking-tight leading-tight mb-6 max-w-2xl">
               Bridging Farmers<br />with Modern Agri Retail
             </h1>
@@ -47,6 +70,31 @@ export function AboutPage() {
                 <div className="text-on-surface-variant font-semibold text-sm uppercase tracking-widest">{stat.label}</div>
               </motion.div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Mission */}
+      <section className="px-4 md:px-10 max-w-7xl mx-auto w-full py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          <div>
+            <span className="text-primary text-xs font-black uppercase tracking-widest mb-3 block">Our Mission</span>
+            <h2 className="text-4xl font-bold text-on-surface mb-6 leading-tight">
+              Empowering Every Farmer with the Right Tools
+            </h2>
+            <p className="text-on-surface-variant text-lg leading-relaxed mb-6">
+              India's agricultural sector employs over 600 million people, yet access to quality inputs and reliable information remains unequal. Krishidukan changes that by creating a unified digital marketplace for local agri retailers and the farmers they serve.
+            </p>
+            <p className="text-on-surface-variant text-lg leading-relaxed">
+              We're not just a shopping app. We're an agricultural intelligence platform — helping farmers discover the right products, understand their composition, and buy from stores they can trust, all within their community.
+            </p>
+          </div>
+          <div className="rounded-3xl overflow-hidden shadow-ambient border border-surface-container h-80 md:h-auto">
+            <img
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcJewaf8J1gWZEdY6ipzy3p0M5aZoePmxCri9BSh7nbzy4FW-i7Azi-fBl6G0vr9TDZY9Q0XxD_GHq2_mJECmXU0oGsqJSZEnh1-5IRtoFi-mxGzKT9SHQH5HJW6wrhRD4Z98Wjo19TKEXGiIpyPXcFVZVvSuhCD9bXXV1kQRL_o0HNQ6-7KIySLLVdAddKSxPd14-jD0W8uG58KaJpjHYahRINJqJMRzG_CvOOiM2CGpIBu5yKjDn4P8gspnpRXThlkMm_JgsHX0L"
+              alt="Farmer in field"
+              className="w-full h-full object-cover"
+            />
           </div>
         </div>
       </section>
@@ -75,12 +123,44 @@ export function AboutPage() {
         </div>
       </section>
 
+      {/* Team */}
+      <section className="px-4 md:px-10 max-w-7xl mx-auto w-full py-16">
+        <div className="text-center mb-12">
+          <span className="text-primary text-xs font-black uppercase tracking-widest mb-3 block">The People Behind Krishidukan</span>
+          <h2 className="text-4xl font-bold text-on-surface">Our Team</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+          {team.map((member, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+              className="bg-white rounded-3xl p-6 shadow-sm border border-surface-container text-center hover:shadow-ambient transition-shadow"
+            >
+              <div className="w-16 h-16 rounded-full bg-primary-container mx-auto mb-4 flex items-center justify-center text-white text-2xl font-bold">
+                {member.name.charAt(0)}
+              </div>
+              <h4 className="font-bold text-on-surface mb-1">{member.name}</h4>
+              <p className="text-primary text-xs font-black uppercase tracking-widest mb-2">{member.role}</p>
+              <p className="text-on-surface-variant text-xs flex items-center justify-center gap-1 font-semibold">
+                <MapPin className="w-3 h-3" /> {member.location}
+              </p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
       {/* Contact */}
       <section className="bg-primary py-16">
         <div className="px-4 md:px-10 max-w-7xl mx-auto w-full">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-4xl font-bold text-white mb-6">We'd Love to Hear from You</h2>
+              <span className="text-primary-container text-xs font-black uppercase tracking-widest mb-3 block">Get in Touch</span>
+              <h2 className="text-4xl font-bold text-white mb-6 leading-tight">We'd Love to Hear from You</h2>
+              <p className="text-white/80 text-lg leading-relaxed mb-8">
+                Whether you're a farmer, a store owner looking to list your shop, or just curious about what we do — reach out to us.
+              </p>
               <div className="flex flex-col gap-4">
                 {[
                   { icon: Phone, label: 'Phone', value: '+91 98765 43210' },
@@ -102,10 +182,10 @@ export function AboutPage() {
             <div className="bg-white rounded-3xl p-8 shadow-2xl">
               <h3 className="text-xl font-bold text-on-surface mb-6">Send us a Message</h3>
               <div className="flex flex-col gap-4">
-                <input type="text" placeholder="Your name" className="w-full px-4 py-3 rounded-xl bg-surface-container-low border border-outline-variant text-sm focus:outline-none focus:border-primary" />
-                <input type="email" placeholder="Email address" className="w-full px-4 py-3 rounded-xl bg-surface-container-low border border-outline-variant text-sm focus:outline-none focus:border-primary" />
-                <textarea placeholder="Your message..." rows={4} className="w-full px-4 py-3 rounded-xl bg-surface-container-low border border-outline-variant text-sm focus:outline-none focus:border-primary resize-none" />
-                <button className="w-full bg-primary text-white font-bold py-3 rounded-xl hover:bg-primary-container transition-colors flex items-center justify-center gap-2">
+                <input type="text" placeholder="Your name" className="w-full px-4 py-3 rounded-xl bg-surface-container-low border border-outline-variant text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                <input type="email" placeholder="Email address" className="w-full px-4 py-3 rounded-xl bg-surface-container-low border border-outline-variant text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                <textarea placeholder="Your message..." rows={4} className="w-full px-4 py-3 rounded-xl bg-surface-container-low border border-outline-variant text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none" />
+                <button className="w-full bg-primary text-white font-bold py-3 rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
                   <ArrowRight className="w-4 h-4" /> Send Message
                 </button>
               </div>
