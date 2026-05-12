@@ -1,0 +1,229 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   KrishiDukan Design System — CSS Custom Properties & Global Styles
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* ── Design Tokens ─────────────────────────────────────────────────────── */
+:root {
+  /* Brand Colors */
+  --kd-green-50: #f0fdf4;
+  --kd-green-100: #dcfce7;
+  --kd-green-200: #bbf7d0;
+  --kd-green-300: #86efac;
+  --kd-green-400: #4ade80;
+  --kd-green-500: #22c55e;
+  --kd-green-600: #16a34a;
+  --kd-green-700: #15803d;
+  --kd-green-800: #166534;
+  --kd-green-900: #14532d;
+
+  /* Neutral */
+  --kd-gray-50: #f8fafc;
+  --kd-gray-100: #f1f5f9;
+  --kd-gray-200: #e2e8f0;
+  --kd-gray-300: #cbd5e1;
+  --kd-gray-400: #94a3b8;
+  --kd-gray-500: #64748b;
+  --kd-gray-600: #475569;
+  --kd-gray-700: #334155;
+  --kd-gray-800: #1e293b;
+  --kd-gray-900: #0f172a;
+
+  /* Accent Colors */
+  --kd-blue-500: #3b82f6;
+  --kd-blue-600: #2563eb;
+  --kd-indigo-500: #6366f1;
+  --kd-amber-500: #f59e0b;
+  --kd-amber-600: #d97706;
+  --kd-red-500: #ef4444;
+  --kd-red-600: #dc2626;
+  --kd-emerald-500: #10b981;
+  --kd-purple-500: #a855f7;
+  --kd-cyan-500: #06b6d4;
+
+  /* Semantic */
+  --kd-primary: var(--kd-green-600);
+  --kd-primary-hover: var(--kd-green-700);
+  --kd-primary-light: var(--kd-green-50);
+  --kd-primary-border: var(--kd-green-200);
+  --kd-danger: var(--kd-red-600);
+  --kd-danger-light: #fef2f2;
+  --kd-warning: var(--kd-amber-500);
+  --kd-warning-light: #fffbeb;
+  --kd-info: var(--kd-blue-600);
+  --kd-info-light: #eff6ff;
+  --kd-success: var(--kd-emerald-500);
+
+  /* Surfaces */
+  --kd-bg: var(--kd-gray-50);
+  --kd-surface: #ffffff;
+  --kd-surface-raised: #ffffff;
+  --kd-border: var(--kd-gray-200);
+  --kd-border-light: #f1f5f9;
+
+  /* Text */
+  --kd-text-primary: var(--kd-gray-900);
+  --kd-text-secondary: var(--kd-gray-600);
+  --kd-text-muted: var(--kd-gray-400);
+  --kd-text-inverse: #ffffff;
+
+  /* Typography */
+  --kd-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --kd-fs-xs: 0.6875rem;    /* 11px */
+  --kd-fs-sm: 0.8125rem;    /* 13px */
+  --kd-fs-base: 0.875rem;   /* 14px */
+  --kd-fs-md: 0.9375rem;    /* 15px */
+  --kd-fs-lg: 1.125rem;     /* 18px */
+  --kd-fs-xl: 1.25rem;      /* 20px */
+  --kd-fs-2xl: 1.5rem;      /* 24px */
+  --kd-fs-3xl: 1.875rem;    /* 30px */
+
+  /* Spacing */
+  --kd-space-1: 4px;
+  --kd-space-2: 8px;
+  --kd-space-3: 12px;
+  --kd-space-4: 16px;
+  --kd-space-5: 20px;
+  --kd-space-6: 24px;
+  --kd-space-8: 32px;
+  --kd-space-10: 40px;
+  --kd-space-12: 48px;
+
+  /* Radii */
+  --kd-radius-sm: 6px;
+  --kd-radius-md: 8px;
+  --kd-radius-lg: 12px;
+  --kd-radius-xl: 16px;
+  --kd-radius-full: 9999px;
+
+  /* Shadows */
+  --kd-shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
+  --kd-shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --kd-shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+  --kd-shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.07), 0 4px 6px -4px rgba(0,0,0,0.05);
+  --kd-shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.06);
+
+  /* Transitions */
+  --kd-transition-fast: 120ms ease;
+  --kd-transition-base: 200ms ease;
+  --kd-transition-slow: 300ms ease;
+
+  /* Layout */
+  --kd-sidebar-width: 260px;
+  --kd-sidebar-collapsed: 72px;
+  --kd-header-height: 64px;
+  --kd-content-max-width: 1200px;
+}
+
+/* ── Reset & Globals ───────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--kd-font);
+  font-size: var(--kd-fs-base);
+  color: var(--kd-text-primary);
+  background: var(--kd-bg);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+a {
+  color: var(--kd-primary);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--kd-gray-300);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--kd-gray-400);
+}
+
+/* ── Utilities ─────────────────────────────────────────────────────────── */
+.kd-fade-in {
+  animation: kdFadeIn var(--kd-transition-slow) ease forwards;
+}
+@keyframes kdFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.kd-slide-in {
+  animation: kdSlideIn var(--kd-transition-slow) ease forwards;
+}
+@keyframes kdSlideIn {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.kd-pulse {
+  animation: kdPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+@keyframes kdPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ── Toast Container ───────────────────────────────────────────────────── */
+.kd-toast-container {
+  position: fixed;
+  top: var(--kd-space-6);
+  right: var(--kd-space-6);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: var(--kd-space-3);
+  pointer-events: none;
+}
+.kd-toast-container > * {
+  pointer-events: auto;
+}
+
+/* ── Modal Backdrop ────────────────────────────────────────────────────── */
+.kd-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: kdBackdropIn 200ms ease forwards;
+}
+@keyframes kdBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── Responsive ────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  :root {
+    --kd-sidebar-width: 0px;
+  }
+}

@@ -80,7 +80,7 @@ export default function Navbar() {
       <nav className="bg-primary/90 backdrop-blur-xl rounded-full border border-white/10 shadow-[0_8px_40px_rgba(10,25,19,0.3)] transition-all duration-300">
         <div className="flex justify-between items-center h-16 px-4 md:px-6 lg:px-8 w-full gap-3">
           <Link to="/" className="text-lg md:text-xl font-extrabold text-white tracking-tight font-sans shrink-0">
-            Karan Arjun Power Plus™
+            Karan Arjun Power Plus
           </Link>
         
         {/* Desktop Links */}

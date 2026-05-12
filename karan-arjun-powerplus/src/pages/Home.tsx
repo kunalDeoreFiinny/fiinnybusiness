@@ -204,9 +204,12 @@ export default function Home() {
             </div>
             
             <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 w-full px-4 flex flex-col items-center">
-              <button className="w-full sm:w-auto bg-secondary-container text-on-secondary-container px-12 py-4 rounded-full font-sans font-bold hover:bg-secondary-fixed transition-all shadow-xl uppercase tracking-widest text-sm mb-4">
+              <Link
+                to="/shop"
+                className="w-full sm:w-auto bg-secondary-container text-on-secondary-container px-12 py-4 rounded-full font-sans font-bold hover:bg-secondary-fixed transition-all shadow-xl uppercase tracking-widest text-sm mb-4 inline-flex items-center justify-center"
+              >
                 {t.hero_shop_now}
-              </button>
+              </Link>
               <div className="glass-panel px-6 py-2 rounded-full inline-flex items-center gap-3">
                 <div className="flex -space-x-2">
                   <div className="w-8 h-8 rounded-full bg-primary/20 border-2 border-white flex items-center justify-center"><Icons.User className="w-4 h-4 text-primary" /></div>

@@ -1,6 +1,12 @@
+<<<<<<< Updated upstream
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginWithEmail } from '../services/authService';
+=======
+import { useAuth } from '../contexts/AuthContext';
+import { IS_DEMO } from '../demoMode';
+import { Sprout } from 'lucide-react';
+>>>>>>> Stashed changes
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -25,6 +31,7 @@ export function LoginPage() {
   }
 
   return (
+<<<<<<< Updated upstream
     <div style={{
       minHeight: '100vh',
       display: 'flex',
@@ -149,6 +156,29 @@ export function LoginPage() {
 
         <p style={{ color: '#475569', fontSize: 11, marginTop: 24, textAlign: 'center' }}>
           Access restricted to authorized admin accounts only.
+=======
+    <div className="min-h-screen flex items-center justify-center bg-surface">
+      <div className="bg-white border border-surface-container rounded-3xl p-10 text-center w-96 shadow-ambient">
+        <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+          <Sprout className="w-8 h-8 text-white" />
+        </div>
+        <h1 className="text-2xl font-bold text-on-surface mb-1 tracking-tight">Krishidukan</h1>
+        <p className="text-on-surface-variant text-sm mb-8 font-medium">Admin Portal</p>
+
+        {IS_DEMO && (
+          <div className="bg-harvest/10 border border-harvest/20 rounded-2xl p-4 mb-6 text-left">
+            <p className="text-harvest text-xs font-black uppercase tracking-widest mb-1">Demo Mode</p>
+            <p className="text-on-surface-variant text-xs leading-relaxed">Backend & Firebase not configured. Click below to enter with mock data.</p>
+          </div>
+        )}
+
+        <button onClick={() => void login()}
+          className="w-full py-3 bg-primary text-white font-bold rounded-2xl text-sm hover:bg-primary-container transition-colors shadow-lg shadow-primary/20">
+          {IS_DEMO ? 'Enter Demo' : 'Sign in with Google'}
+        </button>
+        <p className="text-on-surface-variant text-xs mt-5">
+          {IS_DEMO ? 'Set VITE_FIREBASE_API_KEY to use real auth.' : 'Access restricted to authorized admin accounts only.'}
+>>>>>>> Stashed changes
         </p>
       </div>
     </div>

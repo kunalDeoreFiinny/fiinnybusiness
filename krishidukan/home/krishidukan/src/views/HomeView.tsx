@@ -2,11 +2,12 @@ import { ICONS, CROPS, PRODUCTS } from '../constants';
 import { motion } from 'motion/react';
 
 interface HomeViewProps {
+  products?: typeof PRODUCTS;
   onProductClick: (id: string) => void;
   onHubClick: () => void;
 }
 
-export default function HomeView({ onProductClick, onHubClick }: HomeViewProps) {
+export default function HomeView({ products = PRODUCTS, onProductClick, onHubClick }: HomeViewProps) {
   return (
     <div className="flex flex-col gap-10 py-6 md:py-10">
       {/* Hero Section */}
@@ -32,25 +33,14 @@ export default function HomeView({ onProductClick, onHubClick }: HomeViewProps) 
             <p className="text-on-primary-container text-lg md:text-xl max-w-lg mb-8">
               Find the freshest harvest and agricultural supplies directly from local stores in your area.
             </p>
-            
-            <div className="bg-white p-2 rounded-2xl shadow-xl flex flex-col sm:flex-row gap-2 items-center max-w-xl">
-              <div className="flex-1 flex items-center bg-surface-container-low rounded-xl px-4 py-3 w-full group focus-within:ring-2 ring-primary/20">
-                <ICONS.Location className="w-5 h-5 text-outline mr-3 group-focus-within:text-primary transition-colors" />
-                <input 
-                  type="text" 
-                  placeholder="Enter your location..." 
-                  defaultValue="Pune, Maharashtra"
-                  className="bg-transparent border-none w-full focus:ring-0 text-on-surface font-semibold"
-                />
-              </div>
-              <button 
-                onClick={onHubClick}
-                className="bg-primary text-white font-bold px-8 py-3 rounded-xl w-full sm:w-auto hover:bg-primary-container transition-colors flex items-center justify-center gap-2"
-              >
-                <ICONS.Search className="w-5 h-5" />
-                Explore
-              </button>
-            </div>
+
+            <button
+              onClick={onHubClick}
+              className="bg-white text-primary font-bold px-8 py-3 rounded-xl w-full sm:w-auto hover:bg-primary-container hover:text-white transition-colors flex items-center justify-center gap-2 shadow-xl max-w-xs"
+            >
+              <ICONS.ArrowRight className="w-5 h-5" />
+              Explore Products
+            </button>
           </div>
         </div>
       </section>
@@ -85,7 +75,7 @@ export default function HomeView({ onProductClick, onHubClick }: HomeViewProps) 
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {PRODUCTS.map((product) => (
+          {products.map((product) => (
             <motion.div 
               key={product.id}
               className="bg-surface rounded-3xl overflow-hidden shadow-ambient border border-surface-container flex flex-col group cursor-pointer"

@@ -2,10 +2,11 @@ import { ICONS, PRODUCTS } from '../constants';
 import { motion } from 'motion/react';
 
 interface MarketViewProps {
+  products?: typeof PRODUCTS;
   onProductClick: (id: string) => void;
 }
 
-export default function MarketView({ onProductClick }: MarketViewProps) {
+export default function MarketView({ products = PRODUCTS, onProductClick }: MarketViewProps) {
   const categories = [
     { id: 'all', name: 'All Products', icon: null },
     { id: 'seeds', name: 'Seeds', icon: ICONS.Sprout },
@@ -50,7 +51,7 @@ export default function MarketView({ onProductClick }: MarketViewProps) {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {[...PRODUCTS, ...PRODUCTS].map((product, idx) => (
+        {[...products, ...products].map((product, idx) => (
           <motion.article 
             key={`${product.id}-${idx}`}
             initial={{ opacity: 0, scale: 0.95 }}

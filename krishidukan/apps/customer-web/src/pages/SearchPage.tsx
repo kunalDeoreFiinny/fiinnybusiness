@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Search, Map as MapIcon, List as ListIcon, MapPin } from 'lucide-react';
+import { Search, Map as MapIcon, List as ListIcon, MapPin, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
   PRODUCTS, CATEGORIES, RETAILERS, RETAILER_STOCK,
@@ -12,6 +12,7 @@ import { ProductSearch } from '../components/ProductSearch';
 import { RetailerCard, type RetailerCardData } from '../components/RetailerCard';
 import { RetailerMap } from '../components/RetailerMap';
 import { categoryIcon } from '../components/icons';
+import { motion, AnimatePresence } from 'motion/react';
 
 type ViewMode = 'list' | 'map';
 
@@ -29,8 +30,6 @@ export function SearchPage() {
 
   const matchingProducts = useMemo(() => searchProducts(q, category), [q, category]);
 
-  // Build a flat retailer-results list for every matching product, in-stock only,
-  // sorted nearest-first. The brief says ignore out-of-stock; we filter them here.
   const retailerResults = useMemo<RetailerCardData[]>(() => {
     if (matchingProducts.length === 0) return [];
     const rows: RetailerCardData[] = [];
@@ -52,7 +51,6 @@ export function SearchPage() {
     return rows;
   }, [matchingProducts, coords]);
 
-  // Map view needs StockResult-shaped data.
   const mapResults: StockResult[] = useMemo(() => retailerResults.map((r) => ({
     retailer: r.retailer,
     stock: r.stock,
@@ -74,9 +72,9 @@ export function SearchPage() {
   const isProductMode = !q && !category;
 
   return (
-    <div>
+    <div className="max-w-7xl mx-auto w-full flex flex-col min-h-screen">
       {/* Search header */}
-      <div style={{ background: '#fff', padding: 14, borderBottom: '1px solid #eef0f3', position: 'sticky', top: 68, zIndex: 30 }}>
+      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-surface-container px-4 py-4 space-y-4">
         <ProductSearch
           query={q}
           onChange={setQuery}
@@ -85,10 +83,14 @@ export function SearchPage() {
         />
 
         {/* Category chips */}
-        <div className="kd-hide-scrollbar" style={{ display: 'flex', gap: 6, marginTop: 12, overflowX: 'auto', paddingBottom: 2 }}>
+        <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
           <button
             onClick={() => setCategory('')}
-            style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid', borderColor: !category ? '#16a34a' : '#e5e7eb', background: !category ? '#f0fdf4' : '#fff', color: !category ? '#15803d' : '#6b7280' }}
+            className={`flex-shrink-0 px-5 py-2 rounded-full text-xs font-bold transition-all shadow-sm ${
+              !category 
+                ? 'bg-primary text-white shadow-primary/20' 
+                : 'bg-white text-on-surface border border-surface-container-highest hover:bg-surface-container-low'
+            }`}
           >
             {t('common.all')}
           </button>
@@ -99,119 +101,156 @@ export function SearchPage() {
               <button
                 key={c.id}
                 onClick={() => setCategory(c.id)}
-                style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid', borderColor: active ? '#16a34a' : '#e5e7eb', background: active ? '#f0fdf4' : '#fff', color: active ? '#15803d' : '#6b7280', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                className={`flex-shrink-0 px-5 py-2 rounded-full text-xs font-bold flex items-center gap-2 transition-all shadow-sm ${
+                  active 
+                    ? 'bg-primary text-white shadow-primary/20' 
+                    : 'bg-white text-on-surface border border-surface-container-highest hover:bg-surface-container-low'
+                }`}
               >
-                <Icon size={13} strokeWidth={2.1} /> {c.label}
+                <Icon size={14} strokeWidth={2.5} /> {c.label}
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Results */}
-      <div style={{ padding: '14px 16px 28px' }}>
-        {/* Status line */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 10, flexWrap: 'wrap' }}>
+      {/* Results area */}
+      <div className="flex-1 p-4 md:px-10 py-6">
+        {/* Results status line */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <div>
-            <div style={{ fontSize: 13, color: '#111827', fontWeight: 700 }}>
+            <h2 className="text-sm font-bold text-on-surface uppercase tracking-tight">
               {q || category
                 ? t('search.statusRetailers', {
                     count: retailerResults.length,
                     label: q ? `"${q}"` : (CATEGORIES.find((c) => c.id === category)?.label ?? ''),
                   })
                 : t('search.statusEmpty')}
-            </div>
-            <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              <MapPin size={11} color="#6b7280" />
-              {t('search.distancesFrom')} <strong style={{ color: '#374151' }}>{label}</strong>
-              {source === 'default' && <span> · {t('common.approx')}</span>}
+            </h2>
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant mt-1">
+              <MapPin size={12} className="text-secondary" />
+              <span>{t('search.distancesFrom')}</span>
+              <span className="text-on-surface font-bold">{label}</span>
+              {source === 'default' && <span className="opacity-60">· {t('common.approx')}</span>}
             </div>
           </div>
 
           {retailerResults.length > 0 && (
-            <div style={{ display: 'flex', background: '#f3f4f6', borderRadius: 8, padding: 2, gap: 2 }}>
+            <div className="bg-surface-container-low p-1 rounded-xl flex gap-1 shadow-inner border border-surface-container">
               <button
                 onClick={() => setView('list')}
-                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, background: view === 'list' ? '#fff' : 'transparent', color: view === 'list' ? '#111827' : '#6b7280', boxShadow: view === 'list' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black transition-all ${
+                  view === 'list' ? 'bg-white text-primary shadow-sm' : 'text-outline hover:text-on-surface'
+                }`}
               >
-                <ListIcon size={13} /> {t('product.list')}
+                <ListIcon size={14} /> {t('product.list')}
               </button>
               <button
                 onClick={() => setView('map')}
-                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, background: view === 'map' ? '#fff' : 'transparent', color: view === 'map' ? '#111827' : '#6b7280', boxShadow: view === 'map' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black transition-all ${
+                  view === 'map' ? 'bg-white text-primary shadow-sm' : 'text-outline hover:text-on-surface'
+                }`}
               >
-                <MapIcon size={13} /> {t('product.map')}
+                <MapIcon size={14} /> {t('product.map')}
               </button>
             </div>
           )}
         </div>
 
-        {/* Empty / browse mode */}
-        {isProductMode ? (
-          <ProductBrowseGrid onPick={(name) => setQuery(name)} />
-        ) : retailerResults.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 20px', color: '#9ca3af' }}>
-            <div style={{ width: 60, height: 60, borderRadius: 18, background: '#f3f4f6', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
-              <Search size={28} color="#6b7280" strokeWidth={1.8} />
-            </div>
-            <p style={{ fontSize: 15, fontWeight: 600, color: '#374151', marginBottom: 6 }}>{t('search.noStockTitle')}</p>
-            <p style={{ fontSize: 13 }}>{t('search.noStockBody')}</p>
-          </div>
-        ) : view === 'list' ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 4 }}>
-            {retailerResults.map((data, i) => (
-              <RetailerCard
-                key={`${data.retailer.id}-${data.product.id}`}
-                data={data}
-                rank={i + 1}
-                onClick={() => navigate(`/retailer/${data.retailer.id}`)}
+        {/* Dynamic content */}
+        <AnimatePresence mode="wait">
+          {isProductMode ? (
+            <motion.div
+              key="browse"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <ProductBrowseGrid onPick={(name) => setQuery(name)} />
+            </motion.div>
+          ) : retailerResults.length === 0 ? (
+            <motion.div
+              key="empty"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex flex-col items-center justify-center py-20 text-center"
+            >
+              <div className="w-20 h-20 rounded-3xl bg-surface-container flex items-center justify-center mb-6">
+                <Search size={32} className="text-outline" />
+              </div>
+              <h3 className="text-xl font-bold text-on-surface mb-2">{t('search.noStockTitle')}</h3>
+              <p className="text-on-surface-variant max-w-xs">{t('search.noStockBody')}</p>
+            </motion.div>
+          ) : view === 'list' ? (
+            <motion.div
+              key="list"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="grid grid-cols-1 md:grid-cols-2 gap-4"
+            >
+              {retailerResults.map((data, i) => (
+                <RetailerCard
+                  key={`${data.retailer.id}-${data.product.id}`}
+                  data={data}
+                  rank={i + 1}
+                  onClick={() => navigate(`/retailer/${data.retailer.id}`)}
+                />
+              ))}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="map"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="h-[calc(100vh-320px)] min-h-[400px] rounded-3xl overflow-hidden border border-surface-container shadow-ambient"
+            >
+              <RetailerMap
+                results={mapResults}
+                userLat={coords.lat}
+                userLng={coords.lng}
+                onSelect={(r) => navigate(`/retailer/${r.id}`)}
+                selected={null}
               />
-            ))}
-          </div>
-        ) : (
-          <div style={{ height: 'calc(100vh - 220px)', minHeight: 360, position: 'relative', borderRadius: 16, overflow: 'hidden', background: '#e5e7eb' }}>
-            <RetailerMap
-              results={mapResults}
-              userLat={coords.lat}
-              userLng={coords.lng}
-              onSelect={(r) => navigate(`/retailer/${r.id}`)}
-              selected={null}
-            />
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
 }
 
-// Browse grid shown when no query/category is set yet — links the input to the rest of the catalog.
 function ProductBrowseGrid({ onPick }: { onPick: (name: string) => void }) {
   const { t } = useTranslation();
   return (
-    <div>
-      <p style={{ fontSize: 11, color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
-        {t('search.popularProducts')}
-      </p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+    <div className="space-y-6">
+      <div className="flex items-center gap-2">
+        <div className="h-1.5 w-1.5 rounded-full bg-secondary animate-pulse" />
+        <p className="text-[10px] font-black uppercase tracking-widest text-outline">
+          {t('search.popularProducts')}
+        </p>
+      </div>
+      
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         {PRODUCTS.map((p) => (
           <button
             key={p.id}
             onClick={() => onPick(p.shortName)}
-            style={{
-              background: '#fff', border: '1px solid #eef0f3', borderRadius: 14,
-              padding: 14, cursor: 'pointer', textAlign: 'left',
-              display: 'flex', flexDirection: 'column', gap: 4,
-              boxShadow: '0 1px 2px rgba(15, 23, 42, 0.03)',
-            }}
+            className="group bg-white border border-surface-container rounded-3xl p-4 text-left hover:shadow-ambient hover:border-primary transition-all flex flex-col gap-3"
           >
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              {p.categoryLabel}
+            <div className="aspect-square rounded-2xl bg-surface-container overflow-hidden">
+              <img src={p.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={p.name} />
             </div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', lineHeight: 1.3 }}>
-              {p.shortName}
-            </div>
-            <div style={{ fontSize: 11, color: '#16a34a', fontWeight: 600, marginTop: 4 }}>
-              {t('search.findRetailers')}
+            <div>
+              <div className="text-[9px] font-black text-outline uppercase tracking-widest mb-1">
+                {p.categoryLabel}
+              </div>
+              <div className="text-sm font-bold text-on-surface line-clamp-1 group-hover:text-primary transition-colors">
+                {p.shortName}
+              </div>
+              <div className="flex items-center gap-1 text-[10px] text-primary font-black uppercase tracking-widest mt-2">
+                <span>Find Stores</span>
+                <ChevronRight size={10} className="group-hover:translate-x-1 transition-transform" />
+              </div>
             </div>
           </button>
         ))}
