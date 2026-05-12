@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.0.0",
+    "axios": "^1.16.0",
     "clsx": "^2.1.1",
     "firebase": "^10.11.1",
     "framer-motion": "^11.1.7",
