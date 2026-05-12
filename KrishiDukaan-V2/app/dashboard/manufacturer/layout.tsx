@@ -1,4 +1,6 @@
-import { auth } from '../../firebase';
+'use client';
+
+import { auth, getUserProfile } from '../../firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -8,11 +10,17 @@ export default function ManufacturerDashboard({ children }: { children: React.Re
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        router.push('/login');
+        router.push('/');
       } else {
-        setLoading(false);
+        const profile = await getUserProfile(user.uid);
+        if (profile?.role === 'manufacturer' && profile?.isPaid) {
+          setLoading(false);
+        } else {
+          // Redirect to home if not paid or wrong role
+          router.push('/');
+        }
       }
     });
     return () => unsubscribe();
@@ -20,10 +28,15 @@ export default function ManufacturerDashboard({ children }: { children: React.Re
 
   const handleLogout = async () => {
     await signOut(auth);
-    router.push('/login');
+    router.push('/');
   };
 
-  if (loading) return <div className="p-10">Loading Dashboard...</div>;
+  if (loading) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+      <div className="animate-spin w-10 h-10 border-4 border-blue-900 border-t-transparent rounded-full mb-4" />
+      <p className="font-bold text-blue-900">Verifying access...</p>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-100 flex">

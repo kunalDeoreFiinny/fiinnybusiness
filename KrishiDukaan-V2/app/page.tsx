@@ -16,20 +16,24 @@ import ProfileView from './views/ProfileView';
 import AboutView from './views/AboutView';
 import LoginView from './views/LoginView';
 import SignupView from './views/SignupView';
+import SubscriptionView from './views/SubscriptionView';
 import { motion, AnimatePresence } from 'framer-motion';
 import { auth, fetchMarketplaceProducts, fetchStores, syncInitialData, getUserProfile } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { MarketplaceProduct } from '../types/product';
+import { useRouter } from 'next/navigation';
 
-type View = 'home' | 'market' | 'hub' | 'product' | 'map' | 'about' | 'profile' | 'login' | 'signup';
+type View = 'home' | 'market' | 'hub' | 'product' | 'map' | 'about' | 'profile' | 'login' | 'signup' | 'subscription';
 type UserRole = 'customer' | 'retailer' | 'manufacturer';
 type UserProfile = {
   name: string;
   phone: string;
   email: string;
+  isPaid?: boolean;
 };
 
 export default function App() {
+  const router = useRouter();
   const [currentView, setCurrentView] = useState<View>('home');
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
@@ -40,7 +44,7 @@ export default function App() {
   
   const [user, setUser] = useState<any>(null);
   const [userRole, setUserRole] = useState<UserRole>('customer');
-  const [userProfile, setUserProfile] = useState<UserProfile>({ name: '', phone: '', email: '' });
+  const [userProfile, setUserProfile] = useState<UserProfile>({ name: '', phone: '', email: '', isPaid: false });
   
   const [allProducts, setAllProducts] = useState<MarketplaceProduct[]>([]);
   const [allStores, setAllStores] = useState<any[]>([]);
@@ -93,16 +97,23 @@ export default function App() {
         const profileData = await getUserProfile(firebaseUser.uid);
         if (profileData) {
           setUserRole(profileData.role as UserRole);
+          const isPaid = profileData.isPaid || false;
           setUserProfile({
             name: profileData.name || '',
             email: profileData.email || firebaseUser.email || '',
-            phone: profileData.phone || ''
+            phone: profileData.phone || '',
+            isPaid: isPaid
           });
+
+          // Paywall logic: if retailer/manufacturer and NOT paid, force subscription view
+          if ((profileData.role === 'retailer' || profileData.role === 'manufacturer') && !isPaid) {
+            setCurrentView('subscription');
+          }
         }
       } else {
         setUser(null);
         setUserRole('customer');
-        setUserProfile({ name: '', phone: '', email: '' });
+        setUserProfile({ name: '', phone: '', email: '', isPaid: false });
       }
     });
 
@@ -113,12 +124,33 @@ export default function App() {
   const handleAuthSuccess = (firebaseUser: any, profile: any) => {
     setUser(firebaseUser);
     setUserRole(profile.role);
+    const isPaid = profile.isPaid || false;
     setUserProfile({
       name: profile.name,
       email: profile.email,
-      phone: profile.phone || ''
+      phone: profile.phone || '',
+      isPaid: isPaid
     });
-    setCurrentView('home');
+
+    if ((profile.role === 'retailer' || profile.role === 'manufacturer') && !isPaid) {
+      setCurrentView('subscription');
+    } else {
+      setCurrentView('home');
+    }
+  };
+
+  const handleSubscriptionSuccess = async () => {
+    if (user) {
+      const profileData = await getUserProfile(user.uid);
+      if (profileData) {
+        setUserProfile(prev => ({ ...prev, isPaid: true }));
+        setCurrentView('profile');
+      }
+    }
+  };
+
+  const handleProfileSave = (profile: UserProfile) => {
+    setUserProfile(profile);
   };
 
   const handleLogout = async () => {
@@ -143,18 +175,23 @@ export default function App() {
     });
   }, [allProducts, productSearch, selectedCategory]);
 
-  const handleProfileSave = (profile: UserProfile) => {
-    setUserProfile(profile);
+  const navigate = (view: View) => {
+    if ((userRole === 'retailer' || userRole === 'manufacturer') && !userProfile.isPaid && 
+        view !== 'home' && view !== 'about' && view !== 'subscription' && view !== 'login' && view !== 'signup') {
+      setCurrentView('subscription');
+      return;
+    }
+    setCurrentView(view);
   };
 
   const navigateToProduct = (id: string) => {
     setSelectedProductId(id);
-    setCurrentView('product');
+    navigate('product');
   };
 
   const navigateToMap = (storeId?: string) => {
     setSelectedStoreId(storeId || null);
-    setCurrentView('map');
+    navigate('map');
   };
 
   const renderView = () => {
@@ -182,7 +219,7 @@ export default function App() {
 
     switch (currentView) {
       case 'home':
-        return <HomeView products={filteredProducts} onProductClick={navigateToProduct} onHubClick={() => setCurrentView('hub')} />;
+        return <HomeView products={filteredProducts} onProductClick={navigateToProduct} onHubClick={() => navigate('hub')} />;
       case 'market':
         return (
           <MarketView 
@@ -195,9 +232,9 @@ export default function App() {
       case 'hub':
         return <HubView />;
       case 'product':
-        return <ProductDetailView products={allProducts} productId={selectedProductId} onBack={() => setCurrentView('market')} onStoreClick={navigateToMap} />;
+        return <ProductDetailView products={allProducts} productId={selectedProductId} onBack={() => navigate('market')} onStoreClick={navigateToMap} />;
       case 'map':
-        return <StoreLocatorView onBack={() => setCurrentView('home')} selectedStoreId={selectedStoreId} stores={allStores} />;
+        return <StoreLocatorView onBack={() => navigate('home')} selectedStoreId={selectedStoreId} stores={allStores} />;
       case 'profile':
         return (
           <ProfileView
@@ -209,13 +246,15 @@ export default function App() {
           />
         );
       case 'login':
-        return <LoginView onBack={() => setCurrentView('home')} onNavigateToSignup={() => setCurrentView('signup')} onSuccess={handleAuthSuccess} />;
+        return <LoginView onBack={() => navigate('home')} onNavigateToSignup={() => navigate('signup')} onSuccess={handleAuthSuccess} />;
       case 'signup':
-        return <SignupView onBack={() => setCurrentView('home')} onNavigateToLogin={() => setCurrentView('login')} onSuccess={handleAuthSuccess} />;
+        return <SignupView onBack={() => navigate('home')} onNavigateToLogin={() => navigate('login')} onSuccess={handleAuthSuccess} />;
+      case 'subscription':
+        return <SubscriptionView user={user} onSuccess={handleSubscriptionSuccess} onLogout={handleLogout} />;
       case 'about':
         return <AboutView />;
       default:
-        return <HomeView products={filteredProducts} onProductClick={navigateToProduct} onHubClick={() => setCurrentView('hub')} />;
+        return <HomeView products={filteredProducts} onProductClick={navigateToProduct} onHubClick={() => navigate('hub')} />;
     }
   };
 
@@ -225,7 +264,7 @@ export default function App() {
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-surface-container shadow-sm px-4 py-2 md:px-6 flex justify-between items-center transition-colors gap-4">
         <div 
           className="font-bold text-xl text-primary tracking-tight cursor-pointer hover:scale-105 transition-transform shrink-0"
-          onClick={() => setCurrentView('home')}
+          onClick={() => navigate('home')}
         >
           Krishidukan
         </div>
@@ -240,7 +279,7 @@ export default function App() {
           ].map((item) => (
             <button
               key={item.id}
-              onClick={() => setCurrentView(item.id as View)}
+              onClick={() => navigate(item.id as View)}
               className={`text-xs font-semibold transition-colors hover:text-primary whitespace-nowrap ${
                 currentView === item.id ? 'text-primary' : 'text-on-surface-variant'
               }`}
@@ -289,15 +328,23 @@ export default function App() {
 
           <button
             className="p-1.5 hover:bg-surface-container rounded-full transition-colors text-primary md:hidden"
-            onClick={() => setCurrentView('map')}
+            onClick={() => navigate('map')}
           >
             <ICONS.Location className="w-5 h-5" />
           </button>
 
           {user ? (
             <div className="flex items-center gap-2">
+              {(userRole === 'retailer' || userRole === 'manufacturer') && userProfile.isPaid && (
+                <button 
+                  onClick={() => router.push(`/dashboard/${userRole}`)}
+                  className="bg-secondary text-white text-xs font-bold px-4 py-2 rounded-xl hover:scale-105 transition-all shadow-md active:scale-95"
+                >
+                  Dashboard
+                </button>
+              )}
               <button 
-                onClick={() => setCurrentView('profile')}
+                onClick={() => navigate('profile')}
                 className="bg-surface-container-high text-on-surface text-xs font-bold px-4 py-2 rounded-xl hover:bg-surface-container-highest transition-all"
               >
                 {userProfile.name || 'Profile'}
@@ -311,7 +358,7 @@ export default function App() {
             </div>
           ) : (
             <button 
-              onClick={() => setCurrentView('login')}
+              onClick={() => navigate('login')}
               className="bg-primary text-white text-xs font-bold px-5 py-2 rounded-xl hover:scale-105 transition-all shadow-md active:scale-95"
             >
               Login
@@ -346,7 +393,7 @@ export default function App() {
         ].map((item) => (
           <button
             key={item.id}
-            onClick={() => setCurrentView(item.id as View)}
+            onClick={() => navigate(item.id as View)}
             className={`flex flex-col items-center gap-1 transition-colors ${
               currentView === item.id ? 'text-primary' : 'text-on-surface-variant'
             }`}
