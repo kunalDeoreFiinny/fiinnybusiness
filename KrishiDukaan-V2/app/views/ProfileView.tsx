@@ -3,7 +3,7 @@ import { FormEvent, useState } from 'react';
 import { ICONS } from '../constants';
 import { saveManufacturerProduct, saveRetailerProduct, saveRetailerProfile } from '../firebase';
 
-type UserRole = 'retailer' | 'manufacturer';
+type UserRole = 'customer' | 'retailer' | 'manufacturer';
 
 interface UserProfile {
   name: string;

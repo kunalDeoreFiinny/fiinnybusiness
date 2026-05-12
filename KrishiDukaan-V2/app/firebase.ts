@@ -293,6 +293,20 @@ export async function fetchManufacturerProducts(manufacturerId: string): Promise
   }
 }
 
+export async function fetchRetailerProducts(retailerId: string): Promise<MarketplaceProduct[]> {
+  try {
+    const q = query(collection(db, 'products'), where('retailerId', '==', retailerId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as MarketplaceProduct));
+  } catch (error) {
+    console.error('Error fetching retailer products:', error);
+    throw error;
+  }
+}
+
 export async function saveManufacturerProduct(manufacturerId: string, product: any) {
   await addDoc(collection(db, 'products'), {
     ...product,

@@ -34,14 +34,14 @@ export function Sidebar({ mobileOpen, onMobileOpenChange }: SidebarProps) {
         <button
           type="button"
           aria-label="Close menu"
-          className="fixed inset-0 z-40 bg-on-surface/40 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 top-16 z-40 bg-on-surface/40 backdrop-blur-sm md:hidden"
           onClick={() => onMobileOpenChange(false)}
         />
       ) : null}
 
       <aside
         className={cn(
-          "fixed left-0 top-0 z-50 flex h-full w-64 flex-col border-r border-outline-variant/30 bg-surface-container-lowest shadow-ambient transition-transform duration-200 md:translate-x-0",
+          "fixed left-0 top-16 z-50 flex h-[calc(100vh-64px)] w-64 flex-col border-r border-outline-variant/30 bg-surface-container-lowest shadow-ambient transition-transform duration-200 md:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
         )}
       >

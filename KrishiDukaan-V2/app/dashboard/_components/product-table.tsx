@@ -1,21 +1,22 @@
 import type { InventoryProduct } from "../_data/mock";
 import { cn } from "../_lib/cn";
 
-function stockStatus(product: InventoryProduct): {
+function stockStatus(product: any): {
   label: string;
   className: string;
 } {
-  if (product.stock <= 0) {
+  const stock = product.stock;
+  if (stock === "Out of Stock" || stock === "0" || stock === 0) {
     return { label: "Out of stock", className: "bg-harvest/15 text-harvest" };
   }
-  if (product.stock <= product.reorderAt) {
+  if (stock === "Low Stock") {
     return { label: "Low stock", className: "bg-secondary-container/80 text-on-secondary-container" };
   }
   return { label: "In stock", className: "bg-primary/10 text-primary" };
 }
 
 type ProductTableProps = {
-  products: InventoryProduct[];
+  products: any[];
 };
 
 export function ProductTable({ products }: ProductTableProps) {
@@ -26,7 +27,6 @@ export function ProductTable({ products }: ProductTableProps) {
           <thead className="border-b border-outline-variant/30 bg-surface-container-low text-on-surface-variant">
             <tr>
               <th className="whitespace-nowrap px-4 py-3 font-medium">Product</th>
-              <th className="whitespace-nowrap px-4 py-3 font-medium">SKU</th>
               <th className="whitespace-nowrap px-4 py-3 font-medium">Category</th>
               <th className="whitespace-nowrap px-4 py-3 font-medium">Stock</th>
               <th className="whitespace-nowrap px-4 py-3 font-medium">Status</th>
@@ -39,10 +39,9 @@ export function ProductTable({ products }: ProductTableProps) {
               return (
                 <tr key={p.id} className="hover:bg-surface-container/60">
                   <td className="px-4 py-3 font-medium text-on-surface">{p.name}</td>
-                  <td className="px-4 py-3 tabular-nums text-on-surface-variant">{p.sku}</td>
                   <td className="px-4 py-3 text-on-surface-variant">{p.category}</td>
                   <td className="px-4 py-3 tabular-nums text-on-surface">
-                    {p.stock} {p.unit}
+                    {p.stock}
                   </td>
                   <td className="px-4 py-3">
                     <span
@@ -54,7 +53,7 @@ export function ProductTable({ products }: ProductTableProps) {
                       {status.label}
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-medium tabular-nums text-on-surface">{p.price}</td>
+                  <td className="px-4 py-3 font-medium tabular-nums text-on-surface">₹{p.price}</td>
                 </tr>
               );
             })}

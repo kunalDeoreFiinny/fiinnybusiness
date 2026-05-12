@@ -1,10 +1,25 @@
 import Link from "next/link";
-import { inventoryHealthSummary } from "../_data/mock";
 
-export function DashboardInventoryHealth() {
-  const s = inventoryHealthSummary;
+interface InventoryHealthSummary {
+  inStock: number;
+  lowStock: number;
+  outOfStock: number;
+  score: number;
+  label: string;
+}
+
+export function DashboardInventoryHealth({ data }: { data?: InventoryHealthSummary }) {
+  const s = data || {
+    inStock: 0,
+    lowStock: 0,
+    outOfStock: 0,
+    score: 0,
+    label: "Unknown",
+  };
+  
   return (
     <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-4 shadow-ambient md:p-5">
+...
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h2 className="text-base font-semibold text-on-surface">Inventory health</h2>

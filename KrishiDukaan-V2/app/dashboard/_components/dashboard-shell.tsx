@@ -8,7 +8,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="flex-1 bg-surface relative overflow-y-auto h-[calc(100vh-64px)]">
       <Sidebar mobileOpen={mobileOpen} onMobileOpenChange={setMobileOpen} />
 
       <div className="md:pl-64">

@@ -5,6 +5,7 @@ import { auth, getUserProfile } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { Navbar } from '../../components/shared/navbar';
 
 export default function DashboardLayout({
   children,
@@ -39,5 +40,12 @@ export default function DashboardLayout({
     </div>
   );
 
-  return <DashboardShell>{children}</DashboardShell>;
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Navbar isDashboard={true} />
+      <div className="flex-1 flex overflow-hidden">
+        <DashboardShell>{children}</DashboardShell>
+      </div>
+    </div>
+  );
 }
