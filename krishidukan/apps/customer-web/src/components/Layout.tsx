@@ -43,8 +43,9 @@ export function Layout({ children }: { children: ReactNode }) {
     setSearchOpen(false);
   }
 
+  // TEMP_DISABLED: Cart feature disabled temporarily
   function goToCart() {
-    requireLogin(() => navigate('/cart'), 'add-to-cart');
+    // no-op — cart is disabled
   }
 
   return (
@@ -124,9 +125,10 @@ export function Layout({ children }: { children: ReactNode }) {
           <Search size={18} />
         </button>
 
+        {/* TEMP_DISABLED: Login/auth feature disabled — navigate directly */}
         <button
-          onClick={() => requireLogin(() => navigate('/account'), 'generic')}
-          aria-label={isAuthenticated ? t('nav.account') : t('nav.login')}
+          onClick={() => navigate('/account')}
+          aria-label={t('nav.account')}
           style={{
             background: 'transparent', border: 'none', color: '#111827',
             padding: 6, cursor: 'pointer', borderRadius: 10, display: 'none', alignItems: 'center', gap: 6,
@@ -134,32 +136,25 @@ export function Layout({ children }: { children: ReactNode }) {
           className="kd-login-desktop"
         >
           <CircleUser size={20} strokeWidth={1.8} />
-          <span style={{ fontSize: 13, fontWeight: 600 }}>{isAuthenticated ? t('nav.account') : t('nav.login')}</span>
+          <span style={{ fontSize: 13, fontWeight: 600 }}>{t('nav.account')}</span>
         </button>
 
         <LanguageSwitcher />
 
+        {/* TEMP_DISABLED: Cart feature disabled temporarily */}
         <button
-          onClick={goToCart}
+          disabled
           aria-label={t('nav.cartAria')}
+          title="Coming Soon"
           style={{
-            background: '#16a34a', color: '#fff', border: 'none',
-            padding: '8px 14px', cursor: 'pointer', borderRadius: 10,
+            background: '#9ca3af', color: '#fff', border: 'none',
+            padding: '8px 14px', cursor: 'not-allowed', borderRadius: 10,
             display: 'flex', alignItems: 'center', gap: 6, position: 'relative',
-            boxShadow: '0 2px 6px rgba(22, 163, 74, 0.25)',
+            opacity: 0.6,
           }}
         >
           <ShoppingCart size={17} strokeWidth={2.1} />
-          <span style={{ fontSize: 13, fontWeight: 700 }} className="kd-cart-label">{t('nav.cart')}</span>
-          {isAuthenticated && cartCount > 0 && (
-            <span style={{
-              minWidth: 18, height: 18, padding: '0 5px',
-              borderRadius: 9, background: '#fff', color: '#16a34a',
-              fontSize: 11, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              {cartCount > 9 ? '9+' : cartCount}
-            </span>
-          )}
+          <span style={{ fontSize: 13, fontWeight: 700 }} className="kd-cart-label">Coming Soon</span>
         </button>
 
         <style>{`

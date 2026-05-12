@@ -33,25 +33,14 @@ export function ProductPage() {
   const inStock = results.filter((r) => r.stock.inStock);
   const outOfStock = results.filter((r) => !r.stock.inStock);
 
-  function handleAddToCart(retailerId: string) {
-    if (!product) return;
-    requireLogin(() => {
-      addToCart(product.id, retailerId, 1);
-      navigate('/cart');
-    }, 'add-to-cart');
-  }
+  // TEMP_DISABLED: Cart feature disabled temporarily
+  function handleAddToCart(_retailerId: string) {}
+  function handleBuyNow(_retailerId: string) {}
 
-  function handleBuyNow(retailerId: string) {
-    if (!product) return;
-    requireLogin(() => {
-      addToCart(product.id, retailerId, 1);
-      navigate('/cart');
-    }, 'buy-now');
-  }
-
+  // TEMP_DISABLED: Login/auth disabled — wishlist works without gate
   function handleWishlist() {
     if (!product) return;
-    requireLogin(() => { toggleWishlist(product.id); }, 'wishlist');
+    toggleWishlist(product.id);
   }
 
   if (loading && !data) {
@@ -317,19 +306,21 @@ function RetailerCard({ result, onClose, onAddToCart, onBuyNow }: RetailerCardPr
       {stock.inStock && (onAddToCart || onBuyNow) && (
         <div style={{ display: 'flex', gap: 8 }}>
           {onAddToCart && (
+            // TEMP_DISABLED: Cart feature disabled temporarily
             <button
               onClick={() => onAddToCart(retailer.id)}
-              style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '10px 12px', background: '#fff', border: '1px solid #16a34a', borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#16a34a', cursor: 'pointer' }}
+              style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '10px 12px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#9ca3af', cursor: 'not-allowed', opacity: 0.6 }}
             >
-              <ShoppingCart size={13} /> {t('product.addToCart')}
+              <ShoppingCart size={13} /> Coming Soon
             </button>
           )}
           {onBuyNow && (
+            // TEMP_DISABLED: Cart feature disabled temporarily
             <button
               onClick={() => onBuyNow(retailer.id)}
-              style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '10px 12px', background: '#16a34a', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer' }}
+              style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '10px 12px', background: '#9ca3af', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'not-allowed', opacity: 0.6 }}
             >
-              <Zap size={13} /> {t('product.buyNow')}
+              <Zap size={13} /> Coming Soon
             </button>
           )}
         </div>
