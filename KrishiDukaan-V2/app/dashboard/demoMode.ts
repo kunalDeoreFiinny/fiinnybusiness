@@ -1,9 +1,9 @@
 // Demo mode kicks in when VITE_FIREBASE_API_KEY is missing.
 // Lets every screen render with mock data — no backend, no Firebase needed.
 
-import { ShopStatus, UserRole, ProductCategory } from '@krishidukan/shared';
+import { ShopStatus, UserRole, ProductCategory } from './types/shared';
 
-export const IS_DEMO = !import.meta.env['VITE_FIREBASE_API_KEY'];
+export const IS_DEMO = !process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
 
 export const DEMO_USER = {
   uid: 'demo-shop-owner-uid',

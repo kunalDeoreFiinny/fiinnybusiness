@@ -1,6 +1,8 @@
+'use client';
+
 import { useEffect, useState } from 'react';
 import { api } from '../api';
-import { ProductCategory, CATEGORY_LABELS } from '@krishidukan/shared';
+import { ProductCategory, CATEGORY_LABELS } from '../types/shared';
 import { AppShell } from '../components/layout/AppShell';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';

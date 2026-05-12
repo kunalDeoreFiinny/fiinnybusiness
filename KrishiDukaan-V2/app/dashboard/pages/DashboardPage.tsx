@@ -1,5 +1,7 @@
+'use client';
+
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../api';
 import { IS_DEMO } from '../demoMode';
@@ -17,7 +19,7 @@ interface Stats { totalViews: number; totalCalls: number; totalDirections: numbe
 
 export function DashboardPage() {
   const { shop, userDoc } = useAuth();
-  const navigate = useNavigate();
+  const router = useRouter();
   const [stats, setStats] = useState<Stats | null>(null);
   const [invCount, setInvCount] = useState(0);
   const [lowStock, setLowStock] = useState(0);
@@ -56,7 +58,7 @@ export function DashboardPage() {
         <Card>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><ShoppingBag size={18} style={{ color: 'var(--kd-primary)' }} /><span style={{ fontSize: 15, fontWeight: 600 }}>Inventory Health</span></div>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/inventory')}>View All <ArrowRight size={14} /></Button>
+            <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard/inventory')}>View All <ArrowRight size={14} /></Button>
           </div>
           <div style={{ display: 'flex', gap: 16 }}>
             {[
@@ -88,7 +90,7 @@ export function DashboardPage() {
               { label: 'View Analytics', icon: <TrendingUp size={16} />, path: '/analytics', bg: '#faf5ff', border: '#d8b4fe', fg: 'var(--kd-purple-500)' },
               { label: 'Shop Profile', icon: <Users size={16} />, path: '/profile', bg: '#fffbeb', border: '#fde68a', fg: 'var(--kd-amber-600)' },
             ].map((a) => (
-              <button key={a.label} onClick={() => navigate(a.path)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: a.bg, border: `1px solid ${a.border}`, borderRadius: 8, color: a.fg, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--kd-font)', transition: 'transform 120ms ease' }}
+              <button key={a.label} onClick={() => router.push(`/dashboard${a.path}`)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: a.bg, border: `1px solid ${a.border}`, borderRadius: 8, color: a.fg, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--kd-font)', transition: 'transform 120ms ease' }}
                 onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; }}>
                 {a.icon}{a.label}

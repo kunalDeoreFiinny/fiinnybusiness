@@ -1,3 +1,5 @@
+'use client';
+
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import {
   onAuthStateChanged,
@@ -13,9 +15,9 @@ import {
 import { getOrCreateUser, getUserById } from '../services/userService';
 import { getRetailerByPhone, getRetailerById } from '../services/retailerService';
 import { setAuthToken } from '../api';
-import { ShopStatus, UserRole } from '@krishidukan/shared';
 import { IS_DEMO, DEMO_USER, DEMO_SHOP, DEMO_ROLE } from '../demoMode';
 import type { UserDoc } from '../types/firebase';
+import { ShopStatus, UserRole } from '../types/shared';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface ShopInfo {
