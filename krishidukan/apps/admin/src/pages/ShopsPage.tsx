@@ -1,8 +1,39 @@
 import { useEffect, useState } from 'react';
+<<<<<<< Updated upstream
 import { Store } from 'lucide-react';
 import { fetchAllRetailers, type RetailerDoc } from '../services/retailerService';
 
 type LoadState = 'loading' | 'ready' | 'error';
+=======
+import { useNavigate } from 'react-router-dom';
+import { api } from '../api';
+import { ShopStatus } from '@krishidukan/shared';
+import { ChevronRight, Store } from 'lucide-react';
+
+interface Shop {
+  id: string;
+  businessName: string;
+  ownerName: string;
+  city: string;
+  state: string;
+  phone: string;
+  status: ShopStatus;
+  createdAt: string;
+  licenses: { id: string }[];
+}
+
+const STATUS_STYLES: Record<string, { bg: string; text: string; border: string }> = {
+  pending_review: { bg: '#fff7ed', text: '#f57c00', border: '#fed7aa' },
+  active: { bg: '#f0fdf4', text: '#154212', border: '#bbf7d0' },
+  suspended: { bg: '#fef2f2', text: '#dc2626', border: '#fecaca' },
+  rejected: { bg: '#f9fafb', text: '#6b7280', border: '#e5e7eb' },
+};
+
+const FILTERS = ['pending_review', 'active', 'suspended', 'rejected', ''] as const;
+const FILTER_LABELS: Record<string, string> = {
+  pending_review: 'Pending', active: 'Active', suspended: 'Suspended', rejected: 'Rejected', '': 'All'
+};
+>>>>>>> Stashed changes
 
 export function ShopsPage() {
   const [retailers, setRetailers] = useState<RetailerDoc[]>([]);
@@ -10,6 +41,7 @@ export function ShopsPage() {
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
+<<<<<<< Updated upstream
     fetchAllRetailers()
       .then((data) => { setRetailers(data); setState('ready'); })
       .catch((err: unknown) => {
@@ -67,10 +99,51 @@ export function ShopsPage() {
                   <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
                     {h}
                   </th>
+=======
+    setLoading(true);
+    api.get<{ shops: Shop[]; total: number }>('/admin/shops', { params: { status: filter } })
+      .then((r) => { setShops(r.data.shops); setTotal(r.data.total); })
+      .finally(() => setLoading(false));
+  }, [filter]);
+
+  return (
+    <div className="p-8">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-on-surface mb-1">Shops</h1>
+          <p className="text-on-surface-variant text-sm">{total} shops total</p>
+        </div>
+      </div>
+
+      {/* Filter tabs */}
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
+        {FILTERS.map((f) => (
+          <button key={f} onClick={() => setFilter(f)}
+            className={`px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${
+              filter === f
+                ? 'bg-primary text-white border-primary shadow-sm'
+                : 'bg-white text-on-surface-variant border-surface-container-highest hover:bg-surface-container-low'
+            }`}>
+            {FILTER_LABELS[f]}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="text-on-surface-variant text-sm py-8">Loading...</div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-surface-container overflow-hidden shadow-sm">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="border-b border-surface-container bg-surface-container-low">
+                {['Business', 'Owner', 'Location', 'Phone', 'Licenses', 'Status', 'Registered', ''].map((h) => (
+                  <th key={h} className="px-5 py-4 text-left text-xs font-black uppercase tracking-widest text-on-surface-variant">{h}</th>
+>>>>>>> Stashed changes
                 ))}
               </tr>
             </thead>
             <tbody>
+<<<<<<< Updated upstream
               {retailers.map((r) => (
                 <tr
                   key={r.uid}
@@ -91,6 +164,45 @@ export function ShopsPage() {
               ))}
             </tbody>
           </table>
+=======
+              {shops.map((shop) => {
+                const ss = STATUS_STYLES[shop.status] ?? STATUS_STYLES['rejected'];
+                return (
+                  <tr key={shop.id} onClick={() => navigate(`/shops/${shop.id}`)}
+                    className="border-b border-surface-container hover:bg-surface-container-low cursor-pointer transition-colors">
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
+                          <Store className="w-4 h-4 text-primary" />
+                        </div>
+                        <span className="font-bold text-on-surface text-sm">{shop.businessName}</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 text-sm text-on-surface-variant">{shop.ownerName}</td>
+                    <td className="px-5 py-4 text-sm text-on-surface-variant">{shop.city}, {shop.state}</td>
+                    <td className="px-5 py-4 text-sm text-on-surface-variant">{shop.phone}</td>
+                    <td className="px-5 py-4 text-sm text-on-surface-variant">{shop.licenses.length}</td>
+                    <td className="px-5 py-4">
+                      <span className="text-xs font-bold px-3 py-1 rounded-full border"
+                        style={{ background: ss.bg, color: ss.text, borderColor: ss.border }}>
+                        {shop.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-xs text-on-surface-variant">
+                      {new Date(shop.createdAt).toLocaleDateString('en-IN')}
+                    </td>
+                    <td className="px-5 py-4">
+                      <ChevronRight className="w-4 h-4 text-outline" />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {shops.length === 0 && (
+            <div className="py-16 text-center text-on-surface-variant text-sm">No shops found for this filter.</div>
+          )}
+>>>>>>> Stashed changes
         </div>
       )}
     </div>

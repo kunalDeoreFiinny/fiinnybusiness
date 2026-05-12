@@ -1,5 +1,6 @@
 import { ICONS, STORES } from '../constants';
 import { motion } from 'motion/react';
+import { useState } from 'react';
 
 interface StoreLocatorViewProps {
   onBack: () => void;
@@ -8,18 +9,32 @@ interface StoreLocatorViewProps {
 
 export default function StoreLocatorView({ onBack, selectedStoreId }: StoreLocatorViewProps) {
   const focusedStore = STORES.find(s => s.id === selectedStoreId) || STORES[0];
+  const [location, setLocation] = useState('Pune, Maharashtra');
 
   return (
     <div className="flex flex-col md:flex-row h-[calc(100vh-64px)] overflow-hidden">
       {/* Sidebar */}
       <div className="w-full md:w-[400px] bg-white border-r border-surface-container flex flex-col z-20 shadow-xl overflow-hidden">
         <div className="p-6 border-b border-surface-container shrink-0">
-          <div className="flex items-center gap-4 mb-6">
+          <div className="flex items-center gap-4 mb-4">
             <button onClick={onBack} className="p-2 hover:bg-surface-container-low rounded-full md:hidden">
               <ICONS.ChevronRight className="w-5 h-5 rotate-180" />
             </button>
             <h2 className="text-2xl font-bold text-on-surface">Nearby Stores</h2>
           </div>
+
+          {/* Location search — only on this tab */}
+          <div className="flex items-center bg-surface-container-low rounded-2xl px-4 py-3 mb-4 border border-outline-variant group focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+            <ICONS.Location className="w-4 h-4 text-outline mr-3 group-focus-within:text-primary transition-colors shrink-0" />
+            <input
+              type="text"
+              value={location}
+              onChange={e => setLocation(e.target.value)}
+              placeholder="Enter your location..."
+              className="bg-transparent border-none w-full focus:ring-0 text-sm text-on-surface font-semibold placeholder:font-normal"
+            />
+          </div>
+
           <div className="flex gap-2 overflow-x-auto pb-4 hide-scrollbar">
             <button className="whitespace-nowrap px-5 py-2 rounded-full bg-primary text-white text-xs font-bold shadow-lg shadow-primary/20 flex items-center gap-2">
               <ICONS.Check className="w-4 h-4" /> Open Now
