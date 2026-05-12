@@ -109,7 +109,7 @@ export default function HubView() {
           </div>
           <h2 className="text-2xl font-bold text-on-surface mb-2">Preventing Blossom End Rot</h2>
           <p className="text-on-surface-variant max-w-3xl leading-relaxed">
-            Inconsistent watering leads to calcium deficiency, causing black sunken spots on the fruit's bottom. Ensure a steady moisture level using drip irrigation, especially during rapid fruit expansion. Apply a calcium-rich foliar spray if symptoms appear early.
+            Inconsistent watering leads to calcium deficiency, causing black sunken spots on the fruit&apos;s bottom. Ensure a steady moisture level using drip irrigation, especially during rapid fruit expansion. Apply a calcium-rich foliar spray if symptoms appear early.
           </p>
           <button className="mt-6 flex items-center gap-2 bg-white text-primary font-bold px-6 py-2.5 rounded-full shadow-sm hover:bg-surface transition-colors">
             <ICONS.Chat className="w-4 h-4" /> Consult Specialist

@@ -6,8 +6,10 @@ import {
   getDoc,
   getDocs,
   getFirestore,
+  query,
   serverTimestamp,
-  setDoc
+  setDoc,
+  where
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { getAnalytics, isSupported } from 'firebase/analytics';
@@ -200,11 +202,33 @@ export type Store = {
 
 export async function fetchStores(): Promise<Store[]> {
   try {
-    const snapshot = await getDocs(collection(db, 'stores'));
-    return snapshot.docs.map((doc) => ({
+    const storesSnapshot = await getDocs(collection(db, 'stores'));
+    const retailersSnapshot = await getDocs(collection(db, 'retailers'));
+    
+    const stores = storesSnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data()
     } as Store));
+
+    const retailers = retailersSnapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        name: data.shopName || data.ownerName || 'Retailer',
+        ownerName: data.ownerName,
+        phone: data.phone,
+        address: data.address,
+        distance: 'Nearby',
+        status: data.status || 'Active',
+        stock: (data.products || []).map((p: any) => p.name),
+        location: { 
+          lat: data.location?.latitude || 0, 
+          lng: data.location?.longitude || 0 
+        }
+      } as Store;
+    });
+
+    return [...stores, ...retailers];
   } catch (error) {
     console.error('Error fetching stores from Firestore:', error);
     throw error;
@@ -214,6 +238,7 @@ export async function fetchStores(): Promise<Store[]> {
 export async function saveUserProfile(uid: string, profile: { name: string, email: string, role: string }) {
   await setDoc(doc(db, 'users', uid), {
     ...profile,
+    isPaid: false,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   });
@@ -226,6 +251,141 @@ export async function getUserProfile(uid: string) {
     return docSnap.data();
   }
   return null;
+}
+
+export async function updateSubscriptionStatus(uid: string, status: 'paid' | 'unpaid', paymentDetails?: any) {
+  const docRef = doc(db, 'users', uid);
+  const timestamp = serverTimestamp();
+  
+  // 1. Update user profile
+  await setDoc(docRef, {
+    isPaid: status === 'paid',
+    subscriptionStatus: status,
+    paymentDetails: paymentDetails || null,
+    updatedAt: timestamp
+  }, { merge: true });
+
+  // 2. Create a payment record for tracking
+  if (status === 'paid') {
+    await addDoc(collection(db, 'payments'), {
+      userId: uid,
+      amount: 21,
+      currency: 'INR',
+      razorpayOrderId: paymentDetails?.orderId,
+      razorpayPaymentId: paymentDetails?.paymentId,
+      timestamp: timestamp,
+      status: 'success'
+    });
+  }
+}
+
+export async function fetchManufacturerProducts(manufacturerId: string): Promise<MarketplaceProduct[]> {
+  try {
+    const q = query(collection(db, 'products'), where('manufacturerId', '==', manufacturerId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as MarketplaceProduct));
+  } catch (error) {
+    console.error('Error fetching manufacturer products:', error);
+    throw error;
+  }
+}
+
+export async function fetchRetailerProducts(retailerId: string): Promise<MarketplaceProduct[]> {
+  try {
+    const q = query(collection(db, 'products'), where('retailerId', '==', retailerId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as MarketplaceProduct));
+  } catch (error) {
+    console.error('Error fetching retailer products:', error);
+    throw error;
+  }
+}
+
+export async function saveManufacturerProduct(manufacturerId: string, product: any) {
+  await addDoc(collection(db, 'products'), {
+    ...product,
+    manufacturerId,
+    source: 'manufacturer',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+}
+
+export async function fetchDealers(): Promise<any[]> {
+  try {
+    const q = query(collection(db, 'users'), where('role', '==', 'retailer'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error('Error fetching dealers:', error);
+    throw error;
+  }
+}
+
+export async function fetchRetailerOrders(retailerId: string): Promise<any[]> {
+  try {
+    const q = query(collection(db, 'orders'), where('retailerId', '==', retailerId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error('Error fetching retailer orders:', error);
+    throw error;
+  }
+}
+
+export async function fetchRetailerInventory(retailerId: string): Promise<any[]> {
+  try {
+    const q = query(collection(db, 'products'), where('retailerId', '==', retailerId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error('Error fetching retailer inventory:', error);
+    throw error;
+  }
+}
+
+export async function addDealerToContacts(manufacturerId: string, dealerId: string) {
+  const dealerDoc = await getDoc(doc(db, 'users', dealerId));
+  if (!dealerDoc.exists()) throw new Error('Dealer not found');
+  
+  const dealerData = dealerDoc.data();
+  
+  await addDoc(collection(db, 'manufacturer_contacts'), {
+    manufacturerId,
+    dealerId,
+    dealerName: dealerData.name,
+    shopName: dealerData.shopName || 'N/A',
+    addedAt: serverTimestamp()
+  });
+}
+
+export async function fetchManufacturerContacts(manufacturerId: string): Promise<any[]> {
+  try {
+    const q = query(collection(db, 'manufacturer_contacts'), where('manufacturerId', '==', manufacturerId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error('Error fetching manufacturer contacts:', error);
+    throw error;
+  }
 }
 
 export async function syncInitialData(products: any[], stores: any[], inventory: any[] = []) {

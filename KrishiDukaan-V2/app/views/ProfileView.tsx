@@ -1,9 +1,9 @@
 import { MarketplaceProduct } from "../../types/product";
 import { FormEvent, useState } from 'react';
 import { ICONS } from '../constants';
-import { saveRetailerProduct, saveRetailerProfile } from '../firebase';
+import { saveManufacturerProduct, saveRetailerProduct, saveRetailerProfile } from '../firebase';
 
-type UserRole = 'retailer' | 'manufacturer';
+type UserRole = 'customer' | 'retailer' | 'manufacturer';
 
 interface UserProfile {
   name: string;
@@ -108,17 +108,25 @@ export default function ProfileView({
 
   const handleProductSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!retailerId) {
-      setStatus({ type: 'error', message: 'Please save your profile phone/email first.' });
+    const userId = localProfile.phone.trim() || localProfile.email.trim() || localProfile.name.trim();
+    if (!userId) {
+      setStatus({ type: 'error', message: 'Please save your profile details first.' });
       return;
     }
     setLoadingProduct(true);
     setStatus(null);
     try {
-      await saveRetailerProduct(retailerId, {
-        ...productForm,
-        store: retailerForm.shopName || localProfile.name
-      });
+      if (role === 'retailer') {
+        await saveRetailerProduct(userId, {
+          ...productForm,
+          store: retailerForm.shopName || localProfile.name
+        });
+      } else {
+        await saveManufacturerProduct(userId, {
+          ...productForm,
+          manufacturerName: localProfile.name
+        });
+      }
       await onRetailerProductSaved();
       setProductForm(initialProductForm);
       setStatus({ type: 'success', message: 'Product published. Customers can now see it.' });

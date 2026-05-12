@@ -93,10 +93,10 @@ export default function AboutView() {
               Empowering Every Farmer with the Right Tools
             </h2>
             <p className="text-on-surface-variant text-lg leading-relaxed mb-6">
-              India's agricultural sector employs over 600 million people, yet access to quality inputs and reliable information remains unequal. Krishidukan changes that by creating a unified digital marketplace for local agri retailers and the farmers they serve.
+              India&apos;s agricultural sector employs over 600 million people, yet access to quality inputs and reliable information remains unequal. Krishidukan changes that by creating a unified digital marketplace for local agri retailers and the farmers they serve.
             </p>
             <p className="text-on-surface-variant text-lg leading-relaxed">
-              We're not just a shopping app. We're an agricultural intelligence platform — helping farmers discover the right products, understand their composition, and buy from stores they can trust, all within their community.
+              We&apos;re not just a shopping app. We&apos;re an agricultural intelligence platform — helping farmers discover the right products, understand their composition, and buy from stores they can trust, all within their community.
             </p>
           </div>
           <div className="rounded-3xl overflow-hidden shadow-ambient border border-surface-container h-80 md:h-auto">
@@ -172,9 +172,9 @@ export default function AboutView() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div>
               <span className="text-primary-container text-xs font-black uppercase tracking-widest mb-3 block">Get in Touch</span>
-              <h2 className="text-4xl font-bold text-white mb-6 leading-tight">We'd Love to Hear from You</h2>
+              <h2 className="text-4xl font-bold text-white mb-6 leading-tight">We&apos;d Love to Hear from You</h2>
               <p className="text-white/80 text-lg leading-relaxed mb-8">
-                Whether you're a farmer, a store owner looking to list your shop, or just curious about what we do — reach out to us.
+                Whether you&apos;re a farmer, a store owner looking to list your shop, or just curious about what we do — reach out to us.
               </p>
               <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-3 text-white">
