@@ -11,6 +11,7 @@ import { InventoryEditorPanel } from "../_components/inventory-editor-panel";
 export default function InventoryPage() {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<any[]>([]);
+  const [profile, setProfile] = useState<any>(null);
   const [health, setHealth] = useState({
     inStock: 0,
     lowStock: 0,
@@ -22,12 +23,14 @@ export default function InventoryPage() {
   const fetchProducts = async () => {
     const user = auth.currentUser;
     if (user) {
-      const profile = await getUserProfile(user.uid);
-      if (profile) {
+      const userProfile = await getUserProfile(user.uid);
+      setProfile(userProfile);
+      
+      if (userProfile) {
         let fetchedProducts: any[] = [];
-        if (profile.role === 'retailer') {
+        if (userProfile.role === 'retailer') {
           fetchedProducts = await fetchRetailerProducts(user.uid);
-        } else if (profile.role === 'manufacturer') {
+        } else if (userProfile.role === 'manufacturer') {
           fetchedProducts = await fetchManufacturerProducts(user.uid);
         }
         setProducts(fetchedProducts);
@@ -72,12 +75,35 @@ export default function InventoryPage() {
     );
   }
 
+  const totalSeats = profile?.totalSeats || 0;
+  const usedSeats = products.length;
+  const remainingSeats = Math.max(0, totalSeats - usedSeats);
+
   return (
     <>
       <PageHeader
         title="Inventory"
         description="Track stock levels, health, and catalog updates in one place."
       />
+
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-5 shadow-ambient">
+          <p className="text-sm font-bold uppercase tracking-widest text-on-surface-variant">Seats Used</p>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-3xl font-black text-on-surface">{usedSeats}</span>
+            <span className="text-sm font-medium text-on-surface-variant">/ {totalSeats} seats</span>
+          </div>
+          <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-surface-container-high">
+            <div 
+              className={`h-full transition-all ${remainingSeats === 0 ? 'bg-harvest' : 'bg-primary'}`}
+              style={{ width: `${Math.min(100, (usedSeats / (totalSeats || 1)) * 100)}%` }}
+            />
+          </div>
+          <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">
+            {remainingSeats} seats available for listing
+          </p>
+        </div>
+      </div>
 
       <InventoryHealthCards
         inStock={health.inStock}
@@ -98,7 +124,11 @@ export default function InventoryPage() {
       </section>
 
       <section className="mt-8" aria-label="Add or edit inventory">
-        <InventoryEditorPanel onSuccess={fetchProducts} />
+        <InventoryEditorPanel 
+          onSuccess={fetchProducts} 
+          totalSeats={totalSeats} 
+          usedSeats={usedSeats}
+        />
       </section>
     </>
   );

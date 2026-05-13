@@ -6,6 +6,7 @@ import {
   getDoc,
   getDocs,
   getFirestore,
+  increment,
   query,
   serverTimestamp,
   setDoc,
@@ -143,6 +144,7 @@ export async function saveRetailerProduct(
     distance: string;
   }
 ) {
+  // 1. Create the product
   await addDoc(collection(db, 'products'), {
     retailerId,
     name: product.name.trim(),
@@ -157,6 +159,13 @@ export async function saveRetailerProduct(
     source: 'retailer',
     createdAt: serverTimestamp()
   });
+
+  // 2. Increment productCount in user profile
+  const userRef = doc(db, 'users', retailerId);
+  await setDoc(userRef, {
+    productCount: increment(1),
+    updatedAt: serverTimestamp()
+  }, { merge: true });
 }
 
 export async function fetchMarketplaceProducts(): Promise<MarketplaceProduct[]> {
@@ -239,6 +248,8 @@ export async function saveUserProfile(uid: string, profile: { name: string, emai
   await setDoc(doc(db, 'users', uid), {
     ...profile,
     isPaid: false,
+    totalSeats: 0,
+    productCount: 0,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   });
@@ -256,16 +267,23 @@ export async function getUserProfile(uid: string) {
 export async function updateSubscriptionStatus(
   uid: string,
   status: 'paid' | 'unpaid',
-  paymentDetails?: any
+  paymentDetails?: any,
+  seatCount: number = 1
 ): Promise<{ profileUpdated: true; paymentLogged: boolean; paymentLogError?: string }> {
   const docRef = doc(db, 'users', uid);
   const timestamp = serverTimestamp();
   
+  // Get current user profile to update seats
+  const userDoc = await getDoc(docRef);
+  const userData = userDoc.exists() ? userDoc.data() : {};
+  const currentSeats = userData.totalSeats || 0;
+
   // 1. Update user profile
   await setDoc(docRef, {
     isPaid: status === 'paid',
     subscriptionStatus: status,
     paymentDetails: paymentDetails || null,
+    totalSeats: status === 'paid' ? currentSeats + seatCount : currentSeats,
     updatedAt: timestamp
   }, { merge: true });
 
@@ -274,7 +292,8 @@ export async function updateSubscriptionStatus(
     try {
       await addDoc(collection(db, 'payments'), {
         userId: uid,
-        amount: 21,
+        amount: seatCount * 21,
+        seatCount: seatCount,
         currency: 'INR',
         razorpayOrderId: paymentDetails?.orderId,
         razorpayPaymentId: paymentDetails?.paymentId,
@@ -321,6 +340,7 @@ export async function fetchRetailerProducts(retailerId: string): Promise<Marketp
 }
 
 export async function saveManufacturerProduct(manufacturerId: string, product: any) {
+  // 1. Create the product
   await addDoc(collection(db, 'products'), {
     ...product,
     manufacturerId,
@@ -328,6 +348,13 @@ export async function saveManufacturerProduct(manufacturerId: string, product: a
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   });
+
+  // 2. Increment productCount in user profile
+  const userRef = doc(db, 'users', manufacturerId);
+  await setDoc(userRef, {
+    productCount: increment(1),
+    updatedAt: serverTimestamp()
+  }, { merge: true });
 }
 
 export async function fetchDealers(): Promise<any[]> {
@@ -467,4 +494,3 @@ export async function fetchHubs(): Promise<Hub[]> {
     throw error;
   }
 }
-

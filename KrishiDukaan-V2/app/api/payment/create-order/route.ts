@@ -8,10 +8,13 @@ const razorpay = new Razorpay({
 
 export async function POST(request: Request) {
   try {
-    const { amount } = await request.json();
+    const { amount, seatCount } = await request.json();
+    
+    // Calculate amount based on seatCount if provided, else use the direct amount
+    const finalAmount = seatCount ? seatCount * 21 : amount;
 
     const options = {
-      amount: amount * 100, // amount in smallest currency unit (paise for INR)
+      amount: finalAmount * 100, // amount in smallest currency unit (paise for INR)
       currency: 'INR',
       receipt: `receipt_${Date.now()}`,
     };

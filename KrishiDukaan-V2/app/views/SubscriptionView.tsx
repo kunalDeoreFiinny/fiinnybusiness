@@ -55,6 +55,7 @@ const PREMIUM_CONTENT: Record<
 
 export default function SubscriptionView({ user, role, onSuccess, onLogout }: SubscriptionViewProps) {
   const [loading, setLoading] = useState(false);
+  const [seatCount, setSeatCount] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const premiumRole: PremiumRole = role === 'manufacturer' ? 'manufacturer' : 'retailer';
   const content = PREMIUM_CONTENT[premiumRole];
@@ -73,7 +74,7 @@ export default function SubscriptionView({ user, role, onSuccess, onLogout }: Su
       const response = await fetch('/api/payment/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: 21 }),
+        body: JSON.stringify({ seatCount }),
       });
 
       if (!response.ok) {
@@ -90,7 +91,7 @@ export default function SubscriptionView({ user, role, onSuccess, onLogout }: Su
         amount: order.amount,
         currency: order.currency,
         name: 'KrishiDukan',
-        description: 'Membership Subscription',
+        description: `Purchase ${seatCount} Product Listing Seat(s)`,
         order_id: order.id,
         handler: async function (paymentResponse: any) {
           try {
@@ -114,7 +115,7 @@ export default function SubscriptionView({ user, role, onSuccess, onLogout }: Su
             const updateResult = await updateSubscriptionStatus(user.uid, 'paid', {
               orderId: paymentResponse.razorpay_order_id,
               paymentId: paymentResponse.razorpay_payment_id,
-            });
+            }, seatCount);
 
             if (!updateResult.paymentLogged && updateResult.paymentLogError) {
               console.warn('Continuing after non-blocking payment log error:', updateResult.paymentLogError);
@@ -186,11 +187,32 @@ export default function SubscriptionView({ user, role, onSuccess, onLogout }: Su
             <span className={`font-black uppercase tracking-widest text-xs ${accent}`}>{content.badge}</span>
           </div>
 
-          <div className="flex justify-between items-center pb-4 border-b border-outline-variant">
-            <span className="text-on-surface-variant font-bold uppercase tracking-widest text-xs">Price</span>
-            <div className="text-right">
-              <span className="text-xl md:text-2xl font-black text-on-surface">₹21.00</span>
-              <p className="text-[10px] text-on-surface-variant font-bold uppercase">One-time listing fee</p>
+          <div className="flex flex-col gap-4 pb-4 border-b border-outline-variant">
+            <div className="flex justify-between items-center">
+              <span className="text-on-surface-variant font-bold uppercase tracking-widest text-xs">Number of Seats</span>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setSeatCount(Math.max(1, seatCount - 1))}
+                  className="w-8 h-8 rounded-full border border-outline-variant flex items-center justify-center hover:bg-surface-container-high transition-colors"
+                >
+                  -
+                </button>
+                <span className="text-lg font-bold w-6 text-center">{seatCount}</span>
+                <button 
+                  onClick={() => setSeatCount(seatCount + 1)}
+                  className="w-8 h-8 rounded-full border border-outline-variant flex items-center justify-center hover:bg-surface-container-high transition-colors"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <span className="text-on-surface-variant font-bold uppercase tracking-widest text-xs">Total Price</span>
+              <div className="text-right">
+                <span className="text-xl md:text-2xl font-black text-on-surface">₹{seatCount * 21}.00</span>
+                <p className="text-[10px] text-on-surface-variant font-bold uppercase">₹21 per product seat</p>
+              </div>
             </div>
           </div>
 
@@ -199,7 +221,7 @@ export default function SubscriptionView({ user, role, onSuccess, onLogout }: Su
             disabled={loading}
             className="w-full mt-4 bg-primary text-white text-xs md:text-sm font-black uppercase tracking-widest py-3 md:py-4 rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-95 transition-all disabled:opacity-70"
           >
-            {loading ? 'Processing...' : `Pay ₹21 & Unlock ${premiumRole === 'retailer' ? 'Retailer' : 'Manufacturer'} Access`}
+            {loading ? 'Processing...' : `Pay ₹${seatCount * 21} & Unlock ${seatCount} Seats`}
           </button>
 
           <h3 className={`mt-4 md:mt-6 text-[11px] md:text-xs font-black uppercase tracking-widest mb-2 md:mb-3 ${accent}`}>Included benefits</h3>
@@ -213,6 +235,10 @@ export default function SubscriptionView({ user, role, onSuccess, onLogout }: Su
                 {feature}
               </li>
             ))}
+            <li className="flex items-start gap-2.5 text-xs md:text-sm font-medium text-on-surface leading-snug">
+              <ICONS.Check className={`w-3.5 h-3.5 md:w-4 md:h-4 shrink-0 mt-0.5 ${accent}`} />
+              List up to {seatCount} products in our marketplace
+            </li>
           </ul>
         </div>
 
