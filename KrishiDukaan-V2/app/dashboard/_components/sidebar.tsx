@@ -8,6 +8,7 @@ import {
   Package,
   Settings,
   Star,
+  UserCircle2,
   X,
 } from "lucide-react";
 import { cn } from "../_lib/cn";
@@ -17,6 +18,7 @@ const nav = [
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/dashboard/inventory", label: "Inventory", icon: Package },
   { href: "/dashboard/reviews", label: "Reviews", icon: Star },
+  { href: "/dashboard/profile", label: "Profile", icon: UserCircle2 },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ] as const;
 
@@ -87,10 +89,6 @@ export function Sidebar({ mobileOpen, onMobileOpenChange }: SidebarProps) {
             );
           })}
         </nav>
-
-        <div className="border-t border-outline-variant/30 p-4 text-xs text-on-surface-variant">
-          KrishiDukaan
-        </div>
       </aside>
     </>
   );
