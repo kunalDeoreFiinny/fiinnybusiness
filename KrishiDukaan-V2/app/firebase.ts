@@ -253,7 +253,11 @@ export async function getUserProfile(uid: string) {
   return null;
 }
 
-export async function updateSubscriptionStatus(uid: string, status: 'paid' | 'unpaid', paymentDetails?: any) {
+export async function updateSubscriptionStatus(
+  uid: string,
+  status: 'paid' | 'unpaid',
+  paymentDetails?: any
+): Promise<{ profileUpdated: true; paymentLogged: boolean; paymentLogError?: string }> {
   const docRef = doc(db, 'users', uid);
   const timestamp = serverTimestamp();
   
@@ -267,16 +271,25 @@ export async function updateSubscriptionStatus(uid: string, status: 'paid' | 'un
 
   // 2. Create a payment record for tracking
   if (status === 'paid') {
-    await addDoc(collection(db, 'payments'), {
-      userId: uid,
-      amount: 21,
-      currency: 'INR',
-      razorpayOrderId: paymentDetails?.orderId,
-      razorpayPaymentId: paymentDetails?.paymentId,
-      timestamp: timestamp,
-      status: 'success'
-    });
+    try {
+      await addDoc(collection(db, 'payments'), {
+        userId: uid,
+        amount: 21,
+        currency: 'INR',
+        razorpayOrderId: paymentDetails?.orderId,
+        razorpayPaymentId: paymentDetails?.paymentId,
+        timestamp: timestamp,
+        status: 'success'
+      });
+      return { profileUpdated: true, paymentLogged: true };
+    } catch (error) {
+      const paymentLogError = error instanceof Error ? error.message : 'Unable to write payment log.';
+      console.warn('Payment succeeded but payment log write failed:', paymentLogError);
+      return { profileUpdated: true, paymentLogged: false, paymentLogError };
+    }
   }
+
+  return { profileUpdated: true, paymentLogged: false };
 }
 
 export async function fetchManufacturerProducts(manufacturerId: string): Promise<MarketplaceProduct[]> {
@@ -430,3 +443,28 @@ export async function syncInitialData(products: any[], stores: any[], inventory:
     throw error;
   }
 }
+
+export interface Hub {
+  id: string;
+  name: string;
+  heroImage: string;
+  tagline: string;
+  seeds: { name: string; price: number; img: string }[];
+  nutrition: { name: string; desc: string; icon: string }[];
+  irrigation: { image: string; items: { name: string; price: string }[] };
+  advisory: { title: string; description: string };
+}
+
+export async function fetchHubs(): Promise<Hub[]> {
+  try {
+    const snapshot = await getDocs(collection(db, 'hubs'));
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as Hub));
+  } catch (error) {
+    console.error('Error fetching hubs:', error);
+    throw error;
+  }
+}
+

@@ -142,13 +142,8 @@ export default function App() {
   };
 
   const handleSubscriptionSuccess = async () => {
-    if (user) {
-      const profileData = await getUserProfile(user.uid);
-      if (profileData) {
-        setUserProfile(prev => ({ ...prev, isPaid: true }));
-        setCurrentView('profile');
-      }
-    }
+    setUserProfile(prev => ({ ...prev, isPaid: true }));
+    setCurrentView('profile');
   };
 
   const handleProfileSave = (profile: UserProfile) => {
@@ -164,18 +159,25 @@ export default function App() {
     }
   };
 
-  const filteredProducts = useMemo(() => {
+  const searchedProducts = useMemo(() => {
+    const query = productSearch.trim().toLowerCase();
+
     return allProducts.filter(p => {
-      const matchesSearch = !productSearch.trim() || 
-        p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-        (p.description && p.description.toLowerCase().includes(productSearch.toLowerCase())) ||
-        (p.category && p.category.toLowerCase().includes(productSearch.toLowerCase()));
-      
-      const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
-      
-      return matchesSearch && matchesCategory;
+      if (!query) return true;
+
+      return (
+        p.name.toLowerCase().includes(query) ||
+        (p.fullName && p.fullName.toLowerCase().includes(query)) ||
+        (p.description && p.description.toLowerCase().includes(query)) ||
+        (p.category && p.category.toLowerCase().includes(query))
+      );
     });
-  }, [allProducts, productSearch, selectedCategory]);
+  }, [allProducts, productSearch]);
+
+  const marketProducts = useMemo(() => {
+    if (selectedCategory === 'all') return searchedProducts;
+    return searchedProducts.filter((product) => product.category === selectedCategory);
+  }, [searchedProducts, selectedCategory]);
 
   const navigate = (view: View) => {
     if ((userRole === 'retailer' || userRole === 'manufacturer') && !userProfile.isPaid && 
@@ -221,11 +223,11 @@ export default function App() {
 
     switch (currentView) {
       case 'home':
-        return <HomeView products={filteredProducts} onProductClick={navigateToProduct} onHubClick={() => navigate('hub')} />;
+        return <HomeView products={searchedProducts} onProductClick={navigateToProduct} onHubClick={() => navigate('hub')} />;
       case 'market':
         return (
           <MarketView 
-            products={filteredProducts} 
+            products={marketProducts} 
             onProductClick={navigateToProduct} 
             selectedCategory={selectedCategory}
             onCategoryChange={setSelectedCategory}
@@ -252,11 +254,11 @@ export default function App() {
       case 'signup':
         return <SignupView onBack={() => navigate('home')} onNavigateToLogin={() => navigate('login')} onSuccess={handleAuthSuccess} />;
       case 'subscription':
-        return <SubscriptionView user={user} onSuccess={handleSubscriptionSuccess} onLogout={handleLogout} />;
+        return <SubscriptionView user={user} role={userRole} onSuccess={handleSubscriptionSuccess} onLogout={handleLogout} />;
       case 'about':
         return <AboutView />;
       default:
-        return <HomeView products={filteredProducts} onProductClick={navigateToProduct} onHubClick={() => navigate('hub')} />;
+        return <HomeView products={searchedProducts} onProductClick={navigateToProduct} onHubClick={() => navigate('hub')} />;
     }
   };
 
