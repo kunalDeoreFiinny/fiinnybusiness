@@ -16,7 +16,7 @@ interface NavbarProps {
   setProductSearch?: (search: string) => void;
   isDashboard?: boolean;
   locationQuery?: string;
-  onLocationChange?: (location: string) => void;
+  onLocationChange?: (location: string, coordinates?: { lat: number, lng: number }) => void;
 }
 
 export function Navbar({ 
@@ -72,7 +72,7 @@ export function Navbar({
             }
             
             const displayLocation = city && state ? `${city}, ${state}` : result.formatted_address;
-            if (onLocationChange) onLocationChange(displayLocation);
+            if (onLocationChange) onLocationChange(displayLocation, { lat: latitude, lng: longitude });
           } else {
             if (onLocationChange) onLocationChange('Address not found');
           }

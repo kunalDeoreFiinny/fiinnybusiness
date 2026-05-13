@@ -1,14 +1,16 @@
 import { MarketplaceProduct } from "../../types/product";
 import { ICONS, STORES } from '../constants';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { GoogleMap, useJsApiLoader, MarkerF } from '@react-google-maps/api';
 
 interface StoreLocatorViewProps {
   onBack: () => void;
   selectedStoreId?: string | null;
   stores?: any[];
   location?: string;
-  onLocationChange?: (location: string) => void;
+  onLocationChange?: (location: string, coordinates?: { lat: number, lng: number }) => void;
+  userCoords?: { lat: number, lng: number };
 }
 
 export default function StoreLocatorView({ 
@@ -16,9 +18,39 @@ export default function StoreLocatorView({
   selectedStoreId, 
   stores = [], 
   location = 'Pune, Maharashtra',
-  onLocationChange
+  onLocationChange,
+  userCoords = { lat: 18.5204, lng: 73.8567 }
 }: StoreLocatorViewProps) {
   const focusedStore = (stores.length > 0 ? (stores.find(s => s.id === selectedStoreId) || stores[0]) : null);
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
+  });
+
+  // Calculate center: use focusedStore if available, else userCoords
+  const getCenter = () => {
+    if (focusedStore) {
+      const lat = focusedStore.location?.lat || focusedStore.location?.latitude;
+      const lng = focusedStore.location?.lng || focusedStore.location?.longitude;
+      if (lat && lng) return { lat: Number(lat), lng: Number(lng) };
+    }
+    return userCoords;
+  };
+
+  const center = getCenter();
+
+  const onUnmount = useCallback(function callback() {
+    setMap(null);
+  }, []);
+
+  // Effect to pan map when store selection or user coords change
+  useEffect(() => {
+    if (map && center) {
+      map.panTo(center);
+    }
+  }, [map, center]);
 
   if (!focusedStore && stores.length === 0) {
     return <div className="p-20 text-center">No stores found.</div>;
@@ -26,6 +58,43 @@ export default function StoreLocatorView({
 
   const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (onLocationChange) onLocationChange(e.target.value);
+  };
+
+  const handleLocationSubmit = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && location) {
+      try {
+        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+        const response = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(location)}&key=${apiKey}`
+        );
+        const data = await response.json();
+        
+        if (data.status === 'OK' && data.results.length > 0) {
+          const { lat, lng } = data.results[0].geometry.location;
+          const formattedAddress = data.results[0].formatted_address;
+          if (onLocationChange) onLocationChange(formattedAddress, { lat, lng });
+        }
+      } catch (error) {
+        console.error('Manual geocoding error:', error);
+      }
+    }
+  };
+
+  const mapContainerStyle = {
+    width: '100%',
+    height: '100%'
+  };
+
+  const mapOptions = {
+    disableDefaultUI: true,
+    zoomControl: false,
+    styles: [
+      {
+        featureType: 'poi',
+        elementType: 'labels',
+        stylers: [{ visibility: 'off' }]
+      }
+    ]
   };
 
   return (
@@ -120,48 +189,77 @@ export default function StoreLocatorView({
 
       {/* Map Content */}
       <div className="hidden md:block flex-1 relative bg-surface-container-high overflow-hidden">
-        <img 
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuAyfMGjwhtw8rcz0nJdJShXXwGD5wnhbktKM9IIi4mJN93_oRQIzploWgg_TNkZ3F5J3C9SS5_RfQKACkRE6YJiZsH5f1PyDDD0kujQFu0R-RqP3v4aX_F5fatLcyE-ryLEG_I9JbWTY_zy0u1xnkMbVNDcf30VtdVN1B1tlFe6aorqvfQfKFmh5frVVrXV1uLEpIOLvMjTg1pXC7KKxivijAdwlxRC6xRVaB56Pqf37xnSFf5zLZFAAKM5bb6NkS3C4bmljQpO2tFR" 
-          alt="Map"
-          className="w-full h-full object-cover opacity-80"
-        />
+        {isLoaded ? (
+          <GoogleMap
+            mapContainerStyle={mapContainerStyle}
+            center={userCoords}
+            zoom={13}
+            onLoad={map => setMap(map)}
+            onUnmount={onUnmount}
+            options={mapOptions}
+          >
+            {/* User Location Marker */}
+            <MarkerF
+              position={userCoords}
+              icon={{
+                path: google.maps.SymbolPath.CIRCLE,
+                fillColor: '#3B82F6',
+                fillOpacity: 1,
+                strokeWeight: 4,
+                strokeColor: '#FFFFFF',
+                scale: 8
+              }}
+            />
+
+            {/* Store Markers */}
+            {stores.map(store => {
+              const lat = store.location?.lat || store.location?.latitude;
+              const lng = store.location?.lng || store.location?.longitude;
+              if (!lat || !lng) return null;
+              
+              return (
+                <MarkerF
+                  key={store.id}
+                  position={{ lat: Number(lat), lng: Number(lng) }}
+                  title={store.name}
+                  onClick={() => {
+                    if (map) {
+                      map.panTo({ lat: Number(lat), lng: Number(lng) });
+                      map.setZoom(15);
+                    }
+                  }}
+                />
+              );
+            })}
+          </GoogleMap>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+          </div>
+        )}
         
         {/* Map UI */}
-        <div className="absolute top-10 right-10 flex flex-col gap-4">
-          <button className="w-12 h-12 bg-white rounded-2xl shadow-xl flex items-center justify-center text-primary hover:scale-110 active:scale-90 transition-all border border-surface-container group">
+        <div className="absolute top-10 right-10 flex flex-col gap-4 z-10">
+          <button 
+            onClick={() => map?.panTo(userCoords)}
+            className="w-12 h-12 bg-white rounded-2xl shadow-xl flex items-center justify-center text-primary hover:scale-110 active:scale-90 transition-all border border-surface-container group"
+          >
             <ICONS.MyPosition className="w-6 h-6 group-hover:animate-pulse" />
           </button>
           <div className="flex flex-col bg-white rounded-3xl shadow-xl border border-surface-container overflow-hidden">
-            <button className="w-12 h-12 flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors border-b border-surface-container">
+            <button 
+              onClick={() => map?.setZoom((map.getZoom() || 13) + 1)}
+              className="w-12 h-12 flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors border-b border-surface-container"
+            >
               <ICONS.Plus className="w-5 h-5" />
             </button>
-            <button className="w-12 h-12 flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
+            <button 
+              onClick={() => map?.setZoom((map.getZoom() || 13) - 1)}
+              className="w-12 h-12 flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors"
+            >
               <ICONS.Minus className="w-5 h-5" />
             </button>
           </div>
-        </div>
-
-        {/* Custom Marker (Simulated) */}
-        <motion.div 
-          key={focusedStore.id}
-          initial={{ y: -50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="absolute top-[45%] left-[55%] -translate-x-1/2 -translate-y-1/2 z-30 flex flex-col items-center group cursor-pointer"
-        >
-          <div className="bg-white px-4 py-2 rounded-2xl shadow-2xl mb-2 whitespace-nowrap border-2 border-primary transform group-hover:-translate-y-1 transition-transform">
-            <span className="text-sm font-black text-on-surface uppercase tracking-tight">{focusedStore.name}</span>
-          </div>
-          <div className="w-10 h-10 bg-primary rounded-full border-4 border-white flex items-center justify-center shadow-xl text-white">
-            <ICONS.Market className="w-5 h-5" />
-          </div>
-          <div className="w-1.5 h-6 bg-primary rounded-full -mt-1 shadow-lg" />
-          <div className="w-6 h-2 bg-black/10 rounded-full blur-[2px] mt-1 scale-x-150 animate-pulse" />
-        </motion.div>
-
-        {/* User Location */}
-        <div className="absolute top-[60%] left-[40%] z-20 flex flex-col items-center">
-          <div className="w-6 h-6 bg-blue-500 rounded-full border-4 border-white shadow-lg" />
-          <div className="w-20 h-20 bg-blue-500/20 rounded-full absolute -top-7 blur-md animate-ping" />
         </div>
       </div>
     </div>

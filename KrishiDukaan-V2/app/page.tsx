@@ -40,6 +40,7 @@ export default function App() {
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [locationQuery, setLocationQuery] = useState('Pune, Maharashtra');
+  const [coordinates, setCoordinates] = useState({ lat: 18.5204, lng: 73.8567 }); // Default Pune
   const [productSearch, setProductSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [language, setLanguage] = useState('EN');
@@ -244,7 +245,11 @@ export default function App() {
             selectedStoreId={selectedStoreId} 
             stores={allStores}
             location={locationQuery}
-            onLocationChange={setLocationQuery}
+            onLocationChange={(loc, coords) => {
+              setLocationQuery(loc);
+              if (coords) setCoordinates(coords);
+            }}
+            userCoords={coordinates}
           />
         );
       case 'profile':
@@ -278,7 +283,10 @@ export default function App() {
         productSearch={productSearch} 
         setProductSearch={setProductSearch} 
         locationQuery={locationQuery}
-        onLocationChange={setLocationQuery}
+        onLocationChange={(loc, coords) => {
+          setLocationQuery(loc);
+          if (coords) setCoordinates(coords);
+        }}
       />
 
       {/* Main Content */}
