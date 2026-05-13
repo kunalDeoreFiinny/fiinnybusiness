@@ -1,20 +1,93 @@
-import { MarketplaceProduct } from "../../types/product";
-import { ICONS, STORES } from '../constants';
+'use client';
+
+import { ICONS } from '../constants';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import dynamic from 'next/dynamic';
+import { LatLng } from '../utils/haversine';
+import { StoreWithDistance, filterStoresByQuery } from '../utils/nearby';
+import { cacheLocation } from '../utils/geolocation';
+
+// Dynamically import LeafletMap — SSR disabled since Leaflet needs `window`
+const LeafletMap = dynamic(() => import('../../components/LeafletMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex items-center justify-center bg-surface-container-high">
+      <div className="flex flex-col items-center gap-3">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+        <span className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">Loading Map…</span>
+      </div>
+    </div>
+  ),
+});
 
 interface StoreLocatorViewProps {
   onBack: () => void;
   selectedStoreId?: string | null;
-  stores?: any[];
+  stores?: StoreWithDistance[];
+  userLocation?: LatLng;
+  locationLabel?: string;
+  onLocationChange?: (coords: LatLng, label: string) => void;
 }
 
-export default function StoreLocatorView({ onBack, selectedStoreId, stores = [] }: StoreLocatorViewProps) {
-  const focusedStore = (stores.length > 0 ? (stores.find(s => s.id === selectedStoreId) || stores[0]) : null);
-  const [location, setLocation] = useState('Pune, Maharashtra');
+export default function StoreLocatorView({
+  onBack,
+  selectedStoreId: initialSelectedStoreId,
+  stores = [],
+  userLocation = { lat: 18.5204, lng: 73.8567 },
+  locationLabel = 'Pune, Maharashtra',
+  onLocationChange,
+}: StoreLocatorViewProps) {
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(initialSelectedStoreId || null);
+  const [storeSearch, setStoreSearch] = useState('');
+  const [showMobileMap, setShowMobileMap] = useState(false);
 
-  if (!focusedStore && stores.length === 0) {
-    return <div className="p-20 text-center">No stores found.</div>;
+  // Filter stores by search query (matches name, city, district, villages from address)
+  const displayedStores = useMemo(() => {
+    return filterStoresByQuery(stores, storeSearch);
+  }, [stores, storeSearch]);
+
+  const focusedStore = displayedStores.find(s => s.id === selectedStoreId) || displayedStores[0] || null;
+
+  const handleStoreClick = (storeId: string) => {
+    setSelectedStoreId(storeId);
+  };
+
+  const handleGetDirections = (store: StoreWithDistance) => {
+    if (store.location?.lat && store.location?.lng) {
+      window.open(
+        `https://www.google.com/maps/dir/?api=1&destination=${store.location.lat},${store.location.lng}`,
+        '_blank'
+      );
+    }
+  };
+
+  const handleLocateMe = () => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const coords: LatLng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        const label = `${coords.lat.toFixed(4)}°N, ${coords.lng.toFixed(4)}°E`;
+        cacheLocation(coords, label);
+        onLocationChange?.(coords, label);
+      },
+      () => {
+        // silently ignore — keep current location
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
+
+  if (stores.length === 0) {
+    return (
+      <div className="p-20 text-center">
+        <div className="flex flex-col items-center gap-4">
+          <ICONS.Location className="w-12 h-12 text-outline" />
+          <p className="text-lg font-bold text-on-surface">No stores found nearby</p>
+          <p className="text-sm text-on-surface-variant">Try changing your location or expanding your search area.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -27,18 +100,41 @@ export default function StoreLocatorView({ onBack, selectedStoreId, stores = [] 
               <ICONS.ChevronRight className="w-5 h-5 rotate-180" />
             </button>
             <h2 className="text-2xl font-bold text-on-surface">Nearby Stores</h2>
+            {/* Mobile map toggle */}
+            <button
+              onClick={() => setShowMobileMap(!showMobileMap)}
+              className="md:hidden ml-auto p-2 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+            >
+              <ICONS.Location className="w-5 h-5" />
+            </button>
           </div>
 
-          {/* Location search — only on this tab */}
+          {/* Location label */}
+          <div className="flex items-center gap-2 mb-3">
+            <button
+              onClick={handleLocateMe}
+              className="flex items-center gap-2 text-xs font-bold text-primary bg-primary/5 px-3 py-1.5 rounded-full hover:bg-primary/10 transition-colors"
+            >
+              <ICONS.MyPosition className="w-3.5 h-3.5" />
+              {locationLabel}
+            </button>
+          </div>
+
+          {/* Store search — matches name/city/district/villages */}
           <div className="flex items-center bg-surface-container-low rounded-2xl px-4 py-3 mb-4 border border-outline-variant group focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
-            <ICONS.Location className="w-4 h-4 text-outline mr-3 group-focus-within:text-primary transition-colors shrink-0" />
+            <ICONS.Search className="w-4 h-4 text-outline mr-3 group-focus-within:text-primary transition-colors shrink-0" />
             <input
               type="text"
-              value={location}
-              onChange={e => setLocation(e.target.value)}
-              placeholder="Enter your location..."
-              className="bg-transparent border-none w-full focus:ring-0 text-sm text-on-surface font-semibold placeholder:font-normal"
+              value={storeSearch}
+              onChange={e => setStoreSearch(e.target.value)}
+              placeholder="Search shops, city, district..."
+              className="bg-transparent border-none w-full focus:ring-0 focus:outline-none text-sm text-on-surface font-semibold placeholder:font-normal"
             />
+            {storeSearch && (
+              <button onClick={() => setStoreSearch('')} className="text-outline hover:text-on-surface transition-colors ml-2">
+                <ICONS.Minus className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
           <div className="flex gap-2 overflow-x-auto pb-4 hide-scrollbar">
@@ -52,24 +148,36 @@ export default function StoreLocatorView({ onBack, selectedStoreId, stores = [] 
               NPK Fertilizer
             </button>
           </div>
+
+          {/* Stores count */}
+          <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
+            {displayedStores.length} store{displayedStores.length !== 1 ? 's' : ''} found
+          </p>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4 bg-surface-container-lowest">
-          {stores.map((store, i) => (
-            <motion.div 
+          {displayedStores.map((store, i) => (
+            <motion.div
               key={store.id}
               initial={{ x: -20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: i * 0.1 }}
+              transition={{ delay: i * 0.07 }}
+              onClick={() => handleStoreClick(store.id)}
               className={`p-5 rounded-3xl border-2 transition-all cursor-pointer group hover:scale-[1.02] ${
-                store.id === selectedStoreId ? 'border-primary bg-primary/10 shadow-lg scale-[1.03]' : (store.isHot ? 'border-primary/40 bg-primary/5 shadow-sm' : 'border-surface-container bg-white hover:border-outline-variant shadow-sm')
+                store.id === selectedStoreId
+                  ? 'border-primary bg-primary/10 shadow-lg scale-[1.03]'
+                  : store.isHot
+                  ? 'border-primary/40 bg-primary/5 shadow-sm'
+                  : 'border-surface-container bg-white hover:border-outline-variant shadow-sm'
               }`}
             >
               <div className="flex justify-between items-start mb-3">
                 <div>
-                  <h3 className={`text-xl font-bold ${store.id === selectedStoreId || store.isHot ? 'text-primary' : 'text-on-surface'}`}>{store.name}</h3>
+                  <h3 className={`text-xl font-bold ${store.id === selectedStoreId || store.isHot ? 'text-primary' : 'text-on-surface'}`}>
+                    {store.name}
+                  </h3>
                   <p className="flex items-center gap-1 text-xs font-bold text-on-surface-variant mt-1">
-                    <ICONS.Location className="w-3 h-3" /> {store.distance}
+                    <ICONS.Location className="w-3 h-3" /> {store.distanceLabel}
                   </p>
                 </div>
                 {(store.id === selectedStoreId || store.isHot) && (
@@ -81,11 +189,14 @@ export default function StoreLocatorView({ onBack, selectedStoreId, stores = [] 
 
               <div className="mb-6 space-y-2">
                 <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${store.status.includes('Open') ? 'bg-green-500' : 'bg-error'}`} />
+                  <div className={`w-2 h-2 rounded-full ${store.status?.includes('Open') ? 'bg-green-500' : 'bg-error'}`} />
                   <span className="text-xs font-bold text-on-surface-variant">{store.status}</span>
                 </div>
+                {store.address && (
+                  <p className="text-[11px] text-on-surface-variant font-medium truncate">{store.address}</p>
+                )}
                 <div className="flex flex-wrap gap-2">
-                  {store.stock.map(item => (
+                  {store.stock?.map(item => (
                     <span key={item} className="px-2 py-0.5 rounded-lg bg-surface-container-high text-on-surface-variant text-[9px] font-black uppercase tracking-widest border border-surface-container-highest">
                       {item}
                     </span>
@@ -94,63 +205,75 @@ export default function StoreLocatorView({ onBack, selectedStoreId, stores = [] 
               </div>
 
               <div className={`flex gap-2 transition-all duration-300 ${store.id === selectedStoreId ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-0 group-hover:opacity-100 group-hover:translate-y-0'}`}>
-                <button className="flex-1 bg-primary text-white py-2.5 rounded-xl text-xs font-bold hover:scale-[1.02] active:scale-95 transition-transform flex items-center justify-center gap-2">
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleGetDirections(store); }}
+                  className="flex-1 bg-primary text-white py-2.5 rounded-xl text-xs font-bold hover:scale-[1.02] active:scale-95 transition-transform flex items-center justify-center gap-2"
+                >
                   <ICONS.Directions className="w-4 h-4" /> Get Directions
                 </button>
-                <button className="flex-1 border border-outline-variant text-on-surface py-2.5 rounded-xl text-xs font-bold hover:bg-white transition-colors">
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleStoreClick(store.id); }}
+                  className="flex-1 border border-outline-variant text-on-surface py-2.5 rounded-xl text-xs font-bold hover:bg-white transition-colors"
+                >
                   Details
                 </button>
               </div>
             </motion.div>
           ))}
+
+          {displayedStores.length === 0 && storeSearch && (
+            <div className="p-8 text-center">
+              <ICONS.Search className="w-8 h-8 text-outline mx-auto mb-3" />
+              <p className="text-sm font-bold text-on-surface-variant">No stores match "{storeSearch}"</p>
+              <p className="text-xs text-outline mt-1">Try a different search term</p>
+            </div>
+          )}
+
           <div className="h-20" />
         </div>
       </div>
 
-      {/* Map Content */}
-      <div className="hidden md:block flex-1 relative bg-surface-container-high overflow-hidden">
-        <img 
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuAyfMGjwhtw8rcz0nJdJShXXwGD5wnhbktKM9IIi4mJN93_oRQIzploWgg_TNkZ3F5J3C9SS5_RfQKACkRE6YJiZsH5f1PyDDD0kujQFu0R-RqP3v4aX_F5fatLcyE-ryLEG_I9JbWTY_zy0u1xnkMbVNDcf30VtdVN1B1tlFe6aorqvfQfKFmh5frVVrXV1uLEpIOLvMjTg1pXC7KKxivijAdwlxRC6xRVaB56Pqf37xnSFf5zLZFAAKM5bb6NkS3C4bmljQpO2tFR" 
-          alt="Map"
-          className="w-full h-full object-cover opacity-80"
-        />
-        
-        {/* Map UI */}
-        <div className="absolute top-10 right-10 flex flex-col gap-4">
-          <button className="w-12 h-12 bg-white rounded-2xl shadow-xl flex items-center justify-center text-primary hover:scale-110 active:scale-90 transition-all border border-surface-container group">
-            <ICONS.MyPosition className="w-6 h-6 group-hover:animate-pulse" />
-          </button>
-          <div className="flex flex-col bg-white rounded-3xl shadow-xl border border-surface-container overflow-hidden">
-            <button className="w-12 h-12 flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors border-b border-surface-container">
-              <ICONS.Plus className="w-5 h-5" />
-            </button>
-            <button className="w-12 h-12 flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
+      {/* Mobile Map (togglable) */}
+      {showMobileMap && (
+        <div className="md:hidden fixed inset-0 z-50 bg-white">
+          <div className="flex items-center justify-between p-4 border-b border-surface-container bg-white">
+            <h3 className="font-bold text-on-surface">Map View</h3>
+            <button
+              onClick={() => setShowMobileMap(false)}
+              className="p-2 bg-surface-container rounded-full"
+            >
               <ICONS.Minus className="w-5 h-5" />
             </button>
           </div>
+          <div className="h-[calc(100vh-60px)]">
+            <LeafletMap
+              userLocation={userLocation}
+              stores={displayedStores}
+              selectedStoreId={selectedStoreId}
+              onStoreSelect={handleStoreClick}
+            />
+          </div>
         </div>
+      )}
 
-        {/* Custom Marker (Simulated) */}
-        <motion.div 
-          key={focusedStore.id}
-          initial={{ y: -50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="absolute top-[45%] left-[55%] -translate-x-1/2 -translate-y-1/2 z-30 flex flex-col items-center group cursor-pointer"
-        >
-          <div className="bg-white px-4 py-2 rounded-2xl shadow-2xl mb-2 whitespace-nowrap border-2 border-primary transform group-hover:-translate-y-1 transition-transform">
-            <span className="text-sm font-black text-on-surface uppercase tracking-tight">{focusedStore.name}</span>
-          </div>
-          <div className="w-10 h-10 bg-primary rounded-full border-4 border-white flex items-center justify-center shadow-xl text-white">
-            <ICONS.Market className="w-5 h-5" />
-          </div>
-          <div className="w-1.5 h-6 bg-primary rounded-full -mt-1 shadow-lg" />
-          <div className="w-6 h-2 bg-black/10 rounded-full blur-[2px] mt-1 scale-x-150 animate-pulse" />
-        </motion.div>
+      {/* Desktop Map — Leaflet + OpenStreetMap */}
+      <div className="hidden md:block flex-1 relative bg-surface-container-high overflow-hidden">
+        <LeafletMap
+          userLocation={userLocation}
+          stores={displayedStores}
+          selectedStoreId={selectedStoreId}
+          onStoreSelect={handleStoreClick}
+        />
 
-        {/* User Location */}
-        <div className="absolute top-[60%] left-[40%] z-20 flex flex-col items-center">
-          <div className="w-6 h-6 bg-blue-500 rounded-full border-4 border-white shadow-lg" />
-          <div className="w-20 h-20 bg-blue-500/20 rounded-full absolute -top-7 blur-md animate-ping" />
+        {/* Locate Me button overlay */}
+        <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-3">
+          <button
+            onClick={handleLocateMe}
+            className="w-12 h-12 bg-white rounded-2xl shadow-xl flex items-center justify-center text-primary hover:scale-110 active:scale-90 transition-all border border-surface-container group"
+            title="Detect my location"
+          >
+            <ICONS.MyPosition className="w-6 h-6 group-hover:animate-pulse" />
+          </button>
         </div>
       </div>
     </div>

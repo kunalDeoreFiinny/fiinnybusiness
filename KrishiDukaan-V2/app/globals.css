@@ -21,3 +21,31 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Leaflet map overrides */
+.leaflet-container {
+  font-family: inherit;
+  z-index: 0;
+}
+
+.leaflet-marker-selected {
+  filter: hue-rotate(120deg) saturate(1.5) brightness(0.9);
+  transform-origin: bottom center;
+  animation: marker-bounce 0.4s ease-out;
+}
+
+@keyframes marker-bounce {
+  0% { transform: translateY(-15px) scale(1.1); }
+  50% { transform: translateY(2px) scale(0.95); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 12px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12) !important;
+}
+
+.leaflet-popup-content {
+  margin: 10px 14px !important;
+  font-family: inherit !important;
+}

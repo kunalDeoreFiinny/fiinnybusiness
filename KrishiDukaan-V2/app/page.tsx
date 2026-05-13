@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { ICONS, PRODUCTS, STORES, INVENTORY } from './constants';
 import HomeView from './views/HomeView';
 import MarketView from './views/MarketView';
@@ -22,6 +22,9 @@ import { auth, fetchMarketplaceProducts, fetchStores, syncInitialData, getUserPr
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { MarketplaceProduct } from '../types/product';
 import { useRouter } from 'next/navigation';
+import { LatLng } from './utils/haversine';
+import { getUserLocation, DEFAULT_LOCATION, DEFAULT_LOCATION_LABEL, GeoResult } from './utils/geolocation';
+import { computeStoreDistances, selectNearbyStores, sortProductsByAvailability, StoreWithDistance } from './utils/nearby';
 
 import { Navbar } from '../components/shared/navbar';
 
@@ -52,6 +55,11 @@ export default function App() {
   const [allStores, setAllStores] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // --- Geolocation state ---
+  const [userLocation, setUserLocation] = useState<LatLng>(DEFAULT_LOCATION);
+  const [locationLabel, setLocationLabel] = useState(DEFAULT_LOCATION_LABEL);
+  const [locationSource, setLocationSource] = useState<'browser' | 'cached' | 'default'>('default');
 
   const loadData = async () => {
     try {
@@ -120,6 +128,14 @@ export default function App() {
     });
 
     void loadData();
+
+    // Detect user location
+    getUserLocation().then((result: GeoResult) => {
+      setUserLocation(result.coords);
+      setLocationLabel(result.label);
+      setLocationSource(result.source);
+    });
+
     return () => unsubscribe();
   }, []);
 
@@ -164,8 +180,18 @@ export default function App() {
     }
   };
 
+  // --- Computed nearby stores with distances ---
+  const storesWithDistance: StoreWithDistance[] = useMemo(() => {
+    if (allStores.length === 0) return [];
+    return computeStoreDistances(allStores, userLocation);
+  }, [allStores, userLocation]);
+
+  const nearbyStores: StoreWithDistance[] = useMemo(() => {
+    return selectNearbyStores(storesWithDistance, userLocation);
+  }, [storesWithDistance, userLocation]);
+
   const filteredProducts = useMemo(() => {
-    return allProducts.filter(p => {
+    const base = allProducts.filter(p => {
       const matchesSearch = !productSearch.trim() || 
         p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
         (p.description && p.description.toLowerCase().includes(productSearch.toLowerCase())) ||
@@ -175,7 +201,9 @@ export default function App() {
       
       return matchesSearch && matchesCategory;
     });
-  }, [allProducts, productSearch, selectedCategory]);
+    // Sort by in-stock first, then distance
+    return sortProductsByAvailability(base, storesWithDistance);
+  }, [allProducts, productSearch, selectedCategory, storesWithDistance]);
 
   const navigate = (view: View) => {
     if ((userRole === 'retailer' || userRole === 'manufacturer') && !userProfile.isPaid && 
@@ -234,9 +262,9 @@ export default function App() {
       case 'hub':
         return <HubView />;
       case 'product':
-        return <ProductDetailView products={allProducts} productId={selectedProductId} onBack={() => navigate('market')} onStoreClick={navigateToMap} />;
+        return <ProductDetailView products={allProducts} productId={selectedProductId} onBack={() => navigate('market')} onStoreClick={navigateToMap} storesWithDistance={storesWithDistance} />;
       case 'map':
-        return <StoreLocatorView onBack={() => navigate('home')} selectedStoreId={selectedStoreId} stores={allStores} />;
+        return <StoreLocatorView onBack={() => navigate('home')} selectedStoreId={selectedStoreId} stores={nearbyStores} userLocation={userLocation} locationLabel={locationLabel} onLocationChange={(coords, label) => { setUserLocation(coords); setLocationLabel(label); }} />;
       case 'profile':
         return (
           <ProfileView

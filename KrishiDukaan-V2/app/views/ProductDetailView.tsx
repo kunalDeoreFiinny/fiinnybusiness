@@ -1,23 +1,34 @@
 import { MarketplaceProduct } from "../../types/product";
 import { ICONS, PRODUCTS, STORES } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { StoreWithDistance } from '../utils/nearby';
 
 interface ProductDetailViewProps {
   products?: MarketplaceProduct[];
   productId: string | null;
   onBack: () => void;
   onStoreClick: (storeId: string) => void;
+  storesWithDistance?: StoreWithDistance[];
 }
 
-export default function ProductDetailView({ products = PRODUCTS, productId, onBack, onStoreClick }: ProductDetailViewProps) {
+export default function ProductDetailView({ products = PRODUCTS, productId, onBack, onStoreClick, storesWithDistance = [] }: ProductDetailViewProps) {
   const product = products.find(p => p.id === productId) || products[0];
   const [quantity, setQuantity] = useState(1);
   const [expandedStoreId, setExpandedStoreId] = useState<string | null>(null);
 
-  const availableStores = STORES.filter(store =>
-    product.availability?.some(a => a.storeId === store.id)
-  );
+  // Use storesWithDistance for computed distances, fallback to STORES constant
+  const availableStores = useMemo(() => {
+    const sourceStores = storesWithDistance.length > 0 ? storesWithDistance : STORES;
+    const filtered = sourceStores.filter(store =>
+      product.availability?.some(a => a.storeId === store.id)
+    );
+    // Sort by distance if we have computed distances
+    if (storesWithDistance.length > 0) {
+      return [...filtered].sort((a: any, b: any) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
+    }
+    return filtered;
+  }, [product, storesWithDistance]);
 
   return (
     <div className="px-4 md:px-10 max-w-7xl mx-auto w-full py-8 flex flex-col gap-10">
@@ -81,7 +92,7 @@ export default function ProductDetailView({ products = PRODUCTS, productId, onBa
                     <span className="block font-bold text-on-surface truncate">{store.name}</span>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-[10px] font-bold text-on-surface-variant flex items-center gap-1">
-                        <ICONS.Location className="w-3 h-3" />{store.distance}
+                        <ICONS.Location className="w-3 h-3" />{(store as any).distanceLabel || store.distance}
                       </span>
                       <span className={`w-1.5 h-1.5 rounded-full ${store.status.includes('Open') ? 'bg-green-500' : 'bg-red-400'}`} />
                       <span className="text-[10px] font-bold text-on-surface-variant">{store.status.split('•')[0].trim()}</span>
