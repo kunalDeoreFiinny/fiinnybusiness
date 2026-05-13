@@ -89,10 +89,6 @@ export function Sidebar({ mobileOpen, onMobileOpenChange }: SidebarProps) {
             );
           })}
         </nav>
-
-        <div className="border-t border-outline-variant/30 p-4 text-xs text-on-surface-variant">
-          Mock data · KrishiDukaan
-        </div>
       </aside>
     </>
   );
