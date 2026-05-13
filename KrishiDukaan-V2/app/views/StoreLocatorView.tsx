@@ -7,15 +7,26 @@ interface StoreLocatorViewProps {
   onBack: () => void;
   selectedStoreId?: string | null;
   stores?: any[];
+  location?: string;
+  onLocationChange?: (location: string) => void;
 }
 
-export default function StoreLocatorView({ onBack, selectedStoreId, stores = [] }: StoreLocatorViewProps) {
+export default function StoreLocatorView({ 
+  onBack, 
+  selectedStoreId, 
+  stores = [], 
+  location = 'Pune, Maharashtra',
+  onLocationChange
+}: StoreLocatorViewProps) {
   const focusedStore = (stores.length > 0 ? (stores.find(s => s.id === selectedStoreId) || stores[0]) : null);
-  const [location, setLocation] = useState('Pune, Maharashtra');
 
   if (!focusedStore && stores.length === 0) {
     return <div className="p-20 text-center">No stores found.</div>;
   }
+
+  const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (onLocationChange) onLocationChange(e.target.value);
+  };
 
   return (
     <div className="flex flex-col md:flex-row h-[calc(100vh-64px)] overflow-hidden">
@@ -35,7 +46,7 @@ export default function StoreLocatorView({ onBack, selectedStoreId, stores = [] 
             <input
               type="text"
               value={location}
-              onChange={e => setLocation(e.target.value)}
+              onChange={handleLocationChange}
               placeholder="Enter your location..."
               className="bg-transparent border-none w-full focus:ring-0 text-sm text-on-surface font-semibold placeholder:font-normal"
             />

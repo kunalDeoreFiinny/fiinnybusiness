@@ -238,7 +238,15 @@ export default function App() {
       case 'product':
         return <ProductDetailView products={allProducts} productId={selectedProductId} onBack={() => navigate('market')} onStoreClick={navigateToMap} />;
       case 'map':
-        return <StoreLocatorView onBack={() => navigate('home')} selectedStoreId={selectedStoreId} stores={allStores} />;
+        return (
+          <StoreLocatorView 
+            onBack={() => navigate('home')} 
+            selectedStoreId={selectedStoreId} 
+            stores={allStores}
+            location={locationQuery}
+            onLocationChange={setLocationQuery}
+          />
+        );
       case 'profile':
         return (
           <ProfileView
@@ -269,6 +277,8 @@ export default function App() {
         onNavigate={navigate} 
         productSearch={productSearch} 
         setProductSearch={setProductSearch} 
+        locationQuery={locationQuery}
+        onLocationChange={setLocationQuery}
       />
 
       {/* Main Content */}

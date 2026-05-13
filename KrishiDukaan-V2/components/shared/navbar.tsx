@@ -15,6 +15,8 @@ interface NavbarProps {
   productSearch?: string;
   setProductSearch?: (search: string) => void;
   isDashboard?: boolean;
+  locationQuery?: string;
+  onLocationChange?: (location: string) => void;
 }
 
 export function Navbar({ 
@@ -22,16 +24,77 @@ export function Navbar({
   onNavigate, 
   productSearch = '', 
   setProductSearch,
-  isDashboard = false 
+  isDashboard = false,
+  locationQuery = 'Pune, Maharashtra',
+  onLocationChange
 }: NavbarProps) {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [userRole, setUserRole] = useState<string>('customer');
   const [userProfile, setUserProfile] = useState<any>({ isPaid: false });
   const [language, setLanguage] = useState('EN');
-  const [locationQuery] = useState('Pune, Maharashtra');
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+
+  const fetchLocation = async () => {
+    if (!navigator.geolocation) {
+      if (onLocationChange) onLocationChange('Geolocation not supported');
+      return;
+    }
+
+    setIsFetchingLocation(true);
+    if (onLocationChange) onLocationChange('Locating...');
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+          
+          const response = await fetch(
+            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`
+          );
+          
+          const data = await response.json();
+          
+          if (data.status === 'OK' && data.results.length > 0) {
+            const result = data.results[0];
+            const addressComponents = result.address_components;
+            
+            let city = '';
+            let state = '';
+            
+            for (const component of addressComponents) {
+              if (component.types.includes('locality')) {
+                city = component.long_name;
+              } else if (component.types.includes('administrative_area_level_1')) {
+                state = component.long_name;
+              }
+            }
+            
+            const displayLocation = city && state ? `${city}, ${state}` : result.formatted_address;
+            if (onLocationChange) onLocationChange(displayLocation);
+          } else {
+            if (onLocationChange) onLocationChange('Address not found');
+          }
+        } catch (error) {
+          if (onLocationChange) onLocationChange('Error fetching address');
+        } finally {
+          setIsFetchingLocation(false);
+        }
+      },
+      (error) => {
+        if (onLocationChange) onLocationChange('Location access denied');
+        setIsFetchingLocation(false);
+      }
+    );
+  };
 
   useEffect(() => {
+    // Only auto-fetch if we're at the default and not on dashboard
+    if (locationQuery === 'Pune, Maharashtra' && !isDashboard) {
+      fetchLocation();
+    }
+    
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
@@ -127,14 +190,21 @@ export function Navbar({
           
         <div className="flex items-center gap-2 shrink-0">
           {/* Current Location Display */}
-          <div className="hidden md:flex items-center bg-surface-container-low border border-outline-variant rounded-2xl shadow-sm px-2 py-1.5 gap-1.5">
-            <ICONS.Location className="w-3.5 h-3.5 text-primary shrink-0" />
-            <span className="text-xs text-on-surface font-semibold truncate max-w-[120px]">{locationQuery}</span>
+          <div 
+            onClick={fetchLocation}
+            className={`hidden md:flex items-center bg-surface-container-low border border-outline-variant rounded-2xl shadow-sm px-2 py-1.5 gap-1.5 cursor-pointer hover:bg-surface-container transition-colors group ${isFetchingLocation ? 'opacity-70' : ''}`}
+            title="Click to refresh location"
+          >
+            <ICONS.Location className={`w-3.5 h-3.5 text-primary shrink-0 ${isFetchingLocation ? 'animate-bounce' : 'group-hover:scale-110 transition-transform'}`} />
+            <span className="text-xs text-on-surface font-semibold truncate max-w-[120px]">
+              {locationQuery}
+            </span>
           </div>
 
           <button
-            className="p-1.5 hover:bg-surface-container rounded-full transition-colors text-primary md:hidden"
-            onClick={() => navigate('map')}
+            className={`p-1.5 hover:bg-surface-container rounded-full transition-colors text-primary md:hidden ${isFetchingLocation ? 'animate-pulse' : ''}`}
+            onClick={fetchLocation}
+            title="Detect current location"
           >
             <ICONS.Location className="w-5 h-5" />
           </button>
