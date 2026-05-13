@@ -6,12 +6,14 @@ export interface ProductDoc {
   name: string;
   category: string;
   description: string;
-  imageUrl: string;
+  image: string;
   unit: string;
-  defaultPrice: number;
+  price: number;
   createdAt?: Timestamp | null;
   updatedAt?: Timestamp | null;
   isActive: boolean;
+  retailerId?: string;
+  store?: string;
 }
 
 /** Document in `inventory` — `id` is the Firestore document ID. */

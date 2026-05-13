@@ -74,7 +74,7 @@ export default function SubscriptionView({ user, role, onSuccess, onLogout }: Su
       const response = await fetch('/api/payment/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ seatCount }),
+        body: JSON.stringify({ seatCount, userId: user.uid }),
       });
 
       if (!response.ok) {
@@ -111,11 +111,11 @@ export default function SubscriptionView({ user, role, onSuccess, onLogout }: Su
               throw new Error('Payment verification failed. Please contact support.');
             }
 
-            // 4. Update Firestore
+            // 4. Update Firestore with verified seatCount
             const updateResult = await updateSubscriptionStatus(user.uid, 'paid', {
               orderId: paymentResponse.razorpay_order_id,
               paymentId: paymentResponse.razorpay_payment_id,
-            }, seatCount);
+            }, verifyData.seatCount || seatCount);
 
             if (!updateResult.paymentLogged && updateResult.paymentLogError) {
               console.warn('Continuing after non-blocking payment log error:', updateResult.paymentLogError);

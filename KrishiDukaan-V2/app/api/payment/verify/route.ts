@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
+import Razorpay from 'razorpay';
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID!,
+  key_secret: process.env.RAZORPAY_KEY_SECRET!,
+});
 
 export async function POST(request: Request) {
   try {
@@ -19,7 +25,14 @@ export async function POST(request: Request) {
     const isAuthentic = expectedSignature === razorpay_signature;
 
     if (isAuthentic) {
-      return NextResponse.json({ status: 'ok' });
+      // Fetch order to get verified seatCount from notes
+      const order = await razorpay.orders.fetch(razorpay_order_id);
+      const verifiedSeatCount = order.notes?.seatCount ? Number(order.notes.seatCount) : 1;
+
+      return NextResponse.json({ 
+        status: 'ok', 
+        seatCount: verifiedSeatCount 
+      });
     } else {
       return NextResponse.json({ status: 'failed' }, { status: 400 });
     }

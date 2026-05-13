@@ -3,6 +3,7 @@ import {
   doc,
   documentId,
   getDocs,
+  increment,
   query,
   serverTimestamp,
   setDoc,
@@ -32,12 +33,14 @@ function mapProduct(id: string, data: Record<string, unknown>): ProductDoc {
     name: String(data.name ?? ""),
     category: String(data.category ?? ""),
     description: String(data.description ?? ""),
-    imageUrl: String(data.imageUrl ?? data.image ?? ""),
+    image: String(data.image ?? data.imageUrl ?? ""),
     unit: String(data.unit ?? ""),
-    defaultPrice: toNum(data.defaultPrice ?? data.price, 0),
+    price: toNum(data.price ?? data.defaultPrice, 0),
     createdAt: (data.createdAt as Timestamp) ?? null,
     updatedAt: (data.updatedAt as Timestamp) ?? null,
     isActive: data.isActive !== false,
+    retailerId: String(data.retailerId ?? ""),
+    store: String(data.store ?? ""),
   };
 }
 
@@ -118,6 +121,7 @@ export type AddProductInventoryInput = {
   reorderThreshold: number;
   description: string;
   imageUrl?: string;
+  storeName?: string;
 };
 
 export async function createProductAndInventory(
@@ -125,8 +129,8 @@ export async function createProductAndInventory(
   input: AddProductInventoryInput,
 ): Promise<void> {
   const now = serverTimestamp();
-  const defaultPrice = input.sellingPrice;
-  const imageUrl = (input.imageUrl ?? "").trim();
+  const price = input.sellingPrice;
+  const image = (input.imageUrl ?? "").trim();
 
   const productRef = doc(collection(db, "products"));
   const inventoryRef = doc(collection(db, "inventory"));
@@ -136,12 +140,17 @@ export async function createProductAndInventory(
     name: input.name.trim(),
     category: input.category.trim(),
     description: input.description.trim(),
-    imageUrl: imageUrl || "",
+    image: image || "",
     unit: input.unit.trim(),
-    defaultPrice,
+    price,
     createdAt: now,
     updatedAt: now,
     isActive: true,
+    retailerId,
+    store: input.storeName || "Local Store",
+    stock: "In Stock",
+    distance: "Nearby",
+    source: "retailer_inventory"
   });
 
   await setDoc(inventoryRef, {
@@ -154,6 +163,13 @@ export async function createProductAndInventory(
     isAvailable: input.stockQuantity > 0,
     updatedAt: now,
   });
+
+  // Increment productCount in user profile
+  const userRef = doc(db, 'users', retailerId);
+  await setDoc(userRef, {
+    productCount: increment(1),
+    updatedAt: now
+  }, { merge: true });
 }
 
 export type InventoryUpdateInput = {

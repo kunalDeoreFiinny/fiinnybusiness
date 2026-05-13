@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../../firebase";
+import { auth, getUserProfile } from "../../firebase";
 import { PageHeader } from "../_components/page-header";
 import { InventoryHealthCards } from "../_components/inventory-health-cards";
 import { InventoryManagementTable } from "../_components/inventory-management-table";
@@ -10,6 +10,8 @@ import { AddProductInventoryForm } from "../_components/add-product-inventory-fo
 import { fetchRetailerInventoryRows } from "../_lib/inventory-firestore";
 import type { InventoryRow } from "../_types/inventory";
 import { deriveStockStatus } from "../_types/inventory";
+import { PlusCircle } from "lucide-react";
+import Link from "next/link";
 
 function computeHealth(rows: InventoryRow[]) {
   if (!rows.length) {
@@ -43,12 +45,18 @@ export default function InventoryPage() {
   const [rows, setRows] = useState<InventoryRow[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  const [profile, setProfile] = useState<any>(null);
+
   const load = useCallback(async (uid: string) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchRetailerInventoryRows(uid);
-      setRows(data);
+      const [inventoryData, profileData] = await Promise.all([
+        fetchRetailerInventoryRows(uid),
+        getUserProfile(uid)
+      ]);
+      setRows(inventoryData);
+      setProfile(profileData);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to load inventory.";
       setError(msg);
@@ -64,6 +72,7 @@ export default function InventoryPage() {
       if (!user) {
         setRetailerId(null);
         setRows([]);
+        setProfile(null);
         setLoading(false);
         return;
       }
@@ -101,12 +110,44 @@ export default function InventoryPage() {
     );
   }
 
+  const totalSeats = profile?.totalSeats || 0;
+  const productCount = profile?.productCount || 0;
+  const seatsRemaining = Math.max(0, totalSeats - productCount);
+
   return (
     <>
       <PageHeader
         title="Inventory"
         description="Firestore-backed stock for your retailer. Products live in catalog; quantities and prices per store live in inventory."
       />
+
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-primary">Listing Seats</span>
+            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${seatsRemaining > 0 ? 'bg-primary text-white' : 'bg-red-500 text-white'}`}>
+              {seatsRemaining} Left
+            </span>
+          </div>
+          <div className="flex items-baseline gap-1">
+            <span className="text-2xl font-black text-on-surface">{productCount}</span>
+            <span className="text-sm font-bold text-on-surface-variant">/ {totalSeats} Used</span>
+          </div>
+          <div className="mt-3 w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
+            <div 
+              className={`h-full transition-all duration-500 ${seatsRemaining === 0 ? 'bg-red-500' : 'bg-primary'}`}
+              style={{ width: `${Math.min(100, (productCount / (totalSeats || 1)) * 100)}%` }}
+            />
+          </div>
+          <Link 
+            href="/dashboard/upgrade"
+            className="mt-4 flex items-center justify-center gap-2 w-full py-2 bg-white border border-primary/20 text-primary text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-primary/5 transition-colors"
+          >
+            <PlusCircle className="w-3.5 h-3.5" />
+            Buy More Seats
+          </Link>
+        </div>
+      </div>
 
       {error ? (
         <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -140,7 +181,14 @@ export default function InventoryPage() {
       </section>
 
       <section className="mt-8" aria-label="Add product">
-        <AddProductInventoryForm retailerId={retailerId} disabled={loading} onCreated={refresh} />
+        <AddProductInventoryForm 
+          retailerId={retailerId} 
+          disabled={loading || seatsRemaining <= 0} 
+          onCreated={refresh}
+          totalSeats={totalSeats}
+          productCount={productCount}
+          storeName={profile?.shopName || profile?.name}
+        />
       </section>
     </>
   );

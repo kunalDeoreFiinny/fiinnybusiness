@@ -9,6 +9,8 @@ interface UserProfile {
   name: string;
   phone: string;
   email: string;
+  totalSeats?: number;
+  productCount?: number;
 }
 
 interface ProfileViewProps {
@@ -17,6 +19,7 @@ interface ProfileViewProps {
   onRoleChange: (role: UserRole) => void;
   onProfileSave: (profile: UserProfile) => void;
   onRetailerProductSaved: () => Promise<void>;
+  onNavigate?: (view: any) => void;
 }
 
 interface RetailerFormState {
@@ -70,7 +73,8 @@ export default function ProfileView({
   profile,
   onRoleChange,
   onProfileSave,
-  onRetailerProductSaved
+  onRetailerProductSaved,
+  onNavigate
 }: ProfileViewProps) {
   const [localProfile, setLocalProfile] = useState(profile);
   const [retailerForm, setRetailerForm] = useState<RetailerFormState>(initialRetailerForm);
@@ -138,8 +142,37 @@ export default function ProfileView({
     }
   };
 
+  const totalSeats = profile.totalSeats || 0;
+  const productCount = profile.productCount || 0;
+  const seatsRemaining = Math.max(0, totalSeats - productCount);
+
   return (
     <div className="px-4 md:px-10 max-w-5xl mx-auto w-full py-8 space-y-6">
+      {/* Listing Seats Card */}
+      <div className="bg-primary/5 rounded-3xl border border-primary/20 p-6 md:p-8 flex flex-wrap items-center justify-between gap-6">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <ICONS.Star className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-bold text-primary uppercase tracking-wider">Product Listing Seats</h2>
+          </div>
+          <p className="text-on-surface-variant text-sm">
+            You have used <span className="font-bold text-on-surface">{productCount}</span> out of <span className="font-bold text-on-surface">{totalSeats}</span> available seats.
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="text-right hidden sm:block">
+            <span className="text-2xl font-black text-on-surface">{seatsRemaining}</span>
+            <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-right">Available</p>
+          </div>
+          <button 
+            onClick={() => onNavigate && onNavigate('subscription')}
+            className="bg-primary text-white text-xs font-black uppercase tracking-widest px-6 py-3 rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+          >
+            Buy More Seats
+          </button>
+        </div>
+      </div>
+
       <div className="bg-white rounded-3xl border border-surface-container p-6 md:p-8 shadow-ambient">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div>
@@ -232,13 +265,20 @@ export default function ProfileView({
           <input type="text" required value={productForm.distance} onChange={(e) => setProductForm((p) => ({ ...p, distance: e.target.value }))} placeholder="Distance (e.g. 2.5km)" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
           <input type="url" required value={productForm.image} onChange={(e) => setProductForm((p) => ({ ...p, image: e.target.value }))} placeholder="Product Image URL" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
           <textarea value={productForm.description} required onChange={(e) => setProductForm((p) => ({ ...p, description: e.target.value }))} placeholder="Product Description" className="md:col-span-2 bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm min-h-24 focus:outline-none focus:ring-1 focus:ring-primary" />
+          
+          {seatsRemaining <= 0 && (
+            <div className="md:col-span-2 bg-red-50 text-red-700 p-4 rounded-xl border border-red-100 text-sm font-medium">
+              You have reached your product listing limit ({productCount}/{totalSeats}). Please buy more seats to publish new products.
+            </div>
+          )}
+
           <button
             type="submit"
-            disabled={loadingProduct}
+            disabled={loadingProduct || seatsRemaining <= 0}
             className="md:col-span-2 inline-flex items-center justify-center gap-2 bg-primary text-white font-semibold px-5 py-3 rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-60"
           >
             <ICONS.AddToCart className="w-4 h-4" />
-            {loadingProduct ? 'Publishing...' : 'Publish Product'}
+            {loadingProduct ? 'Publishing...' : seatsRemaining <= 0 ? 'Limit Reached' : 'Publish Product'}
           </button>
         </form>
       </div>

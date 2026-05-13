@@ -13,6 +13,7 @@
     "axios": "^1.16.0",
     "clsx": "^2.1.1",
     "firebase": "^10.11.1",
+    "firebase-admin": "^13.9.0",
     "framer-motion": "^11.1.7",
     "lucide-react": "^0.378.0",
     "next": "14.2.3",

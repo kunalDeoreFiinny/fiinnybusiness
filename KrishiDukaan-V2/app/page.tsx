@@ -32,6 +32,8 @@ type UserProfile = {
   phone: string;
   email: string;
   isPaid?: boolean;
+  totalSeats?: number;
+  productCount?: number;
 };
 
 export default function App() {
@@ -105,7 +107,9 @@ export default function App() {
             name: profileData.name || '',
             email: profileData.email || firebaseUser.email || '',
             phone: profileData.phone || '',
-            isPaid: isPaid
+            isPaid: isPaid,
+            totalSeats: profileData.totalSeats || 0,
+            productCount: profileData.productCount || 0
           });
 
           // Paywall logic: if retailer/manufacturer and NOT paid, force subscription view
@@ -132,7 +136,9 @@ export default function App() {
       name: profile.name,
       email: profile.email,
       phone: profile.phone || '',
-      isPaid: isPaid
+      isPaid: isPaid,
+      totalSeats: profile.totalSeats || 0,
+      productCount: profile.productCount || 0
     });
 
     if ((profile.role === 'retailer' || profile.role === 'manufacturer') && !isPaid) {
@@ -260,6 +266,7 @@ export default function App() {
             onRoleChange={setUserRole}
             onProfileSave={handleProfileSave}
             onRetailerProductSaved={loadData}
+            onNavigate={setCurrentView}
           />
         );
       case 'login':
