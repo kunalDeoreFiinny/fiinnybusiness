@@ -74,7 +74,7 @@ export default function StoreLocatorView({
       () => {
         // silently ignore — keep current location
       },
-      { enableHighAccuracy: true, timeout: 8000 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   };
 
