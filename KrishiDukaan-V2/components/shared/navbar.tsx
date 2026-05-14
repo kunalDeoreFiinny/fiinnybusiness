@@ -8,6 +8,8 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useI18n } from '../../app/i18n/I18nContext';
 import { MarketplaceProduct } from '../../types/product';
+import { reverseGeocodeToDisplay } from '../../app/utils/geolocation';
+import { HelperIcon } from '../helpers';
 
 type View = 'home' | 'market' | 'hub' | 'product' | 'map' | 'about' | 'profile' | 'login' | 'signup' | 'subscription';
 
@@ -71,38 +73,19 @@ export function Navbar({
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
+        const { latitude, longitude } = position.coords;
+        const coords = { lat: latitude, lng: longitude };
+
         try {
-          const { latitude, longitude } = position.coords;
-          const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-
-          const response = await fetch(
-            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`
+          const label = await reverseGeocodeToDisplay(
+            latitude,
+            longitude,
+            process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
           );
-
-          const data = await response.json();
-
-          if (data.status === 'OK' && data.results.length > 0) {
-            const result = data.results[0];
-            const addressComponents = result.address_components;
-
-            let city = '';
-            let state = '';
-
-            for (const component of addressComponents) {
-              if (component.types.includes('locality')) {
-                city = component.long_name;
-              } else if (component.types.includes('administrative_area_level_1')) {
-                state = component.long_name;
-              }
-            }
-
-            const displayLocation = city && state ? `${city}, ${state}` : result.formatted_address;
-            if (onLocationChange) onLocationChange(displayLocation, { lat: latitude, lng: longitude });
-          } else {
-            if (onLocationChange) onLocationChange('Address not found');
-          }
-        } catch (error) {
-          if (onLocationChange) onLocationChange('Error fetching address');
+          if (onLocationChange) onLocationChange(label, coords);
+        } catch {
+          const label = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+          if (onLocationChange) onLocationChange(label, coords);
         } finally {
           setIsFetchingLocation(false);
         }
@@ -115,10 +98,18 @@ export function Navbar({
   };
 
   useEffect(() => {
-    if (locationQuery === 'Pune, Maharashtra' && !isDashboard) {
-      fetchLocation();
-    }
+    if (isDashboard) return;
+    const shouldAutoLocate =
+      locationQuery === 'Pune, Maharashtra' ||
+      locationQuery === 'Address not found' ||
+      locationQuery === 'Error fetching address';
 
+    if (shouldAutoLocate) {
+      void fetchLocation();
+    }
+  }, [locationQuery, isDashboard]);
+
+  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setLocalUser(firebaseUser);
@@ -313,6 +304,7 @@ export function Navbar({
           {navItems.map((item) => (
             <button
               key={item.id}
+              data-tour-nav={item.id}
               onClick={() => navigate(item.id as View)}
               className={`text-xs font-semibold transition-colors hover:text-primary whitespace-nowrap ${
                 currentView === item.id ? 'text-primary' : 'text-on-surface-variant'
@@ -329,7 +321,11 @@ export function Navbar({
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {/* Desktop Product Search Bar */}
           {!isDashboard && setProductSearch && (
-            <div ref={desktopSearchRef} className="hidden md:block relative flex-1 max-w-sm">
+            <div 
+              ref={desktopSearchRef} 
+              data-tour="search"
+              className="hidden md:block relative flex-1 max-w-sm"
+            >
               <div className="flex items-center bg-surface-container-low border border-outline-variant rounded-2xl overflow-hidden shadow-sm group focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
                 <ICONS.Search className="w-4 h-4 text-outline group-focus-within:text-primary transition-colors shrink-0 ml-3" />
                 <input
@@ -340,13 +336,29 @@ export function Navbar({
                   onFocus={() => setShowResults(true)}
                   className="flex-1 bg-transparent border-none focus:ring-0 text-xs text-on-surface px-2 py-2 placeholder-on-surface-variant font-medium"
                 />
-                {productSearch && (
+                {productSearch ? (
                   <button
                     onMouseDown={() => { setProductSearch(''); setShowResults(false); }}
                     className="mr-2 text-outline hover:text-on-surface transition-colors"
                   >
                     <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
                   </button>
+                ) : (
+                  <HelperIcon
+                    size="xs"
+                    variant="ghost"
+                    side="bottom"
+                    title="Search tip"
+                    ariaLabel="Search help"
+                    className="mr-2"
+                    content={
+                      <>
+                        Search products, crops, fertilizers, or nearby stores.
+                        <br />
+                        <span className="text-outline">Example: &ldquo;Urea&rdquo;, &ldquo;Tomato Seeds&rdquo;</span>
+                      </>
+                    }
+                  />
                 )}
               </div>
               {shouldShowDropdown && <SearchDropdown />}
@@ -357,14 +369,23 @@ export function Navbar({
         <div className="flex items-center gap-2 shrink-0">
           {/* Current Location Display */}
           <div
+            data-tour="location"
             onClick={fetchLocation}
             className={`hidden md:flex items-center bg-surface-container-low border border-outline-variant rounded-2xl shadow-sm px-2 py-1.5 gap-1.5 cursor-pointer hover:bg-surface-container transition-colors group ${isFetchingLocation ? 'opacity-70' : ''}`}
             title="Click to refresh location"
           >
             <ICONS.Location className={`w-3.5 h-3.5 text-primary shrink-0 ${isFetchingLocation ? 'animate-bounce' : 'group-hover:scale-110 transition-transform'}`} />
-            <span className="text-xs text-on-surface font-semibold truncate max-w-[120px]">
+            <span className="text-xs text-on-surface font-semibold truncate max-w-[120px] md:max-w-[220px]" title={locationQuery}>
               {locationQuery}
             </span>
+            <HelperIcon
+              size="xs"
+              variant="ghost"
+              side="bottom"
+              title="Why we ask"
+              ariaLabel="Location help"
+              content="Your location helps us show nearby stores, stock availability, and delivery range."
+            />
           </div>
 
           <button
@@ -450,7 +471,11 @@ export function Navbar({
       </div>
 
       {!isDashboard && setProductSearch && (
-        <div ref={mobileSearchRef} className="md:hidden mt-2 relative">
+        <div 
+          ref={mobileSearchRef} 
+          data-tour="search-mobile"
+          className="md:hidden mt-2 relative"
+        >
           <div className="flex items-center bg-surface-container-low border border-outline-variant rounded-2xl overflow-hidden shadow-sm group focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
             <ICONS.Search className="w-4 h-4 text-outline group-focus-within:text-primary transition-colors shrink-0 ml-3" />
             <input
@@ -461,13 +486,29 @@ export function Navbar({
               onFocus={() => setShowResults(true)}
               className="w-full bg-transparent border-none focus:ring-0 text-xs text-on-surface px-2 py-2.5 placeholder-on-surface-variant font-medium"
             />
-            {productSearch && (
+            {productSearch ? (
               <button
                 onMouseDown={() => { setProductSearch(''); setShowResults(false); }}
                 className="mr-2 text-outline hover:text-on-surface transition-colors"
               >
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
               </button>
+            ) : (
+              <HelperIcon
+                size="xs"
+                variant="ghost"
+                side="bottom"
+                title="Search tip"
+                ariaLabel="Search help"
+                className="mr-2"
+                content={
+                  <>
+                    Search products, crops, fertilizers, or nearby stores.
+                    <br />
+                    <span className="text-outline">Example: &ldquo;Urea&rdquo;, &ldquo;Tomato Seeds&rdquo;</span>
+                  </>
+                }
+              />
             )}
           </div>
           {shouldShowDropdown && <SearchDropdown />}

@@ -12,11 +12,9 @@ import { AccountPage } from './pages/AccountPage';
 import { CartPage } from './pages/CartPage';
 import { WishlistPage } from './pages/WishlistPage';
 import { AddressesPage } from './pages/AddressesPage';
+// Legacy routes kept for back-compat
 import { SearchPage } from './pages/SearchPage';
 import { ShopPage } from './pages/ShopPage';
-import { MarketPage } from './pages/MarketPage';
-import { HubPage } from './pages/HubPage';
-import { AboutPage } from './pages/AboutPage';
 
 export default function App() {
   return (
@@ -27,9 +25,6 @@ export default function App() {
             <Layout>
               <Routes>
                 <Route path="/" element={<HomePage />} />
-                <Route path="/market" element={<MarketPage />} />
-                <Route path="/hub" element={<HubPage />} />
-                <Route path="/about" element={<AboutPage />} />
                 <Route path="/product/:id" element={<ProductPage />} />
                 <Route path="/retailer/:id" element={<RetailerPage />} />
                 <Route path="/retailers" element={<ShopsPage />} />
@@ -37,10 +32,11 @@ export default function App() {
                 <Route path="/cart" element={<CartPage />} />
                 <Route path="/wishlist" element={<WishlistPage />} />
                 <Route path="/addresses" element={<AddressesPage />} />
+                {/* legacy */}
                 <Route path="/search" element={<SearchPage />} />
                 <Route path="/shop/:id" element={<ShopPage />} />
                 <Route path="/shops" element={<ShopsPage />} />
-                <Route path="/categories" element={<MarketPage />} />
+                <Route path="/categories" element={<HomePage />} />
                 <Route path="*" element={<HomePage />} />
               </Routes>
             </Layout>

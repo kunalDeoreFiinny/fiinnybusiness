@@ -4,12 +4,13 @@ import { useState, useEffect, useMemo } from 'react';
 import { ICONS } from '../constants';
 import { motion } from 'framer-motion';
 import { fetchHubs, Hub } from '../firebase';
+import { HelperIcon } from '../../components/helpers';
 
 const FALLBACK_HUBS: Hub[] = [
   {
     id: 'watermelon',
     name: 'Watermelon',
-    heroImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCShWApLmd5orpbfCQ7ygmjWA2q0BgOL3TUTOio-WN0NkMwFg5_h-EH9g3y-w1-6oC0wSXQML-mnfg8yXuc01VGH-dCPmVLcuMxg5_efLEOzm28E4LyalAxJSZ9ovVXj4PGtDA34b_c-3e1eFFqWla8pryOHK4d2XXK0Asc7R2hgGkWwuz68m7DEvfIX02LRu5Yj0ZpYms9UGHBBd5DbaEwinBYuDXuGHpBgAHZUm6G3chxh-S-jrFLwLfPGmA-I1zal0Z0mbzLpPNo',
+    heroImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuShWApLmd5orpbfCQ7ygmjWA2q0BgOL3TUTOio-WN0NkMwFg5_h-EH9g3y-w1-6oC0wSXQML-mnfg8yXuc01VGH-dCPmVLcuMxg5_efLEOzm28E4LyalAxJSZ9ovVXj4PGtDA34b_c-3e1eFFqWla8pryOHK4d2XXK0Asc7R2hgGkWwuz68m7DEvfIX02LRu5Yj0ZpYms9UGHBBd5DbaEwinBYuDXuGHpBgAHZUm6G3chxh-S-jrFLwLfPGmA-I1zal0Z0mbzLpPNo',
     tagline: 'Everything required from seed selection to final harvest, curated for maximum yield.',
     seeds: [
       { name: 'Sugar Baby', price: 250, img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuByv4cPqlB1KYhELYjTmiYEkyUvKp9WVaye2AODgv8iz0zWp-dBoAq4amESYk6lY1LvA9UYb2sVqE6F91lDwmCSWOC86XN8a2C4BjFSsLROvs0SE1MMZLxfMkAfQUDpEBPBHIwHPFGEsrKqWrf2x_MDsMCo3kKhfkoeClw8BmDJOXClpDykV6mx-8Eqktiha67i1uMyfEzJ-maCYo7liILE2i8yqsNNEbYFCZ4sBGfLOasGGPaRcwV1iRU4SNm2L0mzt9_Vzx_1oSfK' },
@@ -196,7 +197,8 @@ export default function HubView({ searchQuery = '' }: HubViewProps) {
     <div className="px-4 md:px-10 max-w-7xl mx-auto w-full py-8 flex flex-col gap-8">
       
       {/* Hub Selector */}
-      <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+      <div className="flex items-center gap-2" data-tour="hub-tabs">
+        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide flex-1">
         {filteredHubs.map((hub) => (
           <button
             key={hub.id}
@@ -210,6 +212,14 @@ export default function HubView({ searchQuery = '' }: HubViewProps) {
             {hub.name} Hub
           </button>
         ))}
+        </div>
+        <HelperIcon
+          size="sm"
+          side="left"
+          title="Hubs"
+          ariaLabel="Hub tabs help"
+          content="Each hub contains curated seeds, fertilizers, and tools for that crop."
+        />
       </div>
 
       {/* Hero */}
@@ -223,7 +233,17 @@ export default function HubView({ searchQuery = '' }: HubViewProps) {
           <div className="absolute inset-0 bg-gradient-to-t from-on-surface via-on-surface/40 to-transparent opacity-80" />
         </div>
         <div className="relative z-10">
-          <span className="bg-primary-container text-on-primary-container text-[10px] font-black uppercase px-3 py-1 rounded-full mb-3 inline-block shadow-sm">Featured Crop</span>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="bg-primary-container text-on-primary-container text-[10px] font-black uppercase px-3 py-1 rounded-full inline-block shadow-sm">Featured Crop</span>
+            <HelperIcon
+              size="xs"
+              variant="onDark"
+              side="right"
+              title="Featured Crop"
+              ariaLabel="Featured crop help"
+              content="Explore agricultural solutions tailored for this crop."
+            />
+          </div>
           <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight">{selectedHub.name} Hub</h1>
           <p className="text-surface-container-low mt-2 max-w-md text-sm md:text-base">{selectedHub.tagline}</p>
         </div>
@@ -254,7 +274,17 @@ export default function HubView({ searchQuery = '' }: HubViewProps) {
         {/* Nutrition */}
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-surface-container flex flex-col hover:shadow-ambient transition-shadow">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-on-surface">Targeted Nutrition</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-on-surface">Targeted Nutrition</h2>
+              <HelperIcon
+                size="xs"
+                variant="ghost"
+                side="right"
+                title="Nutrition"
+                ariaLabel="Nutrition help"
+                content="Targeted nutrition products improve crop growth and yield."
+              />
+            </div>
             <ICONS.Science className="text-secondary w-7 h-7" />
           </div>
           <div className="flex flex-col gap-3 flex-grow">
@@ -280,7 +310,17 @@ export default function HubView({ searchQuery = '' }: HubViewProps) {
         {/* Irrigation */}
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-surface-container flex flex-col hover:shadow-ambient transition-shadow">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-on-surface">Irrigation Tools</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-on-surface">Irrigation Tools</h2>
+              <HelperIcon
+                size="xs"
+                variant="ghost"
+                side="right"
+                title="Irrigation"
+                ariaLabel="Irrigation help"
+                content="Efficient irrigation tools help reduce water usage and improve consistency."
+              />
+            </div>
             <ICONS.Water className="text-secondary w-7 h-7" />
           </div>
           <div className="rounded-2xl bg-surface-container-high h-32 overflow-hidden mb-6 relative">

@@ -1,9 +1,9 @@
+// Location picker (F1). Supports GPS or manual selection by village / city / pincode.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { LocateFixed, Search, X, MapPin } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from '../LocationContext';
 import { searchLocationCatalog } from '../data/locationCatalog';
-import { motion, AnimatePresence } from 'motion/react';
 
 interface Props {
   open: boolean;
@@ -21,11 +21,13 @@ export function LocationPickerModal({ open, onClose, required = false }: Props) 
   useEffect(() => {
     if (open) {
       setQuery('');
-      setTimeout(() => inputRef.current?.focus(), 150);
+      setTimeout(() => inputRef.current?.focus(), 80);
     }
   }, [open]);
 
   const matches = useMemo(() => searchLocationCatalog(query, 10), [query]);
+
+  if (!open) return null;
 
   function handleClose() {
     if (required) dismissPrompt();
@@ -38,119 +40,96 @@ export function LocationPickerModal({ open, onClose, required = false }: Props) 
   }
 
   return (
-    <AnimatePresence>
-      {open && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => { if (!required) handleClose(); }}
-            className="absolute inset-0 bg-on-surface/60 backdrop-blur-sm"
-          />
-
-          {/* Modal Content */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative bg-white rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl flex flex-col max-h-[85vh]"
-          >
-            <div className="p-6 border-b border-surface-container flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-bold text-on-surface tracking-tight leading-none">
-                  {required ? t('location.promptTitleRequired') : t('location.promptTitle')}
-                </h3>
-                <p className="text-xs font-semibold text-on-surface-variant mt-1.5 opacity-70">
-                  {t('location.promptBody')}
-                </p>
-              </div>
-              {!required && (
-                <button 
-                  onClick={handleClose} 
-                  className="p-2 hover:bg-surface-container rounded-full transition-colors text-outline"
-                >
-                  <X size={20} />
-                </button>
-              )}
-            </div>
-
-            <div className="p-6 pb-4">
-              <button
-                disabled={requesting}
-                onClick={handleGps}
-                className="w-full flex items-center justify-center gap-2 py-4 bg-primary text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-primary/20 disabled:opacity-70"
-              >
-                <LocateFixed size={18} className={requesting ? 'animate-spin' : ''} />
-                {requesting ? t('search.gettingLocation') : t('location.useCurrent')}
-              </button>
-
-              <div className="flex items-center gap-4 my-6">
-                <div className="flex-1 h-px bg-surface-container-highest" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-outline">
-                  {t('location.pickManually')}
-                </span>
-                <div className="flex-1 h-px bg-surface-container-highest" />
-              </div>
-
-              <div className="flex items-center gap-3 bg-surface-container-low rounded-2xl px-4 py-3 border border-outline-variant focus-within:border-primary transition-all">
-                <Search size={18} className="text-outline" />
-                <input
-                  ref={inputRef}
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder={t('location.searchPlaceholder')}
-                  className="flex-1 bg-transparent border-none outline-none text-sm font-bold text-on-surface placeholder:font-normal"
-                  inputMode="search"
-                />
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-6 pb-6">
-              <div className="flex flex-col gap-2">
-                {matches.length === 0 ? (
-                  <p className="text-center py-10 text-on-surface-variant text-sm font-bold opacity-50">
-                    {t('location.noMatches')}
-                  </p>
-                ) : (
-                  matches.map((entry) => {
-                    const active = location.pincode === entry.pincode;
-                    return (
-                      <button
-                        key={entry.id}
-                        onClick={() => { setManualEntry(entry); onClose(); }}
-                        className={`flex items-center gap-4 p-4 text-left rounded-2xl border-2 transition-all group ${
-                          active 
-                            ? 'bg-primary/5 border-primary shadow-sm' 
-                            : 'bg-white border-surface-container hover:border-outline-variant'
-                        }`}
-                      >
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                          active ? 'bg-primary text-white' : 'bg-surface-container-low text-secondary'
-                        }`}>
-                          <MapPin size={18} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-bold text-on-surface truncate group-hover:text-primary transition-colors">
-                            {entry.village}
-                          </div>
-                          <div className="text-[10px] font-semibold text-on-surface-variant opacity-70">
-                            {entry.district} · {entry.state} · {entry.pincode}
-                          </div>
-                        </div>
-                        {active && (
-                          <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                        )}
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          </motion.div>
+    <div
+      onClick={() => { if (!required) handleClose(); }}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 100,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: '#fff', borderRadius: 14, padding: 0, width: '100%', maxWidth: 420, maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+      >
+        <div style={{ padding: '16px 18px 12px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: '#111827', marginBottom: 2 }}>
+              {required ? t('location.promptTitleRequired') : t('location.promptTitle')}
+            </h3>
+            <p style={{ fontSize: 12, color: '#6b7280' }}>{t('location.promptBody')}</p>
+          </div>
+          <button onClick={handleClose} aria-label={t('location.closeAria')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 4 }}>
+            <X size={18} />
+          </button>
         </div>
-      )}
-    </AnimatePresence>
+
+        <div style={{ padding: 16 }}>
+          <button
+            disabled={requesting}
+            onClick={handleGps}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '12px 16px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 10,
+              fontSize: 14, fontWeight: 600, cursor: requesting ? 'wait' : 'pointer', marginBottom: 14,
+              opacity: requesting ? 0.85 : 1,
+            }}
+          >
+            <LocateFixed size={16} />
+            {requesting ? t('search.gettingLocation') : t('location.useCurrent')}
+          </button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '4px 0 12px' }}>
+            <div style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
+            <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, letterSpacing: '0.06em' }}>{t('location.pickManually')}</span>
+            <div style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f3f4f6', borderRadius: 10, padding: '10px 12px', marginBottom: 10 }}>
+            <Search size={15} style={{ color: '#9ca3af' }} />
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t('location.searchPlaceholder')}
+              style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: 14, color: '#111827' }}
+              inputMode="search"
+            />
+          </div>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
+          {matches.length === 0 ? (
+            <p style={{ fontSize: 13, color: '#9ca3af', textAlign: 'center', padding: '24px 0' }}>
+              {t('location.noMatches')}
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {matches.map((entry) => {
+                const active = location.pincode === entry.pincode;
+                return (
+                  <button
+                    key={entry.id}
+                    onClick={() => { setManualEntry(entry); onClose(); }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '10px 12px', textAlign: 'left',
+                      border: `1px solid ${active ? '#bbf7d0' : '#e5e7eb'}`,
+                      background: active ? '#f0fdf4' : '#fff',
+                      borderRadius: 10, cursor: 'pointer',
+                    }}
+                  >
+                    <MapPin size={14} style={{ color: active ? '#15803d' : '#9ca3af', flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{entry.village}</div>
+                      <div style={{ fontSize: 11, color: '#6b7280' }}>{entry.district} · {entry.state} · {entry.pincode}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

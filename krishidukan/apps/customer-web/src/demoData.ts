@@ -39,7 +39,6 @@ export interface Product {
   benefits: string[];
   packSizes: string[];
   emoji: string;
-  image: string;
   imageColor: string;
   popularity: number;
 }
@@ -56,7 +55,6 @@ export const PRODUCTS: Product[] = [
     benefits: ['Boosts yield by up to 30%', 'Improves root strength', 'Works on all soil types'],
     packSizes: ['500g', '1kg', '5kg', '25kg'],
     emoji: '🌟',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB2WDW8n84ARpG1rKuqGsgPJ6DH-K_TGgT2BhcMvWXVlj0-wQMhgkIlMit2lSvWxek2a1m6zuh1KvEEW24PWTv4w-z_-j_Vetv8EyJcha1AMMb2Y4y9Uz3ay5lhhylUC6ZRuU981JFFLbDt0lLn99tSC5Jf0ceN_5WcBGlbJ5J0E1_NgwYlUAGZH005ylDSYopd5G0QRLaoksL7vi3xZ7IcWobKDhijMZcwJK2-k-FSlSFAY2Megman0hXlvpr8P-I9cHeuI4H1Ow-U',
     imageColor: '#f59e0b',
     popularity: 98,
   },
@@ -71,7 +69,6 @@ export const PRODUCTS: Product[] = [
     benefits: ['Protects against 20+ diseases', 'Systemic + contact action', 'Rain-fast in 2 hours'],
     packSizes: ['100ml', '250ml', '500ml', '1L'],
     emoji: '🛡️',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC0lKpQNZwsNobPjdMrfQ1RArKB3PDGd2wb97adUURc2Dj-YyC4LmH5BGv4C7p08DMZejvtg1fr2b_zgV8b3R26Ua2KRECh6nsoWlbvzt-GFXcziFU0yRgHUvxGG1DDv1COqqNbkD69EYziOBsrQkkYzmhOqERacnmBDeHca7dtmCoPV7ltojPylMI7wZhuXeiWq6Au3zaSeAwVCH2Vz5KHmEnYAeiR5Fz0pg0acr04msE-dkcGlgsyVHaStKFwHwoDYb5_XrF2umgu',
     imageColor: '#0ea5e9',
     popularity: 89,
   },
@@ -86,7 +83,6 @@ export const PRODUCTS: Product[] = [
     benefits: ['Stimulates flowering', 'Improves fruit quality', 'Certified organic'],
     packSizes: ['250ml', '500ml', '1L'],
     emoji: '🚀',
-    image: '/src/assets/images/regenerated_image_1778304077291.png',
     imageColor: '#8b5cf6',
     popularity: 84,
   },
@@ -101,7 +97,6 @@ export const PRODUCTS: Product[] = [
     benefits: ['5× root mass increase', 'Drought resistance', 'Reduces transplant shock'],
     packSizes: ['250g', '1kg', '5kg'],
     emoji: '🌿',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA9DzE2OB77Rgv1NwTy7JTBCgFSx2IWia8qNQ3S0rtSkbpNjXc23to77zsOMOdw7GnIxonAWKD_J95prSm1HHoU2-qFcJV746h5UpRa27VzKlzySDbpj113cgYgy5Aloy9q2KRRhZnC9haCd4DVupUB3pj2SV7CGzVOPf0QcDdNxPoS5389PNv5WzYsqcim342Qxeky-arBg88aAW245GoXUyRGTFK55SBklq-Sz3_DLtwhSB4QVBOjJC_p_AdlTjnDYgqO5lRa62P6',
     imageColor: '#16a34a',
     popularity: 76,
   },

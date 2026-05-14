@@ -21,6 +21,11 @@ function intentKey(intent: LoginIntent): string {
 }
 
 export function LoginGateModal() {
+  // TEMP_DISABLED: Login/auth feature disabled for current release
+  // The entire modal is disabled — always return null.
+  return null;
+
+  /* TEMP_DISABLED: Original implementation preserved below for re-enablement
   const { t } = useTranslation();
   const { gateOpen, gateIntent, closeGate, requestOtp, verifyOtp } = useAuth();
   const [step, setStep] = useState<Step>('phone');
@@ -165,4 +170,5 @@ export function LoginGateModal() {
       </div>
     </div>
   );
+  TEMP_DISABLED: end of original implementation */
 }

@@ -41,23 +41,12 @@ export function RetailerMap({ results, userLat, userLng, onSelect, selected }: P
 
       mapRef.current = map;
 
-      // User location marker (blue dot with pulse)
+      // User location marker (blue dot)
       const userIcon = L.divIcon({
-        html: `
-          <div style="position: relative; width: 16px; height: 16px;">
-            <div style="width: 16px; height: 16px; border-radius: 50%; background: #3b82f6; border: 3px solid #fff; box-shadow: 0 0 10px rgba(59,130,246,0.5); position: relative; z-index: 2;"></div>
-            <div style="position: absolute; top: -12px; left: -12px; width: 40px; height: 40px; background: rgba(59,130,246,0.2); border-radius: 50%; animation: pulse 2s infinite; z-index: 1;"></div>
-          </div>
-          <style>
-            @keyframes pulse {
-              0% { transform: scale(0.5); opacity: 0.8; }
-              100% { transform: scale(1.5); opacity: 0; }
-            }
-          </style>
-        `,
+        html: `<div style="width:14px;height:14px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 2px 6px rgba(37,99,235,0.5)"></div>`,
         className: '',
-        iconSize: [16, 16],
-        iconAnchor: [8, 8],
+        iconSize: [14, 14],
+        iconAnchor: [7, 7],
       });
       L.marker([userLat, userLng], { icon: userIcon })
         .addTo(map)
@@ -93,63 +82,34 @@ export function RetailerMap({ results, userLat, userLng, onSelect, selected }: P
   function renderMarkers(L: typeof import('leaflet'), map: Map, data: StockResult[], cb: (r: Retailer) => void) {
     data.forEach(({ retailer, stock, distanceM: d }) => {
       const isInStock = stock.inStock;
-      const isSelected = selected?.id === retailer.id;
-      
       const icon = L.divIcon({
-        html: `
-          <div style="display: flex; flex-col; align-items: center; cursor: pointer;">
-            <div style="
-              background: #fff; 
-              padding: 4px 10px; 
-              border-radius: 12px; 
-              box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
-              margin-bottom: 4px; 
-              white-space: nowrap; 
-              border: 2px solid ${isSelected ? '#154212' : '#c2c9bb'};
-              transform: translateY(${isSelected ? '0' : '4px'});
-              opacity: ${isSelected ? '1' : '0.8'};
-              transition: all 0.3s;
-            ">
-              <span style="font-size: 10px; font-weight: 800; color: #1b1c1b; text-transform: uppercase;">${retailer.businessName}</span>
-            </div>
-            <div style="
-              width: 24px; 
-              height: 24px; 
-              background: #154212; 
-              border-radius: 50%; 
-              border: 3px solid #fff; 
-              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            "></div>
-          </div>
-        `,
+        html: `<div style="
+          background:${isInStock ? '#16a34a' : '#9ca3af'};
+          color:#fff;font-size:10px;font-weight:700;
+          padding:3px 7px;border-radius:12px;
+          white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.25);
+          border:2px solid #fff;
+        ">${isInStock ? '✓ In Stock' : 'Out of Stock'}</div>`,
         className: '',
-        iconAnchor: [40, 48],
+        iconAnchor: [40, 12],
       });
 
       const marker = L.marker([retailer.lat, retailer.lng], { icon })
         .addTo(map)
         .bindPopup(`
-          <div style="min-width:200px; font-family: 'Plus Jakarta Sans', sans-serif; padding: 4px;">
-            <div style="font-weight: 800; font-size: 14px; color: #1b1c1b; margin-bottom: 2px; text-transform: uppercase; letter-spacing: -0.01em;">${retailer.businessName}</div>
-            <div style="font-size: 11px; color: #72796e; margin-bottom: 10px; font-weight: 600;">${retailer.city} · ${formatDistance(d)}</div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-              <span style="font-size: 12px; font-weight: 800; color: ${isInStock ? '#154212' : '#72796e'}">
-                ${isInStock ? `₹${stock.price}` : 'Out of Stock'}
-              </span>
-              <span style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; background: ${isInStock ? '#9dd09033' : '#f5f3f1'}; color: ${isInStock ? '#154212' : '#72796e'}; padding: 2px 8px; border-radius: 8px;">
-                ${isInStock ? 'In Stock' : 'Unavailable'}
-              </span>
+          <div style="min-width:180px;font-family:sans-serif">
+            <div style="font-weight:700;font-size:13px;margin-bottom:4px">${retailer.businessName}</div>
+            <div style="font-size:11px;color:#6b7280;margin-bottom:4px">${retailer.city} · ${formatDistance(d)}</div>
+            <div style="font-size:12px;margin-bottom:8px;color:${isInStock ? '#16a34a' : '#dc2626'};font-weight:600">
+              ${isInStock ? `✓ In Stock — ₹${stock.price}` : '✗ Out of Stock'}
             </div>
             <a href="https://www.google.com/maps/dir/?api=1&destination=${retailer.lat},${retailer.lng}"
                target="_blank"
-               style="display: flex; align-items: center; justify-content: center; background: #154212; color: #fff; padding: 8px; border-radius: 10px; font-size: 11px; font-weight: 800; text-decoration: none; text-transform: uppercase; letter-spacing: 0.02em;">
-              Get Directions
+               style="display:inline-block;background:#1d4ed8;color:#fff;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none">
+              Get Directions →
             </a>
           </div>
-        `, {
-          closeButton: false,
-          offset: [0, -40]
-        })
+        `)
         .on('click', () => cb(retailer));
 
       markersRef.current.push(marker);

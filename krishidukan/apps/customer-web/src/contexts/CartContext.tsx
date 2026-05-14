@@ -71,20 +71,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } catch { /* quota — ignore */ }
   }, [state, user?.phone]);
 
-  const addToCart = useCallback((productId: string, retailerId: string, qty = 1) => {
-    setState((s) => {
-      const idx = s.cart.findIndex((i) => i.productId === productId && i.retailerId === retailerId);
-      if (idx >= 0) {
-        const next = s.cart.slice();
-        next[idx] = { ...next[idx]!, qty: next[idx]!.qty + qty };
-        return { ...s, cart: next };
-      }
-      return { ...s, cart: [...s.cart, { productId, retailerId, qty, addedAt: Date.now() }] };
-    });
+  // TEMP_DISABLED: Cart feature disabled temporarily — addToCart is a no-op
+  const addToCart = useCallback((_productId: string, _retailerId: string, _qty = 1) => {
+    console.log('[TEMP_DISABLED] addToCart called but cart is disabled');
   }, []);
 
-  const removeFromCart = useCallback((productId: string, retailerId: string) => {
-    setState((s) => ({ ...s, cart: s.cart.filter((i) => !(i.productId === productId && i.retailerId === retailerId)) }));
+  // TEMP_DISABLED: Cart feature disabled temporarily — removeFromCart is a no-op
+  const removeFromCart = useCallback((_productId: string, _retailerId: string) => {
+    console.log('[TEMP_DISABLED] removeFromCart called but cart is disabled');
   }, []);
 
   const toggleWishlist = useCallback((productId: string) => {
@@ -112,7 +106,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, addresses: s.addresses.filter((a) => a.id !== id) }));
   }, []);
 
-  const cartCount = state.cart.reduce((acc, i) => acc + i.qty, 0);
+  // TEMP_DISABLED: Cart feature disabled — cartCount always 0
+  const cartCount = 0;
 
   const value = useMemo<CartState>(() => ({
     cart: state.cart,

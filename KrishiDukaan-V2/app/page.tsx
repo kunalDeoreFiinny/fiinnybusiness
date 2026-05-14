@@ -21,8 +21,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { auth, fetchMarketplaceProducts, fetchStores, syncInitialData, getUserProfile } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { MarketplaceProduct } from '../types/product';
+import { LatLng } from './utils/haversine';
+import { getUserLocation, DEFAULT_LOCATION, DEFAULT_LOCATION_LABEL, GeoResult } from './utils/geolocation';
+import { computeStoreDistances } from './utils/nearby';
 
 import { Navbar } from '../components/shared/navbar';
+import { GuidedTour, TourStep } from '../components/helpers';
 
 type View = 'home' | 'market' | 'hub' | 'product' | 'map' | 'about' | 'profile' | 'login' | 'signup' | 'subscription';
 type UserRole = 'customer' | 'retailer' | 'manufacturer';
@@ -179,6 +183,11 @@ export default function App() {
     return () => window.removeEventListener('popstate', onPopState);
   }, [buildUrl, readRouteFromUrl, resolveViewForAccess]);
 
+  // --- Geolocation state ---
+  const [userLocation, setUserLocation] = useState<LatLng>(DEFAULT_LOCATION);
+  const [locationLabel, setLocationLabel] = useState(DEFAULT_LOCATION_LABEL);
+  const [locationSource, setLocationSource] = useState<'browser' | 'cached' | 'default'>('default');
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -248,6 +257,16 @@ export default function App() {
     });
 
     void loadData();
+
+    // Detect user location
+    getUserLocation().then((result: GeoResult) => {
+      setUserLocation(result.coords);
+      setLocationLabel(result.label);
+      setLocationSource(result.source);
+      setLocationQuery(result.label);
+      setCoordinates(result.coords);
+    });
+
     return () => unsubscribe();
   }, []);
 
@@ -369,6 +388,11 @@ export default function App() {
     return searchedProducts.filter((product) => product.category === selectedCategory);
   }, [searchedProducts, selectedCategory]);
 
+  const storesWithDistance = useMemo(
+    () => computeStoreDistances(allStores, coordinates),
+    [allStores, coordinates]
+  );
+
   const navigateToProduct = (id: string) => {
     navigate('product', { productId: id });
   };
@@ -376,6 +400,51 @@ export default function App() {
   const navigateToMap = (storeId?: string) => {
     navigate('map', { storeId: storeId || null });
   };
+
+  const tourSteps: TourStep[] = useMemo(() => [
+    {
+      selector: '[data-tour="hero"]',
+      title: 'Welcome to Krishidukan',
+      body: 'Your one-stop platform for nearby agricultural supplies. Let’s show you around — it only takes a moment.',
+      side: 'bottom',
+    },
+    {
+      selector: '[data-tour="search"]',
+      title: 'Search anything',
+      body: 'Find products, crops, fertilizers, or nearby stores — try “Urea” or “Tomato Seeds”.',
+      side: 'bottom',
+    },
+    {
+      selector: '[data-tour="location"]',
+      title: 'Your location',
+      body: 'We use your location to show nearby stores, live stock, and delivery range.',
+      side: 'bottom',
+    },
+    {
+      selector: '[data-tour="shop-by-crop"]',
+      title: 'Shop by Crop',
+      body: 'Open a crop hub to see curated seeds, fertilizers, and tools for that crop.',
+      side: 'top',
+    },
+    {
+      selector: '[data-tour-nav="market"]',
+      title: 'Marketplace filters',
+      body: 'Browse products from local stores and filter by category, stock, or distance.',
+      side: 'top',
+    },
+    {
+      selector: '[data-tour-nav="map"]',
+      title: 'Nearby stores',
+      body: 'View nearby agri stores on a map and get directions in one tap.',
+      side: 'top',
+    },
+    {
+      selector: '[data-tour-nav="hub"]',
+      title: 'Crop Hubs',
+      body: 'Targeted recommendations for seeds, nutrition, and irrigation per crop.',
+      side: 'top',
+    },
+  ], []);
 
   const renderView = () => {
     if (loading) return (
@@ -417,10 +486,10 @@ export default function App() {
       case 'product':
         return <ProductDetailView
           products={allProducts}
-          stores={allStores}
           productId={selectedProductId}
           onBack={() => navigate('market')}
           onStoreClick={navigateToMap}
+          storesWithDistance={storesWithDistance}
           onProductClick={navigateToProduct}
           onViewSellerAll={(storeName) => {
             setProductSearch(storeName);
@@ -432,6 +501,7 @@ export default function App() {
           <StoreLocatorView 
             onBack={() => navigate('home')} 
             selectedStoreId={selectedStoreId} 
+            onStoreSelect={setSelectedStoreId}
             stores={searchedStores}
             location={locationQuery}
             onLocationChange={(loc, coords) => {
@@ -509,6 +579,11 @@ export default function App() {
         </AnimatePresence>
       </main>
 
+      {/* Onboarding Tour — only runs on first visit, only on home view */}
+      {currentView === 'home' && !loading && !errorMsg ? (
+        <GuidedTour steps={tourSteps} />
+      ) : null}
+
       {/* Mobile Bottom Nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-surface-container flex items-center justify-around px-4 z-50">
         {[
@@ -520,6 +595,7 @@ export default function App() {
         ].map((item) => (
           <button
             key={item.id}
+            data-tour-nav={item.id}
             onClick={() => navigate(item.id as View)}
             className={`flex flex-col items-center gap-1 transition-colors ${
               currentView === item.id ? 'text-primary' : 'text-on-surface-variant'
