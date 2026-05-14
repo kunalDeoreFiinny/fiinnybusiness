@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { ICONS, PRODUCTS, STORES, INVENTORY } from './constants';
 import HomeView from './views/HomeView';
 import MarketView from './views/MarketView';
@@ -21,7 +21,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { auth, fetchMarketplaceProducts, fetchStores, syncInitialData, getUserProfile } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { MarketplaceProduct } from '../types/product';
-import { useRouter } from 'next/navigation';
 
 import { Navbar } from '../components/shared/navbar';
 
@@ -36,8 +35,9 @@ type UserProfile = {
   productCount?: number;
 };
 
+const VALID_VIEWS: View[] = ['home', 'market', 'hub', 'product', 'map', 'about', 'profile', 'login', 'signup', 'subscription'];
+
 export default function App() {
-  const router = useRouter();
   const [currentView, setCurrentView] = useState<View>('home');
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
@@ -45,7 +45,6 @@ export default function App() {
   const [coordinates, setCoordinates] = useState({ lat: 18.5204, lng: 73.8567 }); // Default Pune
   const [productSearch, setProductSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [language, setLanguage] = useState('EN');
   
   const [user, setUser] = useState<any>(null);
   const [userRole, setUserRole] = useState<UserRole>('customer');
@@ -55,6 +54,86 @@ export default function App() {
   const [allStores, setAllStores] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const resolveViewForAccess = useCallback((view: View): View => {
+    if (
+      (userRole === 'retailer' || userRole === 'manufacturer') &&
+      !userProfile.isPaid &&
+      view !== 'home' &&
+      view !== 'about' &&
+      view !== 'subscription' &&
+      view !== 'login' &&
+      view !== 'signup'
+    ) {
+      return 'subscription';
+    }
+    return view;
+  }, [userRole, userProfile.isPaid]);
+
+  const buildUrl = useCallback((view: View, productId?: string | null, storeId?: string | null) => {
+    const params = new URLSearchParams();
+    if (view !== 'home') params.set('view', view);
+    if (productId) params.set('product', productId);
+    if (storeId) params.set('store', storeId);
+    const query = params.toString();
+    return query ? `/?${query}` : '/';
+  }, []);
+
+  const readRouteFromUrl = useCallback(() => {
+    if (typeof window === 'undefined') {
+      return { view: 'home' as View, productId: null as string | null, storeId: null as string | null };
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const viewParam = params.get('view');
+    const view = VALID_VIEWS.includes(viewParam as View) ? (viewParam as View) : 'home';
+
+    return {
+      view,
+      productId: params.get('product'),
+      storeId: params.get('store')
+    };
+  }, []);
+
+  const navigate = useCallback((view: View, options?: { productId?: string | null; storeId?: string | null; replace?: boolean }) => {
+    const nextView = resolveViewForAccess(view);
+    const nextProductId = options?.productId ?? (nextView === 'product' ? selectedProductId : null);
+    const nextStoreId = options?.storeId ?? (nextView === 'map' ? selectedStoreId : null);
+
+    setCurrentView(nextView);
+    setSelectedProductId(nextProductId);
+    setSelectedStoreId(nextStoreId);
+
+    if (typeof window !== 'undefined') {
+      const nextUrl = buildUrl(nextView, nextProductId, nextStoreId);
+      if (options?.replace) {
+        window.history.replaceState(null, '', nextUrl);
+      } else {
+        window.history.pushState(null, '', nextUrl);
+      }
+    }
+  }, [buildUrl, resolveViewForAccess, selectedProductId, selectedStoreId]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const route = readRouteFromUrl();
+    const routeView = resolveViewForAccess(route.view);
+    setCurrentView(routeView);
+    setSelectedProductId(route.productId);
+    setSelectedStoreId(route.storeId);
+    window.history.replaceState(null, '', buildUrl(routeView, route.productId, route.storeId));
+
+    const onPopState = () => {
+      const next = readRouteFromUrl();
+      setCurrentView(resolveViewForAccess(next.view));
+      setSelectedProductId(next.productId);
+      setSelectedStoreId(next.storeId);
+    };
+
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [buildUrl, readRouteFromUrl, resolveViewForAccess]);
 
   const loadData = async () => {
     try {
@@ -142,15 +221,15 @@ export default function App() {
     });
 
     if ((profile.role === 'retailer' || profile.role === 'manufacturer') && !isPaid) {
-      setCurrentView('subscription');
+      navigate('subscription', { replace: true });
     } else {
-      setCurrentView('home');
+      navigate('home', { replace: true });
     }
   };
 
   const handleSubscriptionSuccess = async () => {
     setUserProfile(prev => ({ ...prev, isPaid: true }));
-    setCurrentView('profile');
+    navigate('profile', { replace: true });
   };
 
   const handleProfileSave = (profile: UserProfile) => {
@@ -160,11 +239,20 @@ export default function App() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      setCurrentView('home');
+      navigate('home', { replace: true });
     } catch (error) {
       console.error('Logout error:', error);
     }
   };
+
+  const storeNameById = useMemo(() => {
+    return new Map(
+      allStores.map((store) => [
+        String(store.id),
+        String(store.name || store.shopName || store.ownerName || '')
+      ])
+    );
+  }, [allStores]);
 
   const searchedProducts = useMemo(() => {
     const query = productSearch.trim().toLowerCase();
@@ -172,37 +260,32 @@ export default function App() {
     return allProducts.filter(p => {
       if (!query) return true;
 
+      const availabilityStoreNames = (p.availability || [])
+        .map((item) => storeNameById.get(item.storeId)?.toLowerCase())
+        .filter((storeName): storeName is string => Boolean(storeName));
+
       return (
         p.name.toLowerCase().includes(query) ||
         (p.fullName && p.fullName.toLowerCase().includes(query)) ||
         (p.description && p.description.toLowerCase().includes(query)) ||
-        (p.category && p.category.toLowerCase().includes(query))
+        (p.category && p.category.toLowerCase().includes(query)) ||
+        p.store.toLowerCase().includes(query) ||
+        availabilityStoreNames.some((storeName) => storeName.includes(query))
       );
     });
-  }, [allProducts, productSearch]);
+  }, [allProducts, productSearch, storeNameById]);
 
   const marketProducts = useMemo(() => {
     if (selectedCategory === 'all') return searchedProducts;
     return searchedProducts.filter((product) => product.category === selectedCategory);
   }, [searchedProducts, selectedCategory]);
 
-  const navigate = (view: View) => {
-    if ((userRole === 'retailer' || userRole === 'manufacturer') && !userProfile.isPaid && 
-        view !== 'home' && view !== 'about' && view !== 'subscription' && view !== 'login' && view !== 'signup') {
-      setCurrentView('subscription');
-      return;
-    }
-    setCurrentView(view);
-  };
-
   const navigateToProduct = (id: string) => {
-    setSelectedProductId(id);
-    navigate('product');
+    navigate('product', { productId: id });
   };
 
   const navigateToMap = (storeId?: string) => {
-    setSelectedStoreId(storeId || null);
-    navigate('map');
+    navigate('map', { storeId: storeId || null });
   };
 
   const renderView = () => {
@@ -243,7 +326,7 @@ export default function App() {
       case 'hub':
         return <HubView />;
       case 'product':
-        return <ProductDetailView products={allProducts} productId={selectedProductId} onBack={() => navigate('market')} onStoreClick={navigateToMap} />;
+        return <ProductDetailView products={allProducts} stores={allStores} productId={selectedProductId} onBack={() => navigate('market')} onStoreClick={navigateToMap} />;
       case 'map':
         return (
           <StoreLocatorView 
@@ -266,7 +349,7 @@ export default function App() {
             onRoleChange={setUserRole}
             onProfileSave={handleProfileSave}
             onRetailerProductSaved={loadData}
-            onNavigate={setCurrentView}
+            onNavigate={navigate}
           />
         );
       case 'login':

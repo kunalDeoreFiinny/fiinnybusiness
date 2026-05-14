@@ -179,7 +179,7 @@ export function Navbar({
               <ICONS.Search className="w-4 h-4 text-outline group-focus-within:text-primary transition-colors shrink-0 ml-3" />
               <input
                 type="text"
-                placeholder="Search by product name..."
+                placeholder="Search by product or shop name..."
                 value={productSearch}
                 onChange={e => setProductSearch(e.target.value)}
                 className="flex-1 bg-transparent border-none focus:ring-0 text-xs text-on-surface px-2 py-2 placeholder-on-surface-variant font-medium"
@@ -275,7 +275,7 @@ export function Navbar({
             <ICONS.Search className="w-4 h-4 text-outline group-focus-within:text-primary transition-colors shrink-0 ml-3" />
             <input
               type="text"
-              placeholder="Search by product name..."
+              placeholder="Search by product or shop name..."
               value={productSearch}
               onChange={e => setProductSearch(e.target.value)}
               className="w-full bg-transparent border-none focus:ring-0 text-xs text-on-surface px-2 py-2.5 placeholder-on-surface-variant font-medium"

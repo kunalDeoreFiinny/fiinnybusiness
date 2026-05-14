@@ -31,7 +31,7 @@ export default function HomeView({ products = PRODUCTS, onProductClick, onHubCli
             >
               Modern Produce,<br />Rooted Locally.
             </motion.h1>
-            <p className="text-on-primary-container text-lg md:text-xl max-w-lg mb-8">
+            <p className="text-white text-lg md:text-xl max-w-lg mb-8">
               Find the freshest harvest and agricultural supplies directly from local stores in your area.
             </p>
 

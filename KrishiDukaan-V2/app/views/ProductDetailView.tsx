@@ -3,21 +3,29 @@ import { ICONS, PRODUCTS, STORES } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 
+type StoreListItem = {
+  id: string;
+  name: string;
+  distance?: string;
+  status?: string;
+  stock?: string[];
+};
+
 interface ProductDetailViewProps {
   products?: MarketplaceProduct[];
+  stores?: StoreListItem[];
   productId: string | null;
   onBack: () => void;
   onStoreClick: (storeId: string) => void;
 }
 
-export default function ProductDetailView({ products = PRODUCTS, productId, onBack, onStoreClick }: ProductDetailViewProps) {
+export default function ProductDetailView({ products = PRODUCTS, stores = STORES, productId, onBack, onStoreClick }: ProductDetailViewProps) {
   const product = products.find(p => p.id === productId) || products[0];
-  const [quantity, setQuantity] = useState(1);
   const [expandedStoreId, setExpandedStoreId] = useState<string | null>(null);
 
-  const availableStores = STORES.filter(store =>
-    product.availability?.some(a => a.storeId === store.id)
-  );
+  const availabilityStoreIds = new Set((product.availability || []).map((item) => item.storeId));
+  const matchingStores = stores.filter((store) => availabilityStoreIds.has(store.id));
+  const availableStores = matchingStores.slice(0, 5);
 
   return (
     <div className="px-4 md:px-10 max-w-7xl mx-auto w-full py-8 flex flex-col gap-10">
@@ -81,10 +89,10 @@ export default function ProductDetailView({ products = PRODUCTS, productId, onBa
                     <span className="block font-bold text-on-surface truncate">{store.name}</span>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-[10px] font-bold text-on-surface-variant flex items-center gap-1">
-                        <ICONS.Location className="w-3 h-3" />{store.distance}
+                        <ICONS.Location className="w-3 h-3" />{store.distance || 'Nearby'}
                       </span>
-                      <span className={`w-1.5 h-1.5 rounded-full ${store.status.includes('Open') ? 'bg-green-500' : 'bg-red-400'}`} />
-                      <span className="text-[10px] font-bold text-on-surface-variant">{store.status.split('•')[0].trim()}</span>
+                      <span className={`w-1.5 h-1.5 rounded-full ${(store.status || '').includes('Open') ? 'bg-green-500' : 'bg-red-400'}`} />
+                      <span className="text-[10px] font-bold text-on-surface-variant">{(store.status || 'Active').split('•')[0].trim()}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -109,12 +117,12 @@ export default function ProductDetailView({ products = PRODUCTS, productId, onBa
                     >
                       <div className="px-4 pb-4 flex flex-col gap-3 border-t border-surface-container">
                         <div className="pt-3 flex flex-wrap gap-1">
-                          {store.stock.map(item => (
+                          {(store.stock || []).map(item => (
                             <span key={item} className="px-2 py-0.5 rounded-lg bg-surface-container text-on-surface-variant text-[9px] font-black uppercase tracking-widest border border-surface-container-highest">
                               {item}
                             </span>
                           ))}
-                          {store.stock.length === 0 && (
+                          {(store.stock || []).length === 0 && (
                             <span className="text-xs text-on-surface-variant">No stock info available</span>
                           )}
                         </div>
