@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { onAuthStateChanged } from "firebase/auth";
 import {
   BarChart3,
   LayoutDashboard,
@@ -9,11 +11,13 @@ import {
   Settings,
   Star,
   UserCircle2,
+  UsersRound,
   X,
 } from "lucide-react";
+import { auth, getUserProfile } from "../../firebase";
 import { cn } from "../_lib/cn";
 
-const nav = [
+const baseNav = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/dashboard/inventory", label: "Inventory", icon: Package },
@@ -22,6 +26,12 @@ const nav = [
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ] as const;
 
+const manufacturerNav = {
+  href: "/dashboard/manufacturer/retailers",
+  label: "Retailer network",
+  icon: UsersRound,
+} as const;
+
 type SidebarProps = {
   mobileOpen: boolean;
   onMobileOpenChange: (open: boolean) => void;
@@ -29,6 +39,31 @@ type SidebarProps = {
 
 export function Sidebar({ mobileOpen, onMobileOpenChange }: SidebarProps) {
   const pathname = usePathname();
+  const [isManufacturer, setIsManufacturer] = useState(false);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setIsManufacturer(false);
+        return;
+      }
+      try {
+        const profile = await getUserProfile(user.uid);
+        setIsManufacturer(profile?.role === "manufacturer");
+      } catch {
+        setIsManufacturer(false);
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const nav = isManufacturer
+    ? [
+        ...baseNav.slice(0, 4),
+        manufacturerNav,
+        ...baseNav.slice(4),
+      ]
+    : [...baseNav];
 
   return (
     <>
