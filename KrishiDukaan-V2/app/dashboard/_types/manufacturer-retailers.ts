@@ -11,6 +11,7 @@ export interface ManufacturerRetailerDoc {
   retailerPhone: string;
   inviteCode: string;
   status: ManufacturerRetailerStatus;
+  claimable?: boolean;
   addedAt?: Timestamp | null;
 }
 

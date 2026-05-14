@@ -44,6 +44,7 @@ function mapDoc(id: string, data: Record<string, unknown>): ManufacturerRetailer
     retailerPhone: String(data.retailerPhone ?? ""),
     inviteCode: String(data.inviteCode ?? ""),
     status: parseStatus(data.status),
+    claimable: typeof data.claimable === "boolean" ? data.claimable : undefined,
     addedAt: (data.addedAt as Timestamp) ?? null,
   };
 }
@@ -120,6 +121,7 @@ export async function createManufacturerRetailerInvite(
     retailerPhone: input.retailerPhone.trim(),
     inviteCode,
     status: "invited",
+    claimable: true,
     addedAt: now,
   });
 

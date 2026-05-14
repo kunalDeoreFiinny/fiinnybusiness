@@ -54,6 +54,8 @@ export default function App() {
   const [allStores, setAllStores] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  /** Preserved `inviteCode` query param for manufacturer → retailer signup links (legacy `invite` also read). */
+  const [signupInviteCode, setSignupInviteCode] = useState<string | null>(null);
 
   const resolveViewForAccess = useCallback((view: View): View => {
     if (
@@ -70,62 +72,104 @@ export default function App() {
     return view;
   }, [userRole, userProfile.isPaid]);
 
-  const buildUrl = useCallback((view: View, productId?: string | null, storeId?: string | null) => {
-    const params = new URLSearchParams();
-    if (view !== 'home') params.set('view', view);
-    if (productId) params.set('product', productId);
-    if (storeId) params.set('store', storeId);
-    const query = params.toString();
-    return query ? `/?${query}` : '/';
-  }, []);
+  const buildUrl = useCallback(
+    (
+      view: View,
+      productId?: string | null,
+      storeId?: string | null,
+      inviteCodeParam?: string | null,
+    ) => {
+      const params = new URLSearchParams();
+      if (view !== 'home') params.set('view', view);
+      if (productId) params.set('product', productId);
+      if (storeId) params.set('store', storeId);
+      const code =
+        inviteCodeParam === undefined
+          ? signupInviteCode?.trim() || null
+          : inviteCodeParam?.trim() || null;
+      if (code) params.set("inviteCode", code);
+      const query = params.toString();
+      return query ? `/?${query}` : '/';
+    },
+    [signupInviteCode],
+  );
 
   const readRouteFromUrl = useCallback(() => {
     if (typeof window === 'undefined') {
-      return { view: 'home' as View, productId: null as string | null, storeId: null as string | null };
+      return {
+        view: 'home' as View,
+        productId: null as string | null,
+        storeId: null as string | null,
+        inviteCode: null as string | null,
+      };
     }
 
     const params = new URLSearchParams(window.location.search);
     const viewParam = params.get('view');
-    const view = VALID_VIEWS.includes(viewParam as View) ? (viewParam as View) : 'home';
+    let view = VALID_VIEWS.includes(viewParam as View) ? (viewParam as View) : 'home';
+    const inviteCode =
+      params.get("inviteCode")?.trim() || params.get("invite")?.trim() || null;
+    if (inviteCode && view === 'home') {
+      view = 'signup';
+    }
 
     return {
       view,
       productId: params.get('product'),
-      storeId: params.get('store')
+      storeId: params.get('store'),
+      inviteCode,
     };
   }, []);
 
-  const navigate = useCallback((view: View, options?: { productId?: string | null; storeId?: string | null; replace?: boolean }) => {
-    const nextView = resolveViewForAccess(view);
-    const nextProductId = options?.productId ?? (nextView === 'product' ? selectedProductId : null);
-    const nextStoreId = options?.storeId ?? (nextView === 'map' ? selectedStoreId : null);
+  const navigate = useCallback(
+    (
+      view: View,
+      options?: {
+        productId?: string | null;
+        storeId?: string | null;
+        replace?: boolean;
+        clearInvite?: boolean;
+      },
+    ) => {
+      const nextView = resolveViewForAccess(view);
+      const nextProductId = options?.productId ?? (nextView === 'product' ? selectedProductId : null);
+      const nextStoreId = options?.storeId ?? (nextView === 'map' ? selectedStoreId : null);
 
-    setCurrentView(nextView);
-    setSelectedProductId(nextProductId);
-    setSelectedStoreId(nextStoreId);
-
-    if (typeof window !== 'undefined') {
-      const nextUrl = buildUrl(nextView, nextProductId, nextStoreId);
-      if (options?.replace) {
-        window.history.replaceState(null, '', nextUrl);
-      } else {
-        window.history.pushState(null, '', nextUrl);
+      if (options?.clearInvite) {
+        setSignupInviteCode(null);
       }
-    }
-  }, [buildUrl, resolveViewForAccess, selectedProductId, selectedStoreId]);
+
+      setCurrentView(nextView);
+      setSelectedProductId(nextProductId);
+      setSelectedStoreId(nextStoreId);
+
+      if (typeof window !== 'undefined') {
+        const inviteForUrl = options?.clearInvite ? null : undefined;
+        const nextUrl = buildUrl(nextView, nextProductId, nextStoreId, inviteForUrl);
+        if (options?.replace) {
+          window.history.replaceState(null, '', nextUrl);
+        } else {
+          window.history.pushState(null, '', nextUrl);
+        }
+      }
+    },
+    [buildUrl, resolveViewForAccess, selectedProductId, selectedStoreId],
+  );
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const route = readRouteFromUrl();
     const routeView = resolveViewForAccess(route.view);
+    setSignupInviteCode(route.inviteCode);
     setCurrentView(routeView);
     setSelectedProductId(route.productId);
     setSelectedStoreId(route.storeId);
-    window.history.replaceState(null, '', buildUrl(routeView, route.productId, route.storeId));
+    window.history.replaceState(null, '', buildUrl(routeView, route.productId, route.storeId, route.inviteCode));
 
     const onPopState = () => {
       const next = readRouteFromUrl();
+      setSignupInviteCode(next.inviteCode);
       setCurrentView(resolveViewForAccess(next.view));
       setSelectedProductId(next.productId);
       setSelectedStoreId(next.storeId);
@@ -221,9 +265,9 @@ export default function App() {
     });
 
     if ((profile.role === 'retailer' || profile.role === 'manufacturer') && !isPaid) {
-      navigate('subscription', { replace: true });
+      navigate('subscription', { replace: true, clearInvite: true });
     } else {
-      navigate('home', { replace: true });
+      navigate('home', { replace: true, clearInvite: true });
     }
   };
 
@@ -255,7 +299,7 @@ export default function App() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      navigate('home', { replace: true });
+      navigate('home', { replace: true, clearInvite: true });
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -390,7 +434,15 @@ export default function App() {
       case 'login':
         return <LoginView onBack={() => navigate('home')} onNavigateToSignup={() => navigate('signup')} onSuccess={handleAuthSuccess} />;
       case 'signup':
-        return <SignupView onBack={() => navigate('home')} onNavigateToLogin={() => navigate('login')} onSuccess={handleAuthSuccess} />;
+        return (
+          <SignupView
+            inviteCode={signupInviteCode}
+            onInviteConsumed={() => setSignupInviteCode(null)}
+            onBack={() => navigate('home', { clearInvite: true })}
+            onNavigateToLogin={() => navigate('login')}
+            onSuccess={handleAuthSuccess}
+          />
+        );
       case 'subscription':
         return <SubscriptionView user={user} role={userRole} onSuccess={handleSubscriptionSuccess} onLogout={handleLogout} />;
       case 'about':

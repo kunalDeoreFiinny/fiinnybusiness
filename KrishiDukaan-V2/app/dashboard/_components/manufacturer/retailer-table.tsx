@@ -1,7 +1,15 @@
 "use client";
 
+import { useState } from "react";
+import { Check, Copy, Mail, MessageCircle } from "lucide-react";
 import type { ManufacturerRetailerRow } from "../../_types/manufacturer-retailers";
 import { cn } from "../../_lib/cn";
+import {
+  buildInviteShareMessage,
+  buildMailtoInviteUrl,
+  buildSignupInviteUrl,
+  buildWhatsAppShareUrl,
+} from "../../../lib/invite/invite-utils";
 
 type RetailerTableProps = {
   rows: ManufacturerRetailerRow[];
@@ -19,6 +27,61 @@ function statusBadge(status: ManufacturerRetailerRow["status"]) {
   }
 }
 
+function RowInviteActions({ row }: { row: ManufacturerRetailerRow }) {
+  const [copied, setCopied] = useState(false);
+  const link = buildSignupInviteUrl(row.inviteCode);
+  const message = buildInviteShareMessage(link);
+  const whatsappHref = buildWhatsAppShareUrl(message);
+  const mailtoHref = buildMailtoInviteUrl({
+    to: row.retailerEmail,
+    subject: "Your KrishiDukan retailer invite",
+    body: message,
+  });
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  if (!row.inviteCode) {
+    return <span className="text-xs text-on-surface-variant">—</span>;
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <button
+        type="button"
+        onClick={copyLink}
+        className="inline-flex items-center gap-1 rounded-lg border border-outline-variant/40 bg-surface-container-low px-2 py-1 text-xs font-medium text-on-surface hover:bg-surface-container"
+      >
+        {copied ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
+        Copy link
+      </button>
+      <a
+        href={whatsappHref}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1 rounded-lg border border-outline-variant/40 bg-surface-container-low px-2 py-1 text-xs font-medium text-on-surface hover:bg-surface-container"
+      >
+        <MessageCircle className="h-3.5 w-3.5" />
+        WhatsApp
+      </a>
+      <a
+        href={mailtoHref}
+        className="inline-flex items-center gap-1 rounded-lg border border-outline-variant/40 bg-surface-container-low px-2 py-1 text-xs font-medium text-on-surface hover:bg-surface-container"
+      >
+        <Mail className="h-3.5 w-3.5" />
+        Email
+      </a>
+    </div>
+  );
+}
+
 export function RetailerTable({ rows, loading }: RetailerTableProps) {
   if (loading) {
     return (
@@ -33,8 +96,8 @@ export function RetailerTable({ rows, loading }: RetailerTableProps) {
       <div className="rounded-2xl border border-dashed border-outline-variant/50 bg-surface-container-low/40 px-6 py-14 text-center">
         <p className="text-base font-semibold text-on-surface">No retailers yet</p>
         <p className="mx-auto mt-2 max-w-md text-sm text-on-surface-variant">
-          Invite a retailer with their email and phone. They will use the invite code to connect to
-          your network when onboarding is ready.
+          Invite a retailer with their email and phone. They will open your signup link to create a
+          retailer account and connect to your network.
         </p>
       </div>
     );
@@ -49,8 +112,8 @@ export function RetailerTable({ rows, loading }: RetailerTableProps) {
               <th className="whitespace-nowrap px-4 py-3 font-medium">Retailer email</th>
               <th className="whitespace-nowrap px-4 py-3 font-medium">Phone</th>
               <th className="whitespace-nowrap px-4 py-3 font-medium">Status</th>
-              <th className="whitespace-nowrap px-4 py-3 font-medium">Invite code</th>
               <th className="whitespace-nowrap px-4 py-3 font-medium">Added</th>
+              <th className="whitespace-nowrap px-4 py-3 font-medium">Invite actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-outline-variant/20">
@@ -70,12 +133,10 @@ export function RetailerTable({ rows, loading }: RetailerTableProps) {
                       {badge.label}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
-                    <code className="rounded-md bg-surface-container px-2 py-1 text-xs font-mono text-on-surface">
-                      {row.inviteCode}
-                    </code>
-                  </td>
                   <td className="whitespace-nowrap px-4 py-3 text-on-surface-variant">{row.addedAtLabel}</td>
+                  <td className="px-4 py-3">
+                    <RowInviteActions row={row} />
+                  </td>
                 </tr>
               );
             })}
