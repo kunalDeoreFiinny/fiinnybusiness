@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { auth, db } from '../firebase';
-import { 
-  createUserWithEmailAndPassword, 
+import {
+  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   updateProfile
 } from 'firebase/auth';
@@ -30,7 +30,7 @@ export default function LoginPage() {
         // Sign In
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
-        
+
         if (userDoc.exists()) {
           const userData = userDoc.data();
           router.push(`/dashboard/${userData.role}`);
@@ -70,7 +70,7 @@ export default function LoginPage() {
           </h2>
           <p className="mt-2 text-sm text-gray-600">
             {isLogin ? "Don't have an account? " : "Already have an account? "}
-            <button 
+            <button
               onClick={() => setIsLogin(!isLogin)}
               className="font-medium text-green-600 hover:text-green-500"
             >

@@ -172,6 +172,26 @@ function getMinProductDistance(
   return min;
 }
 
+/** Normalize Firestore address (string or structured object) for display and search. */
+export function storeAddressToDisplayString(address: unknown): string {
+  if (address == null) return '';
+  if (typeof address === 'string') return address.trim();
+  if (typeof address === 'object') {
+    const o = address as Record<string, unknown>;
+    const pick = (k: string) => {
+      const v = o[k];
+      if (typeof v === 'string') return v.trim();
+      if (v != null && typeof v !== 'object') return String(v).trim();
+      return '';
+    };
+    const parts = [pick('line1'), pick('line2'), pick('city'), pick('district'), pick('state'), pick('pincode')].filter(
+      Boolean
+    );
+    return parts.join(', ');
+  }
+  return String(address).trim();
+}
+
 /**
  * Filter stores by a text query.
  * Matches against: business name, city, district, villages (from address).
@@ -185,7 +205,7 @@ export function filterStoresByQuery(
 
   return stores.filter((store) => {
     const name = (store.name || '').toLowerCase();
-    const address = (store.address || '').toLowerCase();
+    const address = storeAddressToDisplayString(store.address).toLowerCase();
     const owner = (store.ownerName || '').toLowerCase();
     return name.includes(q) || address.includes(q) || owner.includes(q);
   });

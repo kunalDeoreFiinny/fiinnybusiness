@@ -139,6 +139,8 @@ export default function App() {
       setUserLocation(result.coords);
       setLocationLabel(result.label);
       setLocationSource(result.source);
+      setLocationQuery(result.label);
+      setCoordinates(result.coords);
     });
 
     return () => unsubscribe();
@@ -201,6 +203,11 @@ export default function App() {
     if (selectedCategory === 'all') return searchedProducts;
     return searchedProducts.filter((product) => product.category === selectedCategory);
   }, [searchedProducts, selectedCategory]);
+
+  const storesWithDistance = useMemo(
+    () => computeStoreDistances(allStores, coordinates),
+    [allStores, coordinates]
+  );
 
   const navigate = (view: View) => {
     if ((userRole === 'retailer' || userRole === 'manufacturer') && !userProfile.isPaid && 
@@ -265,6 +272,7 @@ export default function App() {
           <StoreLocatorView 
             onBack={() => navigate('home')} 
             selectedStoreId={selectedStoreId} 
+            onStoreSelect={setSelectedStoreId}
             stores={allStores}
             location={locationQuery}
             onLocationChange={(loc, coords) => {

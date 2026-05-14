@@ -6,6 +6,7 @@ import { ICONS } from '../../app/constants';
 import { auth, getUserProfile } from '../../app/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { useEffect, useState } from 'react';
+import { reverseGeocodeToDisplay } from '../../app/utils/geolocation';
 
 type View = 'home' | 'market' | 'hub' | 'product' | 'map' | 'about' | 'profile' | 'login' | 'signup' | 'subscription';
 
@@ -46,38 +47,19 @@ export function Navbar({
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
+        const { latitude, longitude } = position.coords;
+        const coords = { lat: latitude, lng: longitude };
+
         try {
-          const { latitude, longitude } = position.coords;
-          const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-          
-          const response = await fetch(
-            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`
+          const label = await reverseGeocodeToDisplay(
+            latitude,
+            longitude,
+            process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
           );
-          
-          const data = await response.json();
-          
-          if (data.status === 'OK' && data.results.length > 0) {
-            const result = data.results[0];
-            const addressComponents = result.address_components;
-            
-            let city = '';
-            let state = '';
-            
-            for (const component of addressComponents) {
-              if (component.types.includes('locality')) {
-                city = component.long_name;
-              } else if (component.types.includes('administrative_area_level_1')) {
-                state = component.long_name;
-              }
-            }
-            
-            const displayLocation = city && state ? `${city}, ${state}` : result.formatted_address;
-            if (onLocationChange) onLocationChange(displayLocation, { lat: latitude, lng: longitude });
-          } else {
-            if (onLocationChange) onLocationChange('Address not found');
-          }
-        } catch (error) {
-          if (onLocationChange) onLocationChange('Error fetching address');
+          if (onLocationChange) onLocationChange(label, coords);
+        } catch {
+          const label = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+          if (onLocationChange) onLocationChange(label, coords);
         } finally {
           setIsFetchingLocation(false);
         }
@@ -90,11 +72,18 @@ export function Navbar({
   };
 
   useEffect(() => {
-    // Only auto-fetch if we're at the default and not on dashboard
-    if (locationQuery === 'Pune, Maharashtra' && !isDashboard) {
-      fetchLocation();
+    if (isDashboard) return;
+    const shouldAutoLocate =
+      locationQuery === 'Pune, Maharashtra' ||
+      locationQuery === 'Address not found' ||
+      locationQuery === 'Error fetching address';
+
+    if (shouldAutoLocate) {
+      void fetchLocation();
     }
-    
+  }, [locationQuery, isDashboard]);
+
+  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
@@ -196,7 +185,7 @@ export function Navbar({
             title="Click to refresh location"
           >
             <ICONS.Location className={`w-3.5 h-3.5 text-primary shrink-0 ${isFetchingLocation ? 'animate-bounce' : 'group-hover:scale-110 transition-transform'}`} />
-            <span className="text-xs text-on-surface font-semibold truncate max-w-[120px]">
+            <span className="text-xs text-on-surface font-semibold truncate max-w-[120px] md:max-w-[220px]" title={locationQuery}>
               {locationQuery}
             </span>
           </div>

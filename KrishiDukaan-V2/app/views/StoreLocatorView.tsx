@@ -2,12 +2,16 @@
 
 import { ICONS } from '../constants';
 import { motion } from 'framer-motion';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { GoogleMap, useJsApiLoader, MarkerF } from '@react-google-maps/api';
+import { LatLng } from '../utils/haversine';
+import { cacheLocation, reverseGeocodeToDisplay } from '../utils/geolocation';
+import { filterStoresByQuery, storeAddressToDisplayString, StoreWithDistance } from '../utils/nearby';
 
 interface StoreLocatorViewProps {
   onBack: () => void;
   selectedStoreId?: string | null;
+  onStoreSelect?: (storeId: string) => void;
   stores?: any[];
   location?: string;
   onLocationChange?: (location: string, coordinates?: { lat: number, lng: number }) => void;
@@ -17,24 +21,36 @@ interface StoreLocatorViewProps {
 export default function StoreLocatorView({ 
   onBack, 
   selectedStoreId, 
+  onStoreSelect,
   stores = [], 
   location = 'Pune, Maharashtra',
   onLocationChange,
   userCoords = { lat: 18.5204, lng: 73.8567 }
 }: StoreLocatorViewProps) {
-  const focusedStore = (stores.length > 0 ? (stores.find(s => s.id === selectedStoreId) || stores[0]) : null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [storeSearch, setStoreSearch] = useState('');
+  const [showMobileMap, setShowMobileMap] = useState(false);
 
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
   });
 
+  const displayedStores = useMemo(() => {
+    return filterStoresByQuery(stores as StoreWithDistance[], storeSearch);
+  }, [stores, storeSearch]);
+
+  const focusedStore =
+    displayedStores.find(s => s.id === selectedStoreId) || displayedStores[0] || null;
+
   // Calculate center: use focusedStore if available, else userCoords
   const getCenter = () => {
     if (focusedStore) {
-      const lat = focusedStore.location?.lat || focusedStore.location?.latitude;
-      const lng = focusedStore.location?.lng || focusedStore.location?.longitude;
+      const loc = focusedStore.location as
+        | { lat?: number; lng?: number; latitude?: number; longitude?: number }
+        | undefined;
+      const lat = loc?.lat ?? loc?.latitude;
+      const lng = loc?.lng ?? loc?.longitude;
       if (lat && lng) return { lat: Number(lat), lng: Number(lng) };
     }
     return userCoords;
@@ -53,15 +69,8 @@ export default function StoreLocatorView({
     }
   }, [map, center]);
 
-  // Filter stores by search query (matches name, city, district, villages from address)
-  const displayedStores = useMemo(() => {
-    return filterStoresByQuery(stores, storeSearch);
-  }, [stores, storeSearch]);
-
-  const focusedStore = displayedStores.find(s => s.id === selectedStoreId) || displayedStores[0] || null;
-
   const handleStoreClick = (storeId: string) => {
-    setSelectedStoreId(storeId);
+    onStoreSelect?.(storeId);
   };
 
   const handleGetDirections = (store: StoreWithDistance) => {
@@ -76,11 +85,15 @@ export default function StoreLocatorView({
   const handleLocateMe = () => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         const coords: LatLng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        const label = `${coords.lat.toFixed(4)}°N, ${coords.lng.toFixed(4)}°E`;
+        const label = await reverseGeocodeToDisplay(
+          coords.lat,
+          coords.lng,
+          process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+        );
         cacheLocation(coords, label);
-        onLocationChange?.(coords, label);
+        onLocationChange?.(label, coords);
       },
       () => {
         // silently ignore — keep current location
@@ -168,25 +181,43 @@ export default function StoreLocatorView({
               className="flex items-center gap-2 text-xs font-bold text-primary bg-primary/5 px-3 py-1.5 rounded-full hover:bg-primary/10 transition-colors"
             >
               <ICONS.MyPosition className="w-3.5 h-3.5" />
-              {locationLabel}
+              {location}
             </button>
           </div>
 
-          {/* Store search — matches name/city/district/villages */}
-          <div className="flex items-center bg-surface-container-low rounded-2xl px-4 py-3 mb-4 border border-outline-variant group focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
-            <ICONS.Search className="w-4 h-4 text-outline mr-3 group-focus-within:text-primary transition-colors shrink-0" />
+          {/* Location search (geocode on Enter) */}
+          <div className="flex items-center bg-surface-container-low rounded-2xl px-4 py-3 mb-3 border border-outline-variant group focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+            <ICONS.Location className="w-4 h-4 text-outline mr-3 shrink-0" />
             <input
               type="text"
               value={location}
               onChange={handleLocationChange}
-              placeholder="Enter your location..."
+              onKeyDown={handleLocationSubmit}
+              placeholder="Enter your location…"
               className="bg-transparent border-none w-full focus:ring-0 text-sm text-on-surface font-semibold placeholder:font-normal"
             />
-            {storeSearch && (
-              <button onClick={() => setStoreSearch('')} className="text-outline hover:text-on-surface transition-colors ml-2">
+          </div>
+
+          {/* Store name / area search */}
+          <div className="flex items-center bg-surface-container-low rounded-2xl px-4 py-3 mb-4 border border-outline-variant group focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+            <ICONS.Search className="w-4 h-4 text-outline mr-3 group-focus-within:text-primary transition-colors shrink-0" />
+            <input
+              type="text"
+              value={storeSearch}
+              onChange={(e) => setStoreSearch(e.target.value)}
+              placeholder="Search stores by name or area…"
+              className="bg-transparent border-none w-full focus:ring-0 text-sm text-on-surface font-semibold placeholder:font-normal"
+            />
+            {storeSearch ? (
+              <button
+                type="button"
+                onClick={() => setStoreSearch('')}
+                className="text-outline hover:text-on-surface transition-colors ml-2 shrink-0"
+                aria-label="Clear store search"
+              >
                 <ICONS.Minus className="w-4 h-4" />
               </button>
-            )}
+            ) : null}
           </div>
 
           <div className="flex gap-2 overflow-x-auto pb-4 hide-scrollbar">
@@ -208,7 +239,9 @@ export default function StoreLocatorView({
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4 bg-surface-container-lowest">
-          {displayedStores.map((store, i) => (
+          {displayedStores.map((store, i) => {
+            const addressLine = storeAddressToDisplayString(store.address);
+            return (
             <motion.div
               key={store.id}
               initial={{ x: -20, opacity: 0 }}
@@ -244,9 +277,9 @@ export default function StoreLocatorView({
                   <div className={`w-2 h-2 rounded-full ${store.status?.includes('Open') ? 'bg-green-500' : 'bg-error'}`} />
                   <span className="text-xs font-bold text-on-surface-variant">{store.status}</span>
                 </div>
-                {store.address && (
-                  <p className="text-[11px] text-on-surface-variant font-medium truncate">{store.address}</p>
-                )}
+                {addressLine ? (
+                  <p className="text-[11px] text-on-surface-variant font-medium truncate">{addressLine}</p>
+                ) : null}
                 <div className="flex flex-wrap gap-2">
                   {store.stock?.map(item => (
                     <span key={item} className="px-2 py-0.5 rounded-lg bg-surface-container-high text-on-surface-variant text-[9px] font-black uppercase tracking-widest border border-surface-container-highest">
@@ -271,7 +304,8 @@ export default function StoreLocatorView({
                 </button>
               </div>
             </motion.div>
-          ))}
+            );
+          })}
 
           {displayedStores.length === 0 && storeSearch && (
             <div className="p-8 text-center">
@@ -285,18 +319,21 @@ export default function StoreLocatorView({
         </div>
       </div>
 
-      {/* Map Content */}
-      <div className="hidden md:block flex-1 relative bg-surface-container-high overflow-hidden">
+      {/* Map — Google Maps only (Leaflet removed; avoids SSR window issues) */}
+      <div
+        className={`relative flex-1 min-h-[280px] bg-surface-container-high overflow-hidden ${
+          showMobileMap ? 'flex' : 'hidden'
+        } md:flex`}
+      >
         {isLoaded ? (
           <GoogleMap
             mapContainerStyle={mapContainerStyle}
-            center={userCoords}
+            center={center}
             zoom={13}
-            onLoad={map => setMap(map)}
+            onLoad={(m) => setMap(m)}
             onUnmount={onUnmount}
             options={mapOptions}
           >
-            {/* User Location Marker */}
             <MarkerF
               position={userCoords}
               icon={{
@@ -305,26 +342,37 @@ export default function StoreLocatorView({
                 fillOpacity: 1,
                 strokeWeight: 4,
                 strokeColor: '#FFFFFF',
-                scale: 8
+                scale: 8,
               }}
             />
 
-            {/* Store Markers */}
-            {stores.map(store => {
-              const lat = store.location?.lat || store.location?.latitude;
-              const lng = store.location?.lng || store.location?.longitude;
-              if (!lat || !lng) return null;
-              
+            {displayedStores.map((store) => {
+              const loc = store.location as
+                | { lat?: number; lng?: number; latitude?: number; longitude?: number }
+                | undefined;
+              const lat = loc?.lat ?? loc?.latitude;
+              const lng = loc?.lng ?? loc?.longitude;
+              if (lat == null || lng == null || Number(lat) === 0 || Number(lng) === 0) return null;
+              const pos = { lat: Number(lat), lng: Number(lng) };
+              const isSelected = store.id === selectedStoreId;
+
               return (
                 <MarkerF
                   key={store.id}
-                  position={{ lat: Number(lat), lng: Number(lng) }}
+                  position={pos}
                   title={store.name}
+                  icon={{
+                    path: google.maps.SymbolPath.CIRCLE,
+                    fillColor: isSelected ? '#EA580C' : '#16A34A',
+                    fillOpacity: 1,
+                    strokeWeight: 2,
+                    strokeColor: '#FFFFFF',
+                    scale: isSelected ? 10 : 7,
+                  }}
                   onClick={() => {
-                    if (map) {
-                      map.panTo({ lat: Number(lat), lng: Number(lng) });
-                      map.setZoom(15);
-                    }
+                    handleStoreClick(store.id);
+                    map?.panTo(pos);
+                    map?.setZoom(15);
                   }}
                 />
               );
@@ -335,36 +383,30 @@ export default function StoreLocatorView({
             <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
           </div>
         )}
-        
-        {/* Map UI */}
-        <div className="absolute top-10 right-10 flex flex-col gap-4 z-10">
-          <button 
+
+        <div className="absolute top-10 right-10 flex flex-col gap-4 z-10 pointer-events-auto">
+          <button
+            type="button"
             onClick={() => map?.panTo(userCoords)}
             className="w-12 h-12 bg-white rounded-2xl shadow-xl flex items-center justify-center text-primary hover:scale-110 active:scale-90 transition-all border border-surface-container group"
           >
             <ICONS.MyPosition className="w-6 h-6 group-hover:animate-pulse" />
           </button>
           <div className="flex flex-col bg-white rounded-3xl shadow-xl border border-surface-container overflow-hidden">
-            <button 
+            <button
+              type="button"
               onClick={() => map?.setZoom((map.getZoom() || 13) + 1)}
               className="w-12 h-12 flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors border-b border-surface-container"
             >
               <ICONS.Plus className="w-5 h-5" />
             </button>
-            <button 
+            <button
+              type="button"
               onClick={() => map?.setZoom((map.getZoom() || 13) - 1)}
               className="w-12 h-12 flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors"
             >
               <ICONS.Minus className="w-5 h-5" />
             </button>
-          </div>
-          <div className="h-[calc(100vh-60px)]">
-            <LeafletMap
-              userLocation={userLocation}
-              stores={displayedStores}
-              selectedStoreId={selectedStoreId}
-              onStoreSelect={handleStoreClick}
-            />
           </div>
         </div>
       </div>
