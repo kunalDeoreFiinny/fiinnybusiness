@@ -4,22 +4,47 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo } from 'react';
 import { StoreWithDistance } from '../utils/nearby';
 
+type StoreListItem = {
+  id: string;
+  name: string;
+  distance?: string;
+  status?: string;
+  stock?: string[];
+};
+
 interface ProductDetailViewProps {
   products?: MarketplaceProduct[];
+  stores?: StoreListItem[];
   productId: string | null;
   onBack: () => void;
   onStoreClick: (storeId: string) => void;
+  onProductClick?: (id: string) => void;
+  onViewSellerAll?: (storeName: string) => void;
   storesWithDistance?: StoreWithDistance[];
 }
 
-export default function ProductDetailView({ products = PRODUCTS, productId, onBack, onStoreClick, storesWithDistance = [] }: ProductDetailViewProps) {
+export default function ProductDetailView({ 
+  products = PRODUCTS, 
+  stores = STORES, 
+  productId, 
+  onBack, 
+  onStoreClick, 
+  onProductClick, 
+  onViewSellerAll,
+  storesWithDistance = [] 
+}: ProductDetailViewProps) {
   const product = products.find(p => p.id === productId) || products[0];
-  const [quantity, setQuantity] = useState(1);
   const [expandedStoreId, setExpandedStoreId] = useState<string | null>(null);
+
+  const sellerProducts = products.filter(p => {
+    if (p.id === product.id) return false;
+    if (product.retailerId && p.retailerId) return p.retailerId === product.retailerId;
+    return product.store !== 'Local Store' && p.store === product.store;
+  }).slice(0, 6);
 
   // Use storesWithDistance for computed distances, fallback to STORES constant
   const availableStores = useMemo(() => {
-    const sourceStores = storesWithDistance.length > 0 ? storesWithDistance : STORES;
+    const sourceStores = storesWithDistance.length > 0 ? storesWithDistance : stores;
     const filtered = sourceStores.filter(store =>
       product.availability?.some(a => a.storeId === store.id)
     );
@@ -28,7 +53,7 @@ export default function ProductDetailView({ products = PRODUCTS, productId, onBa
       return [...filtered].sort((a: any, b: any) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
     }
     return filtered;
-  }, [product, storesWithDistance]);
+  }, [product, storesWithDistance, stores]);
 
   return (
     <div className="px-4 md:px-10 max-w-7xl mx-auto w-full py-8 flex flex-col gap-10">
@@ -81,32 +106,41 @@ export default function ProductDetailView({ products = PRODUCTS, productId, onBa
                 }`}
               >
                 {/* Always-visible summary row */}
-                <button
-                  onClick={() => setExpandedStoreId(isExpanded ? null : store.id)}
-                  className="w-full flex items-center gap-4 p-4 text-left"
-                >
-                  <div className={`p-2.5 rounded-xl transition-colors ${isExpanded ? 'bg-primary text-white' : 'bg-white shadow-sm text-on-surface-variant'}`}>
-                    <ICONS.Market className="w-5 h-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="block font-bold text-on-surface truncate">{store.name}</span>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[10px] font-bold text-on-surface-variant flex items-center gap-1">
-                        <ICONS.Location className="w-3 h-3" />{(store as any).distanceLabel || store.distance}
-                      </span>
-                      <span className={`w-1.5 h-1.5 rounded-full ${store.status.includes('Open') ? 'bg-green-500' : 'bg-red-400'}`} />
-                      <span className="text-[10px] font-bold text-on-surface-variant">{store.status.split('•')[0].trim()}</span>
+                <div className="w-full flex items-center gap-2 p-4">
+                  <button
+                    onClick={() => setExpandedStoreId(isExpanded ? null : store.id)}
+                    className="flex-1 min-w-0 flex items-center gap-4 text-left"
+                  >
+                    <div className={`p-2.5 rounded-xl transition-colors ${isExpanded ? 'bg-primary text-white' : 'bg-white shadow-sm text-on-surface-variant'}`}>
+                      <ICONS.Market className="w-5 h-5" />
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
-                      availability?.stockLevel === 'In Stock' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
-                    }`}>
-                      {availability?.stockLevel}
-                    </span>
-                    <ICONS.ChevronRight className={`w-4 h-4 text-outline transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                  </div>
-                </button>
+                    <div className="flex-1 min-w-0">
+                      <span className="block font-bold text-on-surface truncate">{store.name}</span>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px] font-bold text-on-surface-variant flex items-center gap-1">
+                          <ICONS.Location className="w-3 h-3" />{(store as any).distanceLabel || store.distance || 'Nearby'}
+                        </span>
+                        <span className={`w-1.5 h-1.5 rounded-full ${(store.status || '').includes('Open') ? 'bg-green-500' : 'bg-red-400'}`} />
+                        <span className="text-[10px] font-bold text-on-surface-variant">{(store.status || 'Active').split('•')[0].trim()}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
+                        availability?.stockLevel === 'In Stock' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                      }`}>
+                        {availability?.stockLevel}
+                      </span>
+                      <ICONS.ChevronRight className={`w-4 h-4 text-outline transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => onStoreClick(store.id)}
+                    className="shrink-0 inline-flex items-center justify-center gap-1.5 bg-primary text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all"
+                  >
+                    <ICONS.Directions className="w-3.5 h-3.5" />
+                    Map
+                  </button>
+                </div>
 
                 {/* Expanded details */}
                 <AnimatePresence>
@@ -120,23 +154,17 @@ export default function ProductDetailView({ products = PRODUCTS, productId, onBa
                     >
                       <div className="px-4 pb-4 flex flex-col gap-3 border-t border-surface-container">
                         <div className="pt-3 flex flex-wrap gap-1">
-                          {store.stock.map(item => (
+                          {(store.stock || []).map(item => (
                             <span key={item} className="px-2 py-0.5 rounded-lg bg-surface-container text-on-surface-variant text-[9px] font-black uppercase tracking-widest border border-surface-container-highest">
                               {item}
                             </span>
                           ))}
-                          {store.stock.length === 0 && (
+                          {(store.stock || []).length === 0 && (
                             <span className="text-xs text-on-surface-variant">No stock info available</span>
                           )}
                         </div>
                         <div className="flex gap-2">
-                          <button
-                            onClick={() => onStoreClick(store.id)}
-                            className="flex-1 bg-primary text-white py-2.5 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-1.5 hover:scale-[1.02] active:scale-95 transition-all"
-                          >
-                            <ICONS.Directions className="w-3.5 h-3.5" /> View on Map
-                          </button>
-                          <button className="flex-1 border border-outline-variant text-on-surface py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-surface-container transition-colors flex items-center justify-center gap-1.5">
+                          <button className="w-full border border-outline-variant text-on-surface py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-surface-container transition-colors flex items-center justify-center gap-1.5">
                             <ICONS.Phone className="w-3.5 h-3.5" /> Call Store
                           </button>
                         </div>
@@ -250,6 +278,44 @@ export default function ProductDetailView({ products = PRODUCTS, productId, onBa
           </div>
         </div>
       </section>
+
+      {/* Seller Portfolio */}
+      {sellerProducts.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-2xl font-bold text-on-surface">More from {product.store}</h2>
+              <p className="text-xs text-on-surface-variant mt-0.5">Other products listed by this seller</p>
+            </div>
+            {onViewSellerAll && (
+              <button
+                onClick={() => onViewSellerAll(product.store)}
+                className="text-xs font-black uppercase tracking-widest text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
+              >
+                View All <ICONS.ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          <div className="flex gap-4 overflow-x-auto pb-2 hide-scrollbar">
+            {sellerProducts.map(p => (
+              <div
+                key={p.id}
+                onClick={() => onProductClick?.(p.id)}
+                className="shrink-0 w-44 cursor-pointer rounded-2xl border border-surface-container bg-white shadow-sm hover:shadow-md hover:border-primary/30 transition-all hover:scale-[1.02] overflow-hidden"
+              >
+                <div className="aspect-square overflow-hidden bg-surface-container-low">
+                  <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                </div>
+                <div className="p-3 flex flex-col gap-0.5">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-primary">{p.category}</span>
+                  <p className="font-bold text-on-surface text-sm truncate leading-tight">{p.name}</p>
+                  <span className="text-secondary font-extrabold text-sm">₹{p.price}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

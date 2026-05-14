@@ -10,6 +10,8 @@ export type MarketplaceProduct = {
   stock: string;
   store: string;
   distance: string;
+  retailerId?: string;
+  manufacturerId?: string;
   availability?: {
     storeId: string;
     stockLevel: string;
