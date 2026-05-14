@@ -350,7 +350,7 @@ export default function StoreLocatorView({
           {displayedStores.length === 0 && storeSearch && (
             <div className="p-8 text-center">
               <ICONS.Search className="w-8 h-8 text-outline mx-auto mb-3" />
-              <p className="text-sm font-bold text-on-surface-variant">No stores match "{storeSearch}"</p>
+              <p className="text-sm font-bold text-on-surface-variant">No stores match &ldquo;{storeSearch}&rdquo;</p>
               <p className="text-xs text-outline mt-1">Try a different search term</p>
             </div>
           )}

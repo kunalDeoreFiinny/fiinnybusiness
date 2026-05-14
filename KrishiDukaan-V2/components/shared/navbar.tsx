@@ -222,6 +222,7 @@ export function Navbar({
     { id: 'map', label: t('stores') }
   ];
   const canAccessDashboard = (userRole === 'retailer' || userRole === 'manufacturer') && userProfile.isPaid && !isDashboard;
+  const isAdmin = userRole === 'admin';
 
   const SearchDropdown = () => (
     <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-2xl shadow-ambient border border-surface-container z-[100] overflow-hidden max-h-[70vh] overflow-y-auto">
@@ -424,6 +425,17 @@ export function Navbar({
 
               {user ? (
                 <>
+                  {isAdmin && (
+                    <button
+                      onClick={() => {
+                        setIsAccountMenuOpen(false);
+                        router.push('/admin');
+                      }}
+                      className="w-full text-left px-2.5 py-2 text-xs font-bold text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                    >
+                      Admin Panel
+                    </button>
+                  )}
                   {canAccessDashboard && (
                     <button
                       onClick={() => {

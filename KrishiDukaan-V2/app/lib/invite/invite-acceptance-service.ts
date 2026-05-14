@@ -65,7 +65,7 @@ export async function acceptManufacturerInvite(params: {
   const initial = await findInviteByCode(code);
   const pre = precheckInviteForAcceptance(initial, params.uid);
   if (!pre.ok) {
-    return { ok: false, message: mapInviteAcceptanceError(pre.reason) };
+    return { ok: false, message: mapInviteAcceptanceError((pre as { ok: false; reason: any }).reason) };
   }
 
   const ref = doc(db, COLLECTION, pre.docId);
@@ -80,7 +80,7 @@ export async function acceptManufacturerInvite(params: {
       const row = mapInviteSnapshot(snap.id, snap.data() as Record<string, unknown>);
       const check = precheckInviteForAcceptance(row, params.uid);
       if (!check.ok) {
-        throw new Error(check.reason);
+        throw new Error((check as { ok: false; reason: string }).reason);
       }
 
       if (row.status === "active" && row.retailerId.trim() === params.uid) {
