@@ -1,6 +1,7 @@
 import { MarketplaceProduct } from "../../types/product";
 import { ICONS, PRODUCTS } from '../constants';
 import { motion } from 'framer-motion';
+import { HelperIcon, HelperTooltip } from '../../components/helpers';
 
 interface MarketViewProps {
   products?: MarketplaceProduct[];
@@ -47,14 +48,34 @@ export default function MarketView({
           ))}
         </div>
         
-        <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 bg-white border border-surface-container-highest px-4 py-2.5 rounded-2xl text-sm font-bold shadow-sm hover:bg-surface-container transition-colors">
-            <ICONS.Efficiency className="w-4 h-4 rotate-90" /> Filter
-          </button>
-          <div className="flex items-center gap-2 bg-surface-container-low px-4 py-2.5 rounded-2xl text-sm font-bold border border-transparent">
-            <ICONS.Location className="w-4 h-4 text-secondary" />
-            <span>Within 5km</span>
-            <ICONS.ChevronRight className="w-4 h-4 rotate-90" />
+        <div className="flex items-center gap-3" data-tour="market-filters">
+          <div className="flex items-center gap-1">
+            <button className="flex items-center gap-2 bg-white border border-surface-container-highest px-4 py-2.5 rounded-2xl text-sm font-bold shadow-sm hover:bg-surface-container transition-colors">
+              <ICONS.Efficiency className="w-4 h-4 rotate-90" /> Filter
+            </button>
+            <HelperIcon
+              size="xs"
+              variant="ghost"
+              side="bottom"
+              title="Filters"
+              ariaLabel="Filter help"
+              content="Narrow products by category, availability, or nearby stores."
+            />
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2 bg-surface-container-low px-4 py-2.5 rounded-2xl text-sm font-bold border border-transparent">
+              <ICONS.Location className="w-4 h-4 text-secondary" />
+              <span>Within 5km</span>
+              <ICONS.ChevronRight className="w-4 h-4 rotate-90" />
+            </div>
+            <HelperIcon
+              size="xs"
+              variant="ghost"
+              side="bottom"
+              title="Distance"
+              ariaLabel="Distance help"
+              content="Increase distance to discover more stores and products."
+            />
           </div>
         </div>
       </div>
@@ -71,10 +92,16 @@ export default function MarketView({
           >
             <div className="aspect-[4/3] relative overflow-hidden bg-surface-container">
               <img src={product.image} alt={product.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-              <div className="absolute top-3 left-3">
-                <span className="bg-primary-container/90 backdrop-blur-md text-on-primary-container text-[10px] uppercase font-black px-2 py-0.5 rounded-full shadow-sm">
-                  In-Stock
-                </span>
+              <div className="absolute top-3 left-3" onClick={(e) => e.stopPropagation()}>
+                <HelperTooltip
+                  side="bottom"
+                  title="Stock"
+                  content="“Low Stock” means limited quantity available nearby."
+                >
+                  <span className="bg-primary-container/90 backdrop-blur-md text-on-primary-container text-[10px] uppercase font-black px-2 py-0.5 rounded-full shadow-sm cursor-help">
+                    In-Stock
+                  </span>
+                </HelperTooltip>
               </div>
             </div>
             

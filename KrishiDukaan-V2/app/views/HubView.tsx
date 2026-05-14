@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { ICONS } from '../constants';
 import { motion } from 'framer-motion';
 import { fetchHubs, Hub } from '../firebase';
+import { HelperIcon } from '../../components/helpers';
 
 const FALLBACK_HUBS: Hub[] = [
   {
@@ -152,7 +153,8 @@ export default function HubView() {
     <div className="px-4 md:px-10 max-w-7xl mx-auto w-full py-8 flex flex-col gap-8">
       
       {/* Hub Selector */}
-      <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+      <div className="flex items-center gap-2" data-tour="hub-tabs">
+        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide flex-1">
         {hubs.map((hub) => (
           <button
             key={hub.id}
@@ -166,6 +168,14 @@ export default function HubView() {
             {hub.name} Hub
           </button>
         ))}
+        </div>
+        <HelperIcon
+          size="sm"
+          side="left"
+          title="Hubs"
+          ariaLabel="Hub tabs help"
+          content="Each hub contains curated seeds, fertilizers, and tools for that crop."
+        />
       </div>
 
       {/* Hero */}
@@ -179,7 +189,17 @@ export default function HubView() {
           <div className="absolute inset-0 bg-gradient-to-t from-on-surface via-on-surface/40 to-transparent opacity-80" />
         </div>
         <div className="relative z-10">
-          <span className="bg-primary-container text-on-primary-container text-[10px] font-black uppercase px-3 py-1 rounded-full mb-3 inline-block shadow-sm">Featured Crop</span>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="bg-primary-container text-on-primary-container text-[10px] font-black uppercase px-3 py-1 rounded-full inline-block shadow-sm">Featured Crop</span>
+            <HelperIcon
+              size="xs"
+              variant="onDark"
+              side="right"
+              title="Featured Crop"
+              ariaLabel="Featured crop help"
+              content="Explore agricultural solutions tailored for this crop."
+            />
+          </div>
           <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight">{selectedHub.name} Hub</h1>
           <p className="text-surface-container-low mt-2 max-w-md text-sm md:text-base">{selectedHub.tagline}</p>
         </div>
@@ -210,7 +230,17 @@ export default function HubView() {
         {/* Nutrition */}
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-surface-container flex flex-col hover:shadow-ambient transition-shadow">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-on-surface">Targeted Nutrition</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-on-surface">Targeted Nutrition</h2>
+              <HelperIcon
+                size="xs"
+                variant="ghost"
+                side="right"
+                title="Nutrition"
+                ariaLabel="Nutrition help"
+                content="Targeted nutrition products improve crop growth and yield."
+              />
+            </div>
             <ICONS.Science className="text-secondary w-7 h-7" />
           </div>
           <div className="flex flex-col gap-3 flex-grow">
@@ -236,7 +266,17 @@ export default function HubView() {
         {/* Irrigation */}
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-surface-container flex flex-col hover:shadow-ambient transition-shadow">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-on-surface">Irrigation Tools</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-on-surface">Irrigation Tools</h2>
+              <HelperIcon
+                size="xs"
+                variant="ghost"
+                side="right"
+                title="Irrigation"
+                ariaLabel="Irrigation help"
+                content="Efficient irrigation tools help reduce water usage and improve consistency."
+              />
+            </div>
             <ICONS.Water className="text-secondary w-7 h-7" />
           </div>
           <div className="rounded-2xl bg-surface-container-high h-32 overflow-hidden mb-6 relative">

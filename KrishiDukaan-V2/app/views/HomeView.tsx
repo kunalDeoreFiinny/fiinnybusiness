@@ -1,6 +1,7 @@
 import { ICONS, CROPS, PRODUCTS } from '../constants';
 import { motion } from 'framer-motion';
 import { MarketplaceProduct } from '../../types/product';
+import { HelperIcon } from '../../components/helpers';
 
 interface HomeViewProps {
   products?: MarketplaceProduct[];
@@ -12,7 +13,7 @@ export default function HomeView({ products = PRODUCTS, onProductClick, onHubCli
   return (
     <div className="flex flex-col gap-10 py-6 md:py-10">
       {/* Hero Section */}
-      <section className="px-4 md:px-10 max-w-7xl mx-auto w-full">
+      <section data-tour="hero" className="px-4 md:px-10 max-w-7xl mx-auto w-full">
         <div className="relative rounded-3xl overflow-hidden shadow-ambient min-h-[400px] flex flex-col justify-center p-8 md:p-12">
           <div className="absolute inset-0 z-0">
             <img 
@@ -23,6 +24,17 @@ export default function HomeView({ products = PRODUCTS, onProductClick, onHubCli
             <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary/40" />
           </div>
           
+          <div className="absolute top-4 right-4 z-20">
+            <HelperIcon
+              size="sm"
+              variant="onDark"
+              side="left"
+              title="Getting started"
+              ariaLabel="Hero help"
+              content="Start by exploring nearby products or browse crop categories below."
+            />
+          </div>
+
           <div className="relative z-10 max-w-2xl">
             <motion.h1 
               initial={{ opacity: 0, y: 20 }}
@@ -47,8 +59,17 @@ export default function HomeView({ products = PRODUCTS, onProductClick, onHubCli
       </section>
 
       {/* Shop by Crop */}
-      <section className="px-4 md:px-10 max-w-7xl mx-auto w-full">
-        <h2 className="text-3xl font-bold text-on-surface mb-8">Shop by Crop</h2>
+      <section data-tour="shop-by-crop" className="px-4 md:px-10 max-w-7xl mx-auto w-full">
+        <div className="flex items-center gap-2 mb-8">
+          <h2 className="text-3xl font-bold text-on-surface">Shop by Crop</h2>
+          <HelperIcon
+            size="sm"
+            side="right"
+            title="Crop hubs"
+            ariaLabel="Shop by crop help"
+            content="Crop hubs organize products, fertilizers, and tools specifically for each crop."
+          />
+        </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           {CROPS.map((crop, i) => (
             <motion.button 

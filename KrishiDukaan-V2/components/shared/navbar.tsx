@@ -7,6 +7,7 @@ import { auth, getUserProfile } from '../../app/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import { reverseGeocodeToDisplay } from '../../app/utils/geolocation';
+import { HelperIcon } from '../helpers';
 
 type View = 'home' | 'market' | 'hub' | 'product' | 'map' | 'about' | 'profile' | 'login' | 'signup' | 'subscription';
 
@@ -148,6 +149,7 @@ export function Navbar({
           {navItems.map((item) => (
             <button
               key={item.id}
+              data-tour-nav={item.id}
               onClick={() => navigate(item.id as View)}
               className={`text-xs font-semibold transition-colors hover:text-primary whitespace-nowrap ${
                 currentView === item.id ? 'text-primary' : 'text-on-surface-variant'
@@ -164,7 +166,10 @@ export function Navbar({
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {/* Desktop Product Search Bar */}
           {!isDashboard && setProductSearch && (
-            <div className="hidden md:flex items-center bg-surface-container-low border border-outline-variant rounded-2xl overflow-hidden shadow-sm group focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all flex-1 max-w-sm">
+            <div
+              data-tour="search"
+              className="hidden md:flex items-center bg-surface-container-low border border-outline-variant rounded-2xl overflow-hidden shadow-sm group focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all flex-1 max-w-sm"
+            >
               <ICONS.Search className="w-4 h-4 text-outline group-focus-within:text-primary transition-colors shrink-0 ml-3" />
               <input
                 type="text"
@@ -173,13 +178,29 @@ export function Navbar({
                 onChange={e => setProductSearch(e.target.value)}
                 className="flex-1 bg-transparent border-none focus:ring-0 text-xs text-on-surface px-2 py-2 placeholder-on-surface-variant font-medium"
               />
+              <HelperIcon
+                size="xs"
+                variant="ghost"
+                side="bottom"
+                title="Search tip"
+                ariaLabel="Search help"
+                className="mr-2"
+                content={
+                  <>
+                    Search products, crops, fertilizers, or nearby stores.
+                    <br />
+                    <span className="text-outline">Example: &ldquo;Urea&rdquo;, &ldquo;Tomato Seeds&rdquo;, &ldquo;NPK 19:19:19&rdquo;</span>
+                  </>
+                }
+              />
             </div>
           )}
         </div>
           
         <div className="flex items-center gap-2 shrink-0">
           {/* Current Location Display */}
-          <div 
+          <div
+            data-tour="location"
             onClick={fetchLocation}
             className={`hidden md:flex items-center bg-surface-container-low border border-outline-variant rounded-2xl shadow-sm px-2 py-1.5 gap-1.5 cursor-pointer hover:bg-surface-container transition-colors group ${isFetchingLocation ? 'opacity-70' : ''}`}
             title="Click to refresh location"
@@ -188,6 +209,14 @@ export function Navbar({
             <span className="text-xs text-on-surface font-semibold truncate max-w-[120px] md:max-w-[220px]" title={locationQuery}>
               {locationQuery}
             </span>
+            <HelperIcon
+              size="xs"
+              variant="ghost"
+              side="bottom"
+              title="Why we ask"
+              ariaLabel="Location help"
+              content="Your location helps us show nearby stores, stock availability, and delivery range."
+            />
           </div>
 
           <button
@@ -259,7 +288,7 @@ export function Navbar({
       </div>
 
       {!isDashboard && setProductSearch && (
-        <div className="md:hidden mt-2">
+        <div className="md:hidden mt-2" data-tour="search-mobile">
           <div className="flex items-center bg-surface-container-low border border-outline-variant rounded-2xl overflow-hidden shadow-sm group focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
             <ICONS.Search className="w-4 h-4 text-outline group-focus-within:text-primary transition-colors shrink-0 ml-3" />
             <input
@@ -268,6 +297,21 @@ export function Navbar({
               value={productSearch}
               onChange={e => setProductSearch(e.target.value)}
               className="w-full bg-transparent border-none focus:ring-0 text-xs text-on-surface px-2 py-2.5 placeholder-on-surface-variant font-medium"
+            />
+            <HelperIcon
+              size="xs"
+              variant="ghost"
+              side="bottom"
+              title="Search tip"
+              ariaLabel="Search help"
+              className="mr-2"
+              content={
+                <>
+                  Search products, crops, fertilizers, or nearby stores.
+                  <br />
+                  <span className="text-outline">Example: &ldquo;Urea&rdquo;, &ldquo;Tomato Seeds&rdquo;</span>
+                </>
+              }
             />
           </div>
         </div>

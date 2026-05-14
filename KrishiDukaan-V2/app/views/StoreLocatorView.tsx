@@ -7,6 +7,7 @@ import { GoogleMap, useJsApiLoader, MarkerF } from '@react-google-maps/api';
 import { LatLng } from '../utils/haversine';
 import { cacheLocation, reverseGeocodeToDisplay } from '../utils/geolocation';
 import { filterStoresByQuery, storeAddressToDisplayString, StoreWithDistance } from '../utils/nearby';
+import { HelperIcon, HelperTooltip } from '../../components/helpers';
 
 interface StoreLocatorViewProps {
   onBack: () => void;
@@ -199,7 +200,10 @@ export default function StoreLocatorView({
           </div>
 
           {/* Store name / area search */}
-          <div className="flex items-center bg-surface-container-low rounded-2xl px-4 py-3 mb-4 border border-outline-variant group focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+          <div
+            data-tour="store-search"
+            className="flex items-center bg-surface-container-low rounded-2xl px-4 py-3 mb-4 border border-outline-variant group focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all"
+          >
             <ICONS.Search className="w-4 h-4 text-outline mr-3 group-focus-within:text-primary transition-colors shrink-0" />
             <input
               type="text"
@@ -217,13 +221,28 @@ export default function StoreLocatorView({
               >
                 <ICONS.Minus className="w-4 h-4" />
               </button>
-            ) : null}
+            ) : (
+              <HelperIcon
+                size="xs"
+                variant="ghost"
+                side="bottom"
+                title="Search stores"
+                ariaLabel="Store search help"
+                content="Search by store name, locality, or available products."
+              />
+            )}
           </div>
 
           <div className="flex gap-2 overflow-x-auto pb-4 hide-scrollbar">
-            <button className="whitespace-nowrap px-5 py-2 rounded-full bg-primary text-white text-xs font-bold shadow-lg shadow-primary/20 flex items-center gap-2">
-              <ICONS.Check className="w-4 h-4" /> Open Now
-            </button>
+            <HelperTooltip
+              side="bottom"
+              title="Open Now"
+              content="Shows stores currently accepting orders or visits."
+            >
+              <button className="whitespace-nowrap px-5 py-2 rounded-full bg-primary text-white text-xs font-bold shadow-lg shadow-primary/20 flex items-center gap-2">
+                <ICONS.Check className="w-4 h-4" /> Open Now
+              </button>
+            </HelperTooltip>
             <button className="whitespace-nowrap px-5 py-2 rounded-full border border-surface-container-highest text-on-surface text-xs font-bold hover:bg-surface-container-low">
               Urea In-Stock
             </button>
@@ -266,9 +285,24 @@ export default function StoreLocatorView({
                   </p>
                 </div>
                 {(store.id === selectedStoreId || store.isHot) && (
-                  <span className="bg-primary text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full">
-                    {store.id === selectedStoreId ? 'Selected' : 'Closest'}
-                  </span>
+                  store.id === selectedStoreId ? (
+                    <span className="bg-primary text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full">
+                      Selected
+                    </span>
+                  ) : (
+                    <HelperTooltip
+                      side="left"
+                      title="Closest"
+                      content={'“Closest” is based on your currently selected location.'}
+                    >
+                      <span
+                        className="bg-primary text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full cursor-help"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Closest
+                      </span>
+                    </HelperTooltip>
+                  )
                 )}
               </div>
 
@@ -384,7 +418,20 @@ export default function StoreLocatorView({
           </div>
         )}
 
-        <div className="absolute top-10 right-10 flex flex-col gap-4 z-10 pointer-events-auto">
+        <div className="absolute top-10 right-10 flex flex-col gap-4 z-10 pointer-events-auto" data-tour="store-map">
+          <HelperTooltip
+            side="left"
+            title="Map legend"
+            content="Green markers represent nearby agricultural stores. Click a store card to highlight it on the map."
+          >
+            <button
+              type="button"
+              aria-label="Map information"
+              className="w-12 h-12 bg-white rounded-2xl shadow-xl flex items-center justify-center text-primary hover:scale-110 active:scale-90 transition-all border border-surface-container"
+            >
+              <ICONS.Info className="w-5 h-5" />
+            </button>
+          </HelperTooltip>
           <button
             type="button"
             onClick={() => map?.panTo(userCoords)}
