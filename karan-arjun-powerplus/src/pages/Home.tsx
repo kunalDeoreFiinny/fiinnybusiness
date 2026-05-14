@@ -6,6 +6,7 @@ import { Icons } from '../components/Icons';
 import { initialHomeVideos } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
+import { useLanguage } from '../context/LanguageContext';
 
 function toStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) {
@@ -35,6 +36,7 @@ function toYouTubeEmbedUrl(url: string) {
 
 export default function Home() {
   const { user, profile } = useAuth();
+  const { t } = useLanguage();
   const [homeVideos, setHomeVideos] = useState<string[]>(initialHomeVideos);
   const [subject, setSubject] = useState('');
   const [description, setDescription] = useState('');
@@ -133,14 +135,14 @@ export default function Home() {
 
         <div className="max-w-7xl mx-auto px-8 relative z-20">
           <p className="font-sans text-primary-container mb-4 italic font-bold tracking-widest uppercase text-sm">
-            "नातं विश्वासचं, एक पाऊल आधुनिकतेचं"
+            {t.hero_tagline}
           </p>
-          <motion.h1 
+          <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="font-sans text-[28px] md:text-[52px] font-extrabold leading-tight mb-8 md:mb-12 uppercase tracking-tight max-w-4xl mx-auto text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary to-secondary"
           >
-            Trust with tradition, <br className="hidden md:block"/> one step toward modernity.
+            {t.hero_heading_line1} <br className="hidden md:block"/> {t.hero_heading_line2}
           </motion.h1>
           
           <div className="relative w-full max-w-5xl mx-auto mt-40 md:mt-48 flex justify-center items-end h-[300px] md:h-[500px]">
@@ -202,16 +204,19 @@ export default function Home() {
             </div>
             
             <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 w-full px-4 flex flex-col items-center">
-              <button className="w-full sm:w-auto bg-secondary-container text-on-secondary-container px-12 py-4 rounded-full font-sans font-bold hover:bg-secondary-fixed transition-all shadow-xl uppercase tracking-widest text-sm mb-4">
-                Shop Now
-              </button>
+              <Link
+                to="/shop"
+                className="w-full sm:w-auto bg-secondary-container text-on-secondary-container px-12 py-4 rounded-full font-sans font-bold hover:bg-secondary-fixed transition-all shadow-xl uppercase tracking-widest text-sm mb-4 inline-flex items-center justify-center"
+              >
+                {t.hero_shop_now}
+              </Link>
               <div className="glass-panel px-6 py-2 rounded-full inline-flex items-center gap-3">
                 <div className="flex -space-x-2">
                   <div className="w-8 h-8 rounded-full bg-primary/20 border-2 border-white flex items-center justify-center"><Icons.User className="w-4 h-4 text-primary" /></div>
                   <div className="w-8 h-8 rounded-full bg-secondary-container/50 border-2 border-white flex items-center justify-center"><Icons.User className="w-4 h-4 text-primary" /></div>
                   <div className="w-8 h-8 rounded-full bg-tertiary-container/50 border-2 border-white flex items-center justify-center"><Icons.User className="w-4 h-4 text-primary" /></div>
                 </div>
-                <span className="font-sans font-bold text-sm text-primary">Trusted by 75,800+ Farmers</span>
+                <span className="font-sans font-bold text-sm text-primary">{t.hero_trusted_by}</span>
               </div>
             </div>
           </div>
@@ -222,9 +227,9 @@ export default function Home() {
         <section className="py-20 relative z-10">
           <div className="max-w-7xl mx-auto px-8">
             <div className="text-center mb-10">
-              <h2 className="font-sans text-3xl md:text-4xl font-extrabold text-primary mb-3 tracking-tight">Power Plus Videos</h2>
+              <h2 className="font-sans text-3xl md:text-4xl font-extrabold text-primary mb-3 tracking-tight">{t.videos_title}</h2>
               <p className="text-on-surface-variant max-w-2xl mx-auto text-base md:text-lg">
-                Watch real short videos and field updates from Power Plus.
+                {t.videos_desc}
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -251,8 +256,8 @@ export default function Home() {
       <section className="py-24 relative z-10">
         <div className="max-w-7xl mx-auto px-8 relative">
           <div className="text-center mb-20">
-            <h2 className="font-sans text-4xl md:text-5xl font-extrabold text-primary mb-6 tracking-tight">Scientific Precision,<br/> Natural Growth</h2>
-            <p className="text-on-surface-variant max-w-2xl mx-auto text-lg">Our formulation addresses the most critical challenges in modern farming.</p>
+            <h2 className="font-sans text-4xl md:text-5xl font-extrabold text-primary mb-6 tracking-tight">{t.benefits_title_line1}<br/> {t.benefits_title_line2}</h2>
+            <p className="text-on-surface-variant max-w-2xl mx-auto text-lg">{t.benefits_subtitle}</p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-auto">
@@ -269,8 +274,8 @@ export default function Home() {
                 <Icons.Droplets className="w-8 h-8 md:w-10 md:h-10" />
               </div>
               <div className="z-10 relative max-w-lg">
-                <h3 className="font-sans text-2xl md:text-3xl font-extrabold text-primary mb-3">Drought Tolerance</h3>
-                <p className="text-on-surface-variant text-base md:text-lg leading-relaxed">Advanced water-retention technology helps crops survive and thrive during extended dry periods and water stress.</p>
+                <h3 className="font-sans text-2xl md:text-3xl font-extrabold text-primary mb-3">{t.drought_title}</h3>
+                <p className="text-on-surface-variant text-base md:text-lg leading-relaxed">{t.drought_desc}</p>
               </div>
               <div className="absolute -bottom-20 -right-20 w-[500px] h-[500px] bg-primary-container/10 rounded-full blur-3xl group-hover:bg-primary-container/20 transition-colors duration-700"></div>
             </div>
@@ -287,8 +292,8 @@ export default function Home() {
               <div className="w-14 h-14 md:w-16 md:h-16 bg-white/80 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg mb-6 text-primary group-hover:rotate-12 transition-transform duration-500 relative z-10">
                 <Icons.Palette className="w-7 h-7 md:w-8 md:h-8" />
               </div>
-              <h3 className="font-sans text-xl md:text-2xl font-extrabold text-primary mb-3 relative z-10">Premium Quality</h3>
-              <p className="text-on-surface-variant text-base relative z-10">Improves fruit color, shine, and weight for premium market pricing.</p>
+              <h3 className="font-sans text-xl md:text-2xl font-extrabold text-primary mb-3 relative z-10">{t.quality_title}</h3>
+              <p className="text-on-surface-variant text-base relative z-10">{t.quality_desc}</p>
             </div>
             
             {/* Benefit 3 */}
@@ -303,8 +308,8 @@ export default function Home() {
               <div className="w-14 h-14 md:w-16 md:h-16 bg-white/80 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg mb-6 text-primary group-hover:-rotate-12 transition-transform duration-500 relative z-10">
                 <Icons.ShieldCheck className="w-7 h-7 md:w-8 md:h-8" />
               </div>
-              <h3 className="font-sans text-xl md:text-2xl font-extrabold text-primary mb-3 relative z-10">Disease Resistance</h3>
-              <p className="text-on-surface-variant text-base relative z-10">Enhanced immunity against common diseases and fungal infections.</p>
+              <h3 className="font-sans text-xl md:text-2xl font-extrabold text-primary mb-3 relative z-10">{t.disease_title}</h3>
+              <p className="text-on-surface-variant text-base relative z-10">{t.disease_desc}</p>
             </div>
 
             {/* Benefit 4 */}
@@ -319,8 +324,8 @@ export default function Home() {
               <div className="w-14 h-14 md:w-16 md:h-16 bg-white/80 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg mb-6 text-primary group-hover:rotate-12 transition-transform duration-500 relative z-10">
                 <Icons.Sprout className="w-7 h-7 md:w-8 md:h-8" />
               </div>
-              <h3 className="font-sans text-xl md:text-2xl font-extrabold text-primary mb-3 relative z-10">Root Development</h3>
-              <p className="text-on-surface-variant text-base relative z-10">Stimulates deep root growth and increases soil organic carbon.</p>
+              <h3 className="font-sans text-xl md:text-2xl font-extrabold text-primary mb-3 relative z-10">{t.root_title}</h3>
+              <p className="text-on-surface-variant text-base relative z-10">{t.root_desc}</p>
             </div>
 
             {/* Benefit 5 */}
@@ -335,8 +340,8 @@ export default function Home() {
               <div className="w-14 h-14 md:w-16 md:h-16 bg-white/80 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg mb-6 text-primary group-hover:-rotate-12 transition-transform duration-500 relative z-10">
                 <Icons.Calendar className="w-7 h-7 md:w-8 md:h-8" />
               </div>
-              <h3 className="font-sans text-xl md:text-2xl font-extrabold text-primary mb-3 relative z-10">Extended Freshness</h3>
-              <p className="text-on-surface-variant text-base relative z-10">Increases post-harvest fruit freshness and overall shelf life.</p>
+              <h3 className="font-sans text-xl md:text-2xl font-extrabold text-primary mb-3 relative z-10">{t.freshness_title}</h3>
+              <p className="text-on-surface-variant text-base relative z-10">{t.freshness_desc}</p>
             </div>
 
             {/* Benefit 6 (CTA Block) */}
@@ -344,17 +349,17 @@ export default function Home() {
               <div className="z-10 max-w-2xl">
                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full text-secondary-container border border-white/10 mb-6">
                   <Icons.Star className="w-4 h-4" />
-                  <span className="font-sans font-bold text-xs uppercase tracking-widest">Natural Sugar Content</span>
+                  <span className="font-sans font-bold text-xs uppercase tracking-widest">{t.cta_badge}</span>
                 </div>
-                <h3 className="font-sans text-3xl md:text-4xl font-extrabold text-white mb-4 leading-tight">Ready to Transform Your Yield?</h3>
-                <p className="text-white/80 mb-8 font-serif text-lg">Join 75,800+ successful farmers who have upgraded to Power Plus™ and seen massive improvements in sweetness and quality.</p>
+                <h3 className="font-sans text-3xl md:text-4xl font-extrabold text-white mb-4 leading-tight">{t.cta_title}</h3>
+                <p className="text-white/80 mb-8 font-serif text-lg">{t.cta_desc}</p>
                 <a
                   href="https://wa.me/919307199040"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="bg-secondary-container text-on-secondary-container px-8 py-4 rounded-xl font-sans font-bold hover:bg-white transition-colors inline-flex items-center space-x-2 shadow-xl"
                 >
-                  <span>Get a Free Consultation</span>
+                  <span>{t.cta_button}</span>
                   <Icons.ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </a>
               </div>
@@ -371,10 +376,10 @@ export default function Home() {
           <div className="text-center mb-10">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/5 rounded-full text-primary border border-primary/10 mb-4">
               <Icons.MessageCircle className="w-4 h-4" />
-              <span className="font-sans font-bold text-xs uppercase tracking-widest">Support</span>
+              <span className="font-sans font-bold text-xs uppercase tracking-widest">{t.support_badge}</span>
             </div>
-            <h2 className="font-sans text-3xl md:text-4xl font-extrabold text-primary mb-3 tracking-tight">Need Help? Raise a Ticket</h2>
-            <p className="text-on-surface-variant font-serif text-base md:text-lg">Our team responds to every query. You can also track replies in your profile.</p>
+            <h2 className="font-sans text-3xl md:text-4xl font-extrabold text-primary mb-3 tracking-tight">{t.support_title}</h2>
+            <p className="text-on-surface-variant font-serif text-base md:text-lg">{t.support_subtitle}</p>
           </div>
 
           <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm p-8 md:p-10">
@@ -389,24 +394,24 @@ export default function Home() {
                 )}
                 <form onSubmit={handleGrievanceSubmit} className="space-y-5">
                   <div>
-                    <label className="block font-sans text-sm font-semibold text-primary mb-2">Subject</label>
+                    <label className="block font-sans text-sm font-semibold text-primary mb-2">{t.subject_label}</label>
                     <input
                       type="text"
                       required
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
-                      placeholder="E.g., Order delay, Product damage..."
+                      placeholder={t.subject_placeholder}
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary/30 bg-slate-50 font-sans text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block font-sans text-sm font-semibold text-primary mb-2">Description</label>
+                    <label className="block font-sans text-sm font-semibold text-primary mb-2">{t.description_label}</label>
                     <textarea
                       required
                       rows={4}
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Describe your issue in detail..."
+                      placeholder={t.description_placeholder}
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary/30 bg-slate-50 font-sans text-sm resize-none"
                     />
                   </div>
@@ -415,33 +420,34 @@ export default function Home() {
                     disabled={submitting}
                     className="w-full py-4 bg-primary text-secondary-container rounded-xl font-sans font-bold text-sm hover:bg-primary-container transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
                   >
-                    {submitting ? 'Submitting...' : (
-                      <><Icons.Send className="w-4 h-4" /> Submit Ticket</>
+                    {submitting ? t.submitting : (
+                      <><Icons.Send className="w-4 h-4" /> {t.submit_ticket}</>
                     )}
                   </button>
                 </form>
                 <p className="text-center text-xs text-slate-400 font-sans mt-4">
-                  Track your tickets and admin replies in{' '}
-                  <Link to="/profile" className="text-primary font-semibold hover:underline">your profile</Link>.
+                  {t.track_prefix}{' '}
+                  <Link to="/profile" className="text-primary font-semibold hover:underline">{t.track_link_text}</Link>
+                  {t.track_suffix}
                 </p>
               </>
             ) : user && profile?.role === 'admin' ? (
               <div className="flex flex-col items-center gap-3 py-6 text-center">
                 <Icons.ShieldCheck className="w-10 h-10 text-primary/40" />
-                <p className="font-sans font-semibold text-primary/70">You are signed in as admin. Manage tickets from the <Link to="/admin" className="text-primary underline">Admin panel</Link>.</p>
+                <p className="font-sans font-semibold text-primary/70">{t.admin_signed_in} <Link to="/admin" className="text-primary underline">{t.admin_panel}</Link>.</p>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-5 py-6 text-center">
                 <Icons.Lock className="w-10 h-10 text-primary/30" />
                 <div>
-                  <p className="font-sans font-semibold text-primary mb-1">Sign in to raise a support ticket</p>
-                  <p className="font-serif text-sm text-on-surface-variant">Your ticket will be tracked and our team will reply directly.</p>
+                  <p className="font-sans font-semibold text-primary mb-1">{t.sign_in_title}</p>
+                  <p className="font-serif text-sm text-on-surface-variant">{t.sign_in_desc}</p>
                 </div>
                 <Link
                   to="/auth"
                   className="px-8 py-3 bg-primary text-secondary-container rounded-xl font-sans font-bold text-sm hover:bg-primary-container transition-colors inline-flex items-center gap-2"
                 >
-                  <Icons.LogIn className="w-4 h-4" /> Sign In to Continue
+                  <Icons.LogIn className="w-4 h-4" /> {t.sign_in_button}
                 </Link>
               </div>
             )}

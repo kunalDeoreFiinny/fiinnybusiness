@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '../firebase';
+import { auth } from '../firebase/config';
 import { api, setAuthToken } from '../api';
 import { IS_DEMO, DEMO_ADMIN_USER } from '../demoMode';
 
@@ -38,7 +38,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (!auth) { setLoading(false); return; }
     return onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
@@ -68,7 +67,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthToken('demo-jwt-token');
       return;
     }
-    if (!auth) return;
     const provider = new GoogleAuthProvider();
     await signInWithPopup(auth, provider);
   }
@@ -81,7 +79,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthToken(null);
       return;
     }
-    if (!auth) return;
     await signOut(auth);
   }
 

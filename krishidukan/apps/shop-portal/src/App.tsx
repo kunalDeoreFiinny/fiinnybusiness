@@ -5,6 +5,10 @@ import { RegisterShopPage } from './pages/RegisterShopPage';
 import { PendingApprovalPage } from './pages/PendingApprovalPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { InventoryPage } from './pages/InventoryPage';
+import { ProfilePage } from './pages/ProfilePage';
+import { AnalyticsPage } from './pages/AnalyticsPage';
+import { NotificationsPage } from './pages/NotificationsPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { ShopStatus } from '@krishidukan/shared';
 
 function AppRoutes() {
@@ -12,8 +16,11 @@ function AppRoutes() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0fdf4' }}>
-        <div style={{ color: '#6b7280', fontSize: 14 }}>Loading...</div>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--kd-bg)' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 44, marginBottom: 12 }}>🌾</div>
+          <div style={{ color: 'var(--kd-text-muted)', fontSize: 14 }}>Loading KrishiDukan...</div>
+        </div>
       </div>
     );
   }
@@ -30,6 +37,10 @@ function AppRoutes() {
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/inventory" element={<InventoryPage />} />
+      <Route path="/profile" element={<ProfilePage />} />
+      <Route path="/analytics" element={<AnalyticsPage />} />
+      <Route path="/notifications" element={<NotificationsPage />} />
+      <Route path="/settings" element={<SettingsPage />} />
       <Route path="/pending" element={<PendingApprovalPage />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

@@ -1,18 +1,40 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation as useRouterLocation } from 'react-router-dom';
-import { Search, MapPin, Home, Store, User, LocateFixed, X } from 'lucide-react';
+import {
+  Search, MapPin, Home, Store, X, ShoppingCart, ChevronDown,
+  CircleUser, Clock3,
+} from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useLocation } from '../LocationContext';
+import { useCart } from '../contexts/CartContext';
+import { useAuth } from '../contexts/AuthContext';
+import { LocationPickerModal } from './LocationPickerModal';
+import { OfflineBanner } from './OfflineBanner';
+import { BrandMarkIcon } from './icons';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
-const HEADER_HEIGHT = 60;
-const TABBAR_HEIGHT = 60;
+const HEADER_HEIGHT = 68;
+const TABBAR_HEIGHT = 64;
 
 export function Layout({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const router = useRouterLocation();
-  const { location, requesting, requestGps } = useLocation();
+  const { location, shouldAutoPrompt } = useLocation();
+  const { cartCount } = useCart();
+  const { isAuthenticated, requireLogin } = useAuth();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
+  const [autoPromptHandled, setAutoPromptHandled] = useState(false);
+
+  useEffect(() => {
+    if (autoPromptHandled) return;
+    if (shouldAutoPrompt) {
+      setLocationPickerOpen(true);
+      setAutoPromptHandled(true);
+    }
+  }, [shouldAutoPrompt, autoPromptHandled]);
 
   function submitSearch(e?: React.FormEvent) {
     e?.preventDefault();
@@ -21,141 +43,206 @@ export function Layout({ children }: { children: ReactNode }) {
     setSearchOpen(false);
   }
 
+  // TEMP_DISABLED: Cart feature disabled temporarily
+  function goToCart() {
+    // no-op — cart is disabled
+  }
+
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Top header */}
-      <header style={{
-        position: 'sticky', top: 0, zIndex: 50,
-        height: HEADER_HEIGHT, background: '#16a34a',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-        display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12,
-      }}>
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: '#fff', flexShrink: 0 }}>
-          <span style={{ fontSize: 22 }}>⚡</span>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: '-0.3px', lineHeight: 1.1 }}>KaranArjun</div>
-            <div style={{ fontSize: 10, fontWeight: 600, opacity: 0.85, letterSpacing: '0.04em' }}>PowerPlus</div>
-          </div>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#f7f8fa' }}>
+      <header
+        style={{
+          position: 'sticky', top: 0, zIndex: 50,
+          height: HEADER_HEIGHT, background: '#ffffff',
+          borderBottom: '1px solid #eef0f3',
+          boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
+          display: 'flex', alignItems: 'center',
+          padding: '0 16px', gap: 16,
+        }}
+      >
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: '#111827', flexShrink: 0 }}>
+          <span style={{
+            width: 36, height: 36, borderRadius: 10,
+            background: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 2px 6px rgba(22, 163, 74, 0.25)',
+          }}>
+            <BrandMarkIcon size={20} color="#ffffff" strokeWidth={2.4} />
+          </span>
+          <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em' }}>{t('common.appName')}</span>
         </Link>
 
-        {/* Location pill — desktop visible always; mobile only on home */}
         <button
           onClick={() => setLocationPickerOpen(true)}
           style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            background: 'rgba(255,255,255,0.18)', color: '#fff',
-            border: '1px solid rgba(255,255,255,0.25)',
-            borderRadius: 20, padding: '5px 12px',
-            fontSize: 12, fontWeight: 500, cursor: 'pointer',
-            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            maxWidth: 160,
+            display: 'flex', alignItems: 'center', gap: 8,
+            background: 'transparent', color: '#111827',
+            border: 'none', padding: '6px 10px',
+            cursor: 'pointer', borderRadius: 10,
+            minWidth: 0, maxWidth: 220,
           }}
         >
-          <MapPin size={13} />
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {location.label}
-          </span>
+          <MapPin size={18} color="#16a34a" strokeWidth={2.2} />
+          <div style={{ textAlign: 'left', minWidth: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 4, lineHeight: 1.1 }}>
+              <Clock3 size={11} strokeWidth={2.4} /> {t('nav.deliveryTo')}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 700, color: '#111827', lineHeight: 1.2, overflow: 'hidden' }}>
+              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 160 }}>{location.label}</span>
+              <ChevronDown size={14} color="#6b7280" />
+            </div>
+          </div>
         </button>
 
-        <div style={{ flex: 1 }} />
+        <form
+          onSubmit={submitSearch}
+          style={{
+            flex: 1, display: 'none', alignItems: 'center', gap: 10,
+            background: '#f3f4f6', borderRadius: 12, padding: '0 14px',
+            height: 44, maxWidth: 520,
+          }}
+          className="kd-search-desktop"
+        >
+          <Search size={18} color="#6b7280" />
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('nav.searchPlaceholder')}
+            style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: 14, color: '#111827' }}
+          />
+        </form>
 
-        {/* Search button (mobile) / search bar inline (wide) */}
+        <div style={{ flex: 1 }} className="kd-search-spacer" />
+
         <button
           onClick={() => setSearchOpen(true)}
-          aria-label="Search"
-          style={{ background: 'transparent', border: 'none', color: '#fff', padding: 8, cursor: 'pointer', borderRadius: 8 }}
+          aria-label={t('nav.searchAria')}
+          className="kd-search-mobile"
+          style={{
+            background: '#f3f4f6', border: 'none', color: '#374151',
+            padding: 9, cursor: 'pointer', borderRadius: 10, display: 'flex',
+          }}
         >
-          <Search size={20} />
+          <Search size={18} />
         </button>
+
+        {/* TEMP_DISABLED: Login/auth feature disabled — navigate directly */}
+        <button
+          onClick={() => navigate('/account')}
+          aria-label={t('nav.account')}
+          style={{
+            background: 'transparent', border: 'none', color: '#111827',
+            padding: 6, cursor: 'pointer', borderRadius: 10, display: 'none', alignItems: 'center', gap: 6,
+          }}
+          className="kd-login-desktop"
+        >
+          <CircleUser size={20} strokeWidth={1.8} />
+          <span style={{ fontSize: 13, fontWeight: 600 }}>{t('nav.account')}</span>
+        </button>
+
+        <LanguageSwitcher />
+
+        {/* TEMP_DISABLED: Cart feature disabled temporarily */}
+        <button
+          disabled
+          aria-label={t('nav.cartAria')}
+          title="Coming Soon"
+          style={{
+            background: '#9ca3af', color: '#fff', border: 'none',
+            padding: '8px 14px', cursor: 'not-allowed', borderRadius: 10,
+            display: 'flex', alignItems: 'center', gap: 6, position: 'relative',
+            opacity: 0.6,
+          }}
+        >
+          <ShoppingCart size={17} strokeWidth={2.1} />
+          <span style={{ fontSize: 13, fontWeight: 700 }} className="kd-cart-label">Coming Soon</span>
+        </button>
+
+        <style>{`
+          @media (min-width: 720px) {
+            .kd-search-desktop { display: flex !important; }
+            .kd-search-spacer { display: none !important; }
+            .kd-search-mobile { display: none !important; }
+            .kd-login-desktop { display: inline-flex !important; }
+          }
+          @media (max-width: 480px) {
+            .kd-cart-label { display: none; }
+          }
+        `}</style>
       </header>
 
-      {/* Search modal overlay */}
+      <OfflineBanner />
+
       {searchOpen && (
         <div
           onClick={() => setSearchOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '60px 16px' }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.5)', zIndex: 100, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '60px 16px' }}
         >
           <form
             onClick={(e) => e.stopPropagation()}
             onSubmit={submitSearch}
-            style={{ background: '#fff', borderRadius: 14, padding: 16, width: '100%', maxWidth: 480, boxShadow: '0 20px 50px rgba(0,0,0,0.3)' }}
+            style={{ background: '#fff', borderRadius: 16, padding: 18, width: '100%', maxWidth: 520, boxShadow: '0 20px 50px rgba(15, 23, 42, 0.25)' }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Search size={18} style={{ color: '#9ca3af', flexShrink: 0 }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#f3f4f6', borderRadius: 12, padding: '10px 14px' }}>
+              <Search size={18} color="#6b7280" />
               <input
                 autoFocus
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search seeds, fertilizers, pesticides..."
-                style={{ flex: 1, border: 'none', outline: 'none', fontSize: 16, padding: '10px 0' }}
+                placeholder={t('nav.searchModalPlaceholder')}
+                style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 15, color: '#111827' }}
               />
               <button type="button" onClick={() => setSearchOpen(false)} style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: 4 }}>
                 <X size={18} />
               </button>
             </div>
-            <div style={{ marginTop: 14, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {['Cotton seeds', 'Urea', 'Glyphosate', 'Confidor', 'Drip irrigation'].map((q) => (
-                <button
-                  type="button"
-                  key={q}
-                  onClick={() => { setSearchQuery(q); setTimeout(submitSearch, 0); }}
-                  style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 16, padding: '6px 12px', fontSize: 12, color: '#15803d', cursor: 'pointer' }}
-                >
-                  {q}
-                </button>
-              ))}
+            <div style={{ marginTop: 16 }}>
+              <p style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>{t('nav.trendingNow')}</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {[
+                  t('nav.trendingChips.fertilizer'),
+                  t('nav.trendingChips.fungicide'),
+                  t('nav.trendingChips.bioStimulant'),
+                  t('nav.trendingChips.rootDeveloper'),
+                  t('nav.trendingChips.organic'),
+                ].map((q) => (
+                  <button
+                    type="button"
+                    key={q}
+                    onClick={() => { setSearchQuery(q); setTimeout(submitSearch, 0); }}
+                    style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 999, padding: '7px 14px', fontSize: 12, color: '#15803d', cursor: 'pointer', fontWeight: 500 }}
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
             </div>
           </form>
         </div>
       )}
 
-      {/* Location picker modal */}
-      {locationPickerOpen && (
-        <div
-          onClick={() => setLocationPickerOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
-        >
-          <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 14, padding: 24, width: '100%', maxWidth: 380 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <h3 style={{ fontSize: 17, fontWeight: 700 }}>Choose Location</h3>
-              <button onClick={() => setLocationPickerOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 4 }}>
-                <X size={18} />
-              </button>
-            </div>
-            <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 16 }}>
-              We'll use this to find shops near you.
-            </p>
-            <button
-              disabled={requesting}
-              onClick={() => { requestGps(); setLocationPickerOpen(false); }}
-              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 16px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', marginBottom: 10 }}
-            >
-              <LocateFixed size={16} />
-              {requesting ? 'Getting location…' : 'Use my current location'}
-            </button>
-            <p style={{ fontSize: 12, color: '#9ca3af', textAlign: 'center', marginTop: 8 }}>
-              Currently: <strong style={{ color: '#374151' }}>{location.label}</strong>
-            </p>
-          </div>
-        </div>
-      )}
+      <LocationPickerModal
+        open={locationPickerOpen}
+        onClose={() => setLocationPickerOpen(false)}
+        required={!autoPromptHandled && shouldAutoPrompt}
+      />
 
-      {/* Main content */}
       <main style={{ flex: 1, paddingBottom: TABBAR_HEIGHT + 16 }}>
         {children}
       </main>
 
-      {/* Bottom tab bar (mobile-first) */}
-      <nav style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, height: TABBAR_HEIGHT,
-        background: '#fff', borderTop: '1px solid #e5e7eb',
-        display: 'flex', alignItems: 'stretch', zIndex: 40,
-        boxShadow: '0 -2px 8px rgba(0,0,0,0.04)',
-      }}>
+      <nav
+        className="kd-tabbar-mobile"
+        style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, height: TABBAR_HEIGHT,
+          background: '#ffffff', borderTop: '1px solid #eef0f3',
+          display: 'flex', alignItems: 'stretch', zIndex: 40,
+          boxShadow: '0 -4px 16px rgba(15, 23, 42, 0.04)',
+        }}
+      >
         {[
-          { to: '/', icon: Home, label: 'Products' },
-          { to: '/retailers', icon: Store, label: 'Retailers' },
-          { to: '/account', icon: User, label: 'Account' },
+          { to: '/', icon: Home, label: t('nav.home') },
+          { to: '/retailers', icon: Store, label: t('nav.shops') },
+          { to: '/account', icon: CircleUser, label: t('nav.accountTab') },
         ].map(({ to, icon: Icon, label }) => {
           const active = to === '/' ? router.pathname === '/' : router.pathname.startsWith(to);
           return (
@@ -164,17 +251,23 @@ export function Layout({ children }: { children: ReactNode }) {
               to={to}
               style={{
                 flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                gap: 3, textDecoration: 'none',
+                gap: 4, textDecoration: 'none',
                 color: active ? '#16a34a' : '#6b7280',
-                fontSize: 11, fontWeight: 500,
+                fontSize: 11, fontWeight: 600,
               }}
             >
-              <Icon size={20} strokeWidth={active ? 2.4 : 2} />
+              <Icon size={22} strokeWidth={active ? 2.4 : 1.9} />
               {label}
             </Link>
           );
         })}
       </nav>
+
+      <style>{`
+        @media (min-width: 720px) {
+          .kd-tabbar-mobile { display: none; }
+        }
+      `}</style>
     </div>
   );
 }

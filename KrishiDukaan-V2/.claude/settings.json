@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /Users/sai/Work/fiinnybusiness/KrishiDukaan-V2 -name \"firestore.rules\" 2>/dev/null; find /Users/sai/Work/fiinnybusiness -maxdepth 3 -name \"firestore.rules\" 2>/dev/null)",
+      "Read(//Users/sai/Work/fiinnybusiness/**)"
+    ]
+  }
+}

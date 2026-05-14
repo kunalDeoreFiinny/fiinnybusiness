@@ -49,6 +49,36 @@ export interface Grievance {
   }>;
 }
 
+export interface OrderItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
+export interface Order {
+  id: string;
+  uid: string;
+  customerName: string;
+  customerPhone: string;
+  customerEmail: string;
+  state: string;
+  district: string;
+  address: string;
+  pinCode: string;
+  items: OrderItem[];
+  totalAmount: number;
+  status: string;
+  paymentStatus: 'paid' | 'pending' | 'failed';
+  razorpayPaymentId?: string;
+  razorpayOrderId?: string;
+  failureReason?: string;
+  shipmentStatus?: 'processing' | 'packed' | 'shipped' | 'out_for_delivery' | 'delivered' | 'cancelled';
+  trackingId?: string;
+  shiprocketOrderId?: string;
+  createdAt: string;
+}
+
 export interface AboutInfo {
   tagline: string;
   manufacturer: string;

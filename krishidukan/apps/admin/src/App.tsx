@@ -6,17 +6,19 @@ import { DashboardPage } from './pages/DashboardPage';
 import { ShopsPage } from './pages/ShopsPage';
 import { ShopDetailPage } from './pages/ShopDetailPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
+import { AddRetailerPage } from './pages/AddRetailerPage';
 
 function Layout() {
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#fbf9f7' }}>
       <Sidebar />
-      <main style={{ flex: 1, overflowY: 'auto' }}>
+      <main style={{ flex: 1, overflowY: 'auto', background: '#fbf9f7' }}>
         <Routes>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/shops" element={<ShopsPage />} />
           <Route path="/shops/:id" element={<ShopDetailPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/retailers/new" element={<AddRetailerPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
@@ -28,8 +30,8 @@ function AppInner() {
   const { user, loading } = useAuth();
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f172a' }}>
-        <div style={{ color: '#64748b', fontSize: 14 }}>Loading...</div>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fbf9f7' }}>
+        <div style={{ color: '#42493e', fontSize: 14 }}>Loading...</div>
       </div>
     );
   }

@@ -30,7 +30,13 @@ export interface UserProfile {
   email: string;
   phone?: string;
   role: UserRole;
+  village?: string;
+  district?: string;
+  state?: string;
+  pincode?: string;
 }
+
+export type ProfileUpdates = Partial<Pick<UserProfile, 'name' | 'email' | 'phone' | 'village' | 'district' | 'state' | 'pincode'>>;
 
 interface AuthContextType {
   user: User | null;
@@ -42,6 +48,7 @@ interface AuthContextType {
   signInWithPhone: (phone: string, verifier: RecaptchaVerifier) => Promise<ConfirmationResult>;
   signOutUser: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  updateUserProfile: (updates: ProfileUpdates) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -80,6 +87,10 @@ async function ensureUserProfile(authUser: User, preferredName?: string): Promis
     name: preferredName || authUser.displayName || 'Power Plus User',
     email: authUser.email ?? '',
     phone: authUser.phoneNumber ?? '',
+    village: '',
+    district: '',
+    state: '',
+    pincode: '',
     role,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -99,6 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (profileUnsubscribe) {
         profileUnsubscribe();
+        profileUnsubscribe = undefined;
       }
 
       setProfile(null);
@@ -109,26 +121,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      await ensureUserProfile(authUser);
-      profileUnsubscribe = onSnapshot(doc(db, 'users', authUser.uid), (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.data() as Partial<UserProfile>;
-          const normalizedEmail = (authUser.email ?? '').toLowerCase();
-          const effectiveRole: UserRole = adminEmails.includes(normalizedEmail)
-            ? 'admin'
-            : (data.role ?? 'customer');
-          setProfile({
-            uid: authUser.uid,
-            name: data.name ?? authUser.displayName ?? 'Power Plus User',
-            email: data.email ?? authUser.email ?? '',
-            phone: data.phone ?? '',
-            role: effectiveRole,
-          });
-        } else {
+      try {
+        await ensureUserProfile(authUser);
+      } catch {
+        // Profile creation failed — continue to set up snapshot listener anyway
+      }
+
+      profileUnsubscribe = onSnapshot(
+        doc(db, 'users', authUser.uid),
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.data() as Partial<UserProfile>;
+            const normalizedEmail = (authUser.email ?? '').toLowerCase();
+            const effectiveRole: UserRole = adminEmails.includes(normalizedEmail)
+              ? 'admin'
+              : (data.role ?? 'customer');
+            setProfile({
+              uid: authUser.uid,
+              name: data.name ?? authUser.displayName ?? 'Power Plus User',
+              email: data.email ?? authUser.email ?? '',
+              phone: data.phone ?? authUser.phoneNumber ?? '',
+              role: effectiveRole,
+              village: data.village ?? '',
+              district: data.district ?? '',
+              state: data.state ?? '',
+              pincode: data.pincode ?? '',
+            });
+          } else {
+            setProfile(null);
+          }
+          setLoading(false);
+        },
+        () => {
+          // Snapshot error (permission denied, network) — unblock UI
           setProfile(null);
-        }
-        setLoading(false);
-      });
+          setLoading(false);
+        },
+      );
     });
 
     return () => {
@@ -164,6 +193,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
       async resetPassword(email) {
         await sendPasswordResetEmail(auth, email);
+      },
+      async updateUserProfile(updates) {
+        if (!user) throw new Error('Not signed in');
+        const ref = doc(db, 'users', user.uid);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) {
+          await setDoc(ref, {
+            uid: user.uid,
+            name: updates.name ?? user.displayName ?? 'Power Plus User',
+            email: updates.email ?? user.email ?? '',
+            phone: updates.phone ?? user.phoneNumber ?? '',
+            village: updates.village ?? '',
+            district: updates.district ?? '',
+            state: updates.state ?? '',
+            pincode: updates.pincode ?? '',
+            role: 'customer',
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+        } else {
+          await updateDoc(ref, { ...updates, updatedAt: serverTimestamp() });
+        }
       },
     }),
     [user, profile, loading],
