@@ -2,45 +2,56 @@
 
 import { ICONS } from '../constants';
 import { motion } from 'framer-motion';
-import { useState, useMemo } from 'react';
-import dynamic from 'next/dynamic';
-import { LatLng } from '../utils/haversine';
-import { StoreWithDistance, filterStoresByQuery } from '../utils/nearby';
-import { cacheLocation } from '../utils/geolocation';
-
-// Dynamically import LeafletMap — SSR disabled since Leaflet needs `window`
-const LeafletMap = dynamic(() => import('../../components/LeafletMap'), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-surface-container-high">
-      <div className="flex flex-col items-center gap-3">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-        <span className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">Loading Map…</span>
-      </div>
-    </div>
-  ),
-});
+import { useState, useCallback, useEffect } from 'react';
+import { GoogleMap, useJsApiLoader, MarkerF } from '@react-google-maps/api';
 
 interface StoreLocatorViewProps {
   onBack: () => void;
   selectedStoreId?: string | null;
-  stores?: StoreWithDistance[];
-  userLocation?: LatLng;
-  locationLabel?: string;
-  onLocationChange?: (coords: LatLng, label: string) => void;
+  stores?: any[];
+  location?: string;
+  onLocationChange?: (location: string, coordinates?: { lat: number, lng: number }) => void;
+  userCoords?: { lat: number, lng: number };
 }
 
-export default function StoreLocatorView({
-  onBack,
-  selectedStoreId: initialSelectedStoreId,
-  stores = [],
-  userLocation = { lat: 18.5204, lng: 73.8567 },
-  locationLabel = 'Pune, Maharashtra',
+export default function StoreLocatorView({ 
+  onBack, 
+  selectedStoreId, 
+  stores = [], 
+  location = 'Pune, Maharashtra',
   onLocationChange,
+  userCoords = { lat: 18.5204, lng: 73.8567 }
 }: StoreLocatorViewProps) {
-  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(initialSelectedStoreId || null);
-  const [storeSearch, setStoreSearch] = useState('');
-  const [showMobileMap, setShowMobileMap] = useState(false);
+  const focusedStore = (stores.length > 0 ? (stores.find(s => s.id === selectedStoreId) || stores[0]) : null);
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
+  });
+
+  // Calculate center: use focusedStore if available, else userCoords
+  const getCenter = () => {
+    if (focusedStore) {
+      const lat = focusedStore.location?.lat || focusedStore.location?.latitude;
+      const lng = focusedStore.location?.lng || focusedStore.location?.longitude;
+      if (lat && lng) return { lat: Number(lat), lng: Number(lng) };
+    }
+    return userCoords;
+  };
+
+  const center = getCenter();
+
+  const onUnmount = useCallback(function callback() {
+    setMap(null);
+  }, []);
+
+  // Effect to pan map when store selection or user coords change
+  useEffect(() => {
+    if (map && center) {
+      map.panTo(center);
+    }
+  }, [map, center]);
 
   // Filter stores by search query (matches name, city, district, villages from address)
   const displayedStores = useMemo(() => {
@@ -90,6 +101,47 @@ export default function StoreLocatorView({
     );
   }
 
+  const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (onLocationChange) onLocationChange(e.target.value);
+  };
+
+  const handleLocationSubmit = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && location) {
+      try {
+        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+        const response = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(location)}&key=${apiKey}`
+        );
+        const data = await response.json();
+        
+        if (data.status === 'OK' && data.results.length > 0) {
+          const { lat, lng } = data.results[0].geometry.location;
+          const formattedAddress = data.results[0].formatted_address;
+          if (onLocationChange) onLocationChange(formattedAddress, { lat, lng });
+        }
+      } catch (error) {
+        console.error('Manual geocoding error:', error);
+      }
+    }
+  };
+
+  const mapContainerStyle = {
+    width: '100%',
+    height: '100%'
+  };
+
+  const mapOptions = {
+    disableDefaultUI: true,
+    zoomControl: false,
+    styles: [
+      {
+        featureType: 'poi',
+        elementType: 'labels',
+        stylers: [{ visibility: 'off' }]
+      }
+    ]
+  };
+
   return (
     <div className="flex flex-col md:flex-row h-[calc(100vh-64px)] overflow-hidden">
       {/* Sidebar */}
@@ -125,10 +177,10 @@ export default function StoreLocatorView({
             <ICONS.Search className="w-4 h-4 text-outline mr-3 group-focus-within:text-primary transition-colors shrink-0" />
             <input
               type="text"
-              value={storeSearch}
-              onChange={e => setStoreSearch(e.target.value)}
-              placeholder="Search shops, city, district..."
-              className="bg-transparent border-none w-full focus:ring-0 focus:outline-none text-sm text-on-surface font-semibold placeholder:font-normal"
+              value={location}
+              onChange={handleLocationChange}
+              placeholder="Enter your location..."
+              className="bg-transparent border-none w-full focus:ring-0 text-sm text-on-surface font-semibold placeholder:font-normal"
             />
             {storeSearch && (
               <button onClick={() => setStoreSearch('')} className="text-outline hover:text-on-surface transition-colors ml-2">
@@ -233,14 +285,75 @@ export default function StoreLocatorView({
         </div>
       </div>
 
-      {/* Mobile Map (togglable) */}
-      {showMobileMap && (
-        <div className="md:hidden fixed inset-0 z-50 bg-white">
-          <div className="flex items-center justify-between p-4 border-b border-surface-container bg-white">
-            <h3 className="font-bold text-on-surface">Map View</h3>
-            <button
-              onClick={() => setShowMobileMap(false)}
-              className="p-2 bg-surface-container rounded-full"
+      {/* Map Content */}
+      <div className="hidden md:block flex-1 relative bg-surface-container-high overflow-hidden">
+        {isLoaded ? (
+          <GoogleMap
+            mapContainerStyle={mapContainerStyle}
+            center={userCoords}
+            zoom={13}
+            onLoad={map => setMap(map)}
+            onUnmount={onUnmount}
+            options={mapOptions}
+          >
+            {/* User Location Marker */}
+            <MarkerF
+              position={userCoords}
+              icon={{
+                path: google.maps.SymbolPath.CIRCLE,
+                fillColor: '#3B82F6',
+                fillOpacity: 1,
+                strokeWeight: 4,
+                strokeColor: '#FFFFFF',
+                scale: 8
+              }}
+            />
+
+            {/* Store Markers */}
+            {stores.map(store => {
+              const lat = store.location?.lat || store.location?.latitude;
+              const lng = store.location?.lng || store.location?.longitude;
+              if (!lat || !lng) return null;
+              
+              return (
+                <MarkerF
+                  key={store.id}
+                  position={{ lat: Number(lat), lng: Number(lng) }}
+                  title={store.name}
+                  onClick={() => {
+                    if (map) {
+                      map.panTo({ lat: Number(lat), lng: Number(lng) });
+                      map.setZoom(15);
+                    }
+                  }}
+                />
+              );
+            })}
+          </GoogleMap>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+          </div>
+        )}
+        
+        {/* Map UI */}
+        <div className="absolute top-10 right-10 flex flex-col gap-4 z-10">
+          <button 
+            onClick={() => map?.panTo(userCoords)}
+            className="w-12 h-12 bg-white rounded-2xl shadow-xl flex items-center justify-center text-primary hover:scale-110 active:scale-90 transition-all border border-surface-container group"
+          >
+            <ICONS.MyPosition className="w-6 h-6 group-hover:animate-pulse" />
+          </button>
+          <div className="flex flex-col bg-white rounded-3xl shadow-xl border border-surface-container overflow-hidden">
+            <button 
+              onClick={() => map?.setZoom((map.getZoom() || 13) + 1)}
+              className="w-12 h-12 flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors border-b border-surface-container"
+            >
+              <ICONS.Plus className="w-5 h-5" />
+            </button>
+            <button 
+              onClick={() => map?.setZoom((map.getZoom() || 13) - 1)}
+              className="w-12 h-12 flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors"
             >
               <ICONS.Minus className="w-5 h-5" />
             </button>
@@ -253,27 +366,6 @@ export default function StoreLocatorView({
               onStoreSelect={handleStoreClick}
             />
           </div>
-        </div>
-      )}
-
-      {/* Desktop Map — Leaflet + OpenStreetMap */}
-      <div className="hidden md:block flex-1 relative bg-surface-container-high overflow-hidden">
-        <LeafletMap
-          userLocation={userLocation}
-          stores={displayedStores}
-          selectedStoreId={selectedStoreId}
-          onStoreSelect={handleStoreClick}
-        />
-
-        {/* Locate Me button overlay */}
-        <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-3">
-          <button
-            onClick={handleLocateMe}
-            className="w-12 h-12 bg-white rounded-2xl shadow-xl flex items-center justify-center text-primary hover:scale-110 active:scale-90 transition-all border border-surface-container group"
-            title="Detect my location"
-          >
-            <ICONS.MyPosition className="w-6 h-6 group-hover:animate-pulse" />
-          </button>
         </div>
       </div>
     </div>

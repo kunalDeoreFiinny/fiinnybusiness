@@ -8,19 +8,19 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: ["Plus Jakarta Sans", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       colors: {
         primary: {
           DEFAULT: "#154212",
           container: "#2d5a27",
+          "on-container": "#9dd090",
         },
-        "on-primary-container": "#9dd090",
         secondary: {
           DEFAULT: "#705a4c",
           container: "#f8dac8",
+          "on-container": "#755e50",
         },
-        "on-secondary-container": "#755e50",
         harvest: "#f57c00",
         surface: {
           DEFAULT: "#fbf9f7",

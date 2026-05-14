@@ -35,6 +35,8 @@ type UserProfile = {
   phone: string;
   email: string;
   isPaid?: boolean;
+  totalSeats?: number;
+  productCount?: number;
 };
 
 export default function App() {
@@ -43,6 +45,7 @@ export default function App() {
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [locationQuery, setLocationQuery] = useState('Pune, Maharashtra');
+  const [coordinates, setCoordinates] = useState({ lat: 18.5204, lng: 73.8567 }); // Default Pune
   const [productSearch, setProductSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [language, setLanguage] = useState('EN');
@@ -112,7 +115,9 @@ export default function App() {
             name: profileData.name || '',
             email: profileData.email || firebaseUser.email || '',
             phone: profileData.phone || '',
-            isPaid: isPaid
+            isPaid: isPaid,
+            totalSeats: profileData.totalSeats || 0,
+            productCount: profileData.productCount || 0
           });
 
           // Paywall logic: if retailer/manufacturer and NOT paid, force subscription view
@@ -147,7 +152,9 @@ export default function App() {
       name: profile.name,
       email: profile.email,
       phone: profile.phone || '',
-      isPaid: isPaid
+      isPaid: isPaid,
+      totalSeats: profile.totalSeats || 0,
+      productCount: profile.productCount || 0
     });
 
     if ((profile.role === 'retailer' || profile.role === 'manufacturer') && !isPaid) {
@@ -158,13 +165,8 @@ export default function App() {
   };
 
   const handleSubscriptionSuccess = async () => {
-    if (user) {
-      const profileData = await getUserProfile(user.uid);
-      if (profileData) {
-        setUserProfile(prev => ({ ...prev, isPaid: true }));
-        setCurrentView('profile');
-      }
-    }
+    setUserProfile(prev => ({ ...prev, isPaid: true }));
+    setCurrentView('profile');
   };
 
   const handleProfileSave = (profile: UserProfile) => {
@@ -180,30 +182,25 @@ export default function App() {
     }
   };
 
-  // --- Computed nearby stores with distances ---
-  const storesWithDistance: StoreWithDistance[] = useMemo(() => {
-    if (allStores.length === 0) return [];
-    return computeStoreDistances(allStores, userLocation);
-  }, [allStores, userLocation]);
+  const searchedProducts = useMemo(() => {
+    const query = productSearch.trim().toLowerCase();
 
-  const nearbyStores: StoreWithDistance[] = useMemo(() => {
-    return selectNearbyStores(storesWithDistance, userLocation);
-  }, [storesWithDistance, userLocation]);
+    return allProducts.filter(p => {
+      if (!query) return true;
 
-  const filteredProducts = useMemo(() => {
-    const base = allProducts.filter(p => {
-      const matchesSearch = !productSearch.trim() || 
-        p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-        (p.description && p.description.toLowerCase().includes(productSearch.toLowerCase())) ||
-        (p.category && p.category.toLowerCase().includes(productSearch.toLowerCase()));
-      
-      const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
-      
-      return matchesSearch && matchesCategory;
+      return (
+        p.name.toLowerCase().includes(query) ||
+        (p.fullName && p.fullName.toLowerCase().includes(query)) ||
+        (p.description && p.description.toLowerCase().includes(query)) ||
+        (p.category && p.category.toLowerCase().includes(query))
+      );
     });
-    // Sort by in-stock first, then distance
-    return sortProductsByAvailability(base, storesWithDistance);
-  }, [allProducts, productSearch, selectedCategory, storesWithDistance]);
+  }, [allProducts, productSearch]);
+
+  const marketProducts = useMemo(() => {
+    if (selectedCategory === 'all') return searchedProducts;
+    return searchedProducts.filter((product) => product.category === selectedCategory);
+  }, [searchedProducts, selectedCategory]);
 
   const navigate = (view: View) => {
     if ((userRole === 'retailer' || userRole === 'manufacturer') && !userProfile.isPaid && 
@@ -249,11 +246,11 @@ export default function App() {
 
     switch (currentView) {
       case 'home':
-        return <HomeView products={filteredProducts} onProductClick={navigateToProduct} onHubClick={() => navigate('hub')} />;
+        return <HomeView products={searchedProducts} onProductClick={navigateToProduct} onHubClick={() => navigate('hub')} />;
       case 'market':
         return (
           <MarketView 
-            products={filteredProducts} 
+            products={marketProducts} 
             onProductClick={navigateToProduct} 
             selectedCategory={selectedCategory}
             onCategoryChange={setSelectedCategory}
@@ -264,7 +261,19 @@ export default function App() {
       case 'product':
         return <ProductDetailView products={allProducts} productId={selectedProductId} onBack={() => navigate('market')} onStoreClick={navigateToMap} storesWithDistance={storesWithDistance} />;
       case 'map':
-        return <StoreLocatorView onBack={() => navigate('home')} selectedStoreId={selectedStoreId} stores={nearbyStores} userLocation={userLocation} locationLabel={locationLabel} onLocationChange={(coords, label) => { setUserLocation(coords); setLocationLabel(label); }} />;
+        return (
+          <StoreLocatorView 
+            onBack={() => navigate('home')} 
+            selectedStoreId={selectedStoreId} 
+            stores={allStores}
+            location={locationQuery}
+            onLocationChange={(loc, coords) => {
+              setLocationQuery(loc);
+              if (coords) setCoordinates(coords);
+            }}
+            userCoords={coordinates}
+          />
+        );
       case 'profile':
         return (
           <ProfileView
@@ -273,6 +282,7 @@ export default function App() {
             onRoleChange={setUserRole}
             onProfileSave={handleProfileSave}
             onRetailerProductSaved={loadData}
+            onNavigate={setCurrentView}
           />
         );
       case 'login':
@@ -280,11 +290,11 @@ export default function App() {
       case 'signup':
         return <SignupView onBack={() => navigate('home')} onNavigateToLogin={() => navigate('login')} onSuccess={handleAuthSuccess} />;
       case 'subscription':
-        return <SubscriptionView user={user} onSuccess={handleSubscriptionSuccess} onLogout={handleLogout} />;
+        return <SubscriptionView user={user} role={userRole} onSuccess={handleSubscriptionSuccess} onLogout={handleLogout} />;
       case 'about':
         return <AboutView />;
       default:
-        return <HomeView products={filteredProducts} onProductClick={navigateToProduct} onHubClick={() => navigate('hub')} />;
+        return <HomeView products={searchedProducts} onProductClick={navigateToProduct} onHubClick={() => navigate('hub')} />;
     }
   };
 
@@ -295,6 +305,11 @@ export default function App() {
         onNavigate={navigate} 
         productSearch={productSearch} 
         setProductSearch={setProductSearch} 
+        locationQuery={locationQuery}
+        onLocationChange={(loc, coords) => {
+          setLocationQuery(loc);
+          if (coords) setCoordinates(coords);
+        }}
       />
 
       {/* Main Content */}

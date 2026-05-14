@@ -6,6 +6,7 @@ import {
   getDoc,
   getDocs,
   getFirestore,
+  increment,
   query,
   serverTimestamp,
   setDoc,
@@ -143,6 +144,7 @@ export async function saveRetailerProduct(
     distance: string;
   }
 ) {
+  // 1. Create the product
   await addDoc(collection(db, 'products'), {
     retailerId,
     name: product.name.trim(),
@@ -157,6 +159,13 @@ export async function saveRetailerProduct(
     source: 'retailer',
     createdAt: serverTimestamp()
   });
+
+  // 2. Increment productCount in user profile
+  const userRef = doc(db, 'users', retailerId);
+  await setDoc(userRef, {
+    productCount: increment(1),
+    updatedAt: serverTimestamp()
+  }, { merge: true });
 }
 
 export async function fetchMarketplaceProducts(): Promise<MarketplaceProduct[]> {
@@ -239,6 +248,8 @@ export async function saveUserProfile(uid: string, profile: { name: string, emai
   await setDoc(doc(db, 'users', uid), {
     ...profile,
     isPaid: false,
+    totalSeats: 0,
+    productCount: 0,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   });
@@ -253,30 +264,51 @@ export async function getUserProfile(uid: string) {
   return null;
 }
 
-export async function updateSubscriptionStatus(uid: string, status: 'paid' | 'unpaid', paymentDetails?: any) {
+export async function updateSubscriptionStatus(
+  uid: string,
+  status: 'paid' | 'unpaid',
+  paymentDetails?: any,
+  seatCount: number = 1
+): Promise<{ profileUpdated: true; paymentLogged: boolean; paymentLogError?: string }> {
   const docRef = doc(db, 'users', uid);
   const timestamp = serverTimestamp();
   
+  // Get current user profile to update seats
+  const userDoc = await getDoc(docRef);
+  const userData = userDoc.exists() ? userDoc.data() : {};
+  const currentSeats = userData.totalSeats || 0;
+
   // 1. Update user profile
   await setDoc(docRef, {
     isPaid: status === 'paid',
     subscriptionStatus: status,
     paymentDetails: paymentDetails || null,
+    totalSeats: status === 'paid' ? currentSeats + seatCount : currentSeats,
     updatedAt: timestamp
   }, { merge: true });
 
   // 2. Create a payment record for tracking
   if (status === 'paid') {
-    await addDoc(collection(db, 'payments'), {
-      userId: uid,
-      amount: 21,
-      currency: 'INR',
-      razorpayOrderId: paymentDetails?.orderId,
-      razorpayPaymentId: paymentDetails?.paymentId,
-      timestamp: timestamp,
-      status: 'success'
-    });
+    try {
+      await addDoc(collection(db, 'payments'), {
+        userId: uid,
+        amount: seatCount * 21,
+        seatCount: seatCount,
+        currency: 'INR',
+        razorpayOrderId: paymentDetails?.orderId,
+        razorpayPaymentId: paymentDetails?.paymentId,
+        timestamp: timestamp,
+        status: 'success'
+      });
+      return { profileUpdated: true, paymentLogged: true };
+    } catch (error) {
+      const paymentLogError = error instanceof Error ? error.message : 'Unable to write payment log.';
+      console.warn('Payment succeeded but payment log write failed:', paymentLogError);
+      return { profileUpdated: true, paymentLogged: false, paymentLogError };
+    }
   }
+
+  return { profileUpdated: true, paymentLogged: false };
 }
 
 export async function fetchManufacturerProducts(manufacturerId: string): Promise<MarketplaceProduct[]> {
@@ -308,6 +340,7 @@ export async function fetchRetailerProducts(retailerId: string): Promise<Marketp
 }
 
 export async function saveManufacturerProduct(manufacturerId: string, product: any) {
+  // 1. Create the product
   await addDoc(collection(db, 'products'), {
     ...product,
     manufacturerId,
@@ -315,6 +348,13 @@ export async function saveManufacturerProduct(manufacturerId: string, product: a
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   });
+
+  // 2. Increment productCount in user profile
+  const userRef = doc(db, 'users', manufacturerId);
+  await setDoc(userRef, {
+    productCount: increment(1),
+    updatedAt: serverTimestamp()
+  }, { merge: true });
 }
 
 export async function fetchDealers(): Promise<any[]> {
@@ -427,6 +467,30 @@ export async function syncInitialData(products: any[], stores: any[], inventory:
     }
   } catch (error) {
     console.error('Firebase Sync Error (Check your Firestore Rules):', error);
+    throw error;
+  }
+}
+
+export interface Hub {
+  id: string;
+  name: string;
+  heroImage: string;
+  tagline: string;
+  seeds: { name: string; price: number; img: string }[];
+  nutrition: { name: string; desc: string; icon: string }[];
+  irrigation: { image: string; items: { name: string; price: string }[] };
+  advisory: { title: string; description: string };
+}
+
+export async function fetchHubs(): Promise<Hub[]> {
+  try {
+    const snapshot = await getDocs(collection(db, 'hubs'));
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as Hub));
+  } catch (error) {
+    console.error('Error fetching hubs:', error);
     throw error;
   }
 }
