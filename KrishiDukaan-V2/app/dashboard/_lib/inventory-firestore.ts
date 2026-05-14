@@ -58,7 +58,7 @@ function mapInventory(id: string, data: Record<string, unknown>): InventoryDoc {
 }
 
 async function fetchProductsByIds(ids: string[]): Promise<Map<string, ProductDoc>> {
-  const unique = [...new Set(ids.filter(Boolean))];
+  const unique = Array.from(new Set(ids.filter(Boolean)));
   const map = new Map<string, ProductDoc>();
   const chunkSize = 10;
 

@@ -1,5 +1,4 @@
-import { MarketplaceProduct } from "../../types/product";
-import { ICONS, STORES } from '../constants';
+import { ICONS } from '../constants';
 import { motion } from 'framer-motion';
 import { useState, useCallback, useEffect } from 'react';
 import { GoogleMap, useJsApiLoader, MarkerF } from '@react-google-maps/api';
@@ -21,7 +20,8 @@ export default function StoreLocatorView({
   onLocationChange,
   userCoords = { lat: 18.5204, lng: 73.8567 }
 }: StoreLocatorViewProps) {
-  const focusedStore = (stores.length > 0 ? (stores.find(s => s.id === selectedStoreId) || stores[0]) : null);
+  const [activeStoreId, setActiveStoreId] = useState<string | null>(selectedStoreId || (stores[0]?.id ?? null));
+  const focusedStore = stores.length > 0 ? (stores.find((s) => s.id === activeStoreId) || stores[0]) : null;
   const [map, setMap] = useState<google.maps.Map | null>(null);
 
   const { isLoaded } = useJsApiLoader({
@@ -40,6 +40,17 @@ export default function StoreLocatorView({
   };
 
   const center = getCenter();
+
+  useEffect(() => {
+    if (selectedStoreId) {
+      setActiveStoreId(selectedStoreId);
+      return;
+    }
+
+    if (!stores.some((store) => store.id === activeStoreId)) {
+      setActiveStoreId(stores[0]?.id ?? null);
+    }
+  }, [selectedStoreId, stores, activeStoreId]);
 
   const onUnmount = useCallback(function callback() {
     setMap(null);
@@ -101,7 +112,7 @@ export default function StoreLocatorView({
     <div className="flex flex-col md:flex-row h-[calc(100vh-64px)] overflow-hidden">
       {/* Sidebar */}
       <div className="w-full md:w-[400px] bg-white border-r border-surface-container flex flex-col z-20 shadow-xl overflow-hidden">
-        <div className="p-6 border-b border-surface-container shrink-0">
+        <div className="p-4 md:p-6 border-b border-surface-container shrink-0">
           <div className="flex items-center gap-4 mb-4">
             <button onClick={onBack} className="p-2 hover:bg-surface-container-low rounded-full md:hidden">
               <ICONS.ChevronRight className="w-5 h-5 rotate-180" />
@@ -112,14 +123,15 @@ export default function StoreLocatorView({
           {/* Location search — only on this tab */}
           <div className="flex items-center bg-surface-container-low rounded-2xl px-4 py-3 mb-4 border border-outline-variant group focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
             <ICONS.Location className="w-4 h-4 text-outline mr-3 group-focus-within:text-primary transition-colors shrink-0" />
-            <input
-              type="text"
-              value={location}
-              onChange={handleLocationChange}
-              placeholder="Enter your location..."
-              className="bg-transparent border-none w-full focus:ring-0 text-sm text-on-surface font-semibold placeholder:font-normal"
-            />
-          </div>
+              <input
+                type="text"
+                value={location}
+                onChange={handleLocationChange}
+                onKeyDown={handleLocationSubmit}
+                placeholder="Enter your location..."
+                className="bg-transparent border-none w-full focus:ring-0 text-sm text-on-surface font-semibold placeholder:font-normal"
+              />
+            </div>
 
           <div className="flex gap-2 overflow-x-auto pb-4 hide-scrollbar">
             <button className="whitespace-nowrap px-5 py-2 rounded-full bg-primary text-white text-xs font-bold shadow-lg shadow-primary/20 flex items-center gap-2">
@@ -132,29 +144,73 @@ export default function StoreLocatorView({
               NPK Fertilizer
             </button>
           </div>
+
+          <div className="md:hidden h-52 rounded-2xl overflow-hidden border border-outline-variant bg-surface-container-low">
+            {isLoaded ? (
+              <GoogleMap
+                mapContainerStyle={mapContainerStyle}
+                center={center}
+                zoom={13}
+                onLoad={(instance) => setMap(instance)}
+                onUnmount={onUnmount}
+                options={mapOptions}
+              >
+                <MarkerF
+                  position={userCoords}
+                  icon={{
+                    path: google.maps.SymbolPath.CIRCLE,
+                    fillColor: '#3B82F6',
+                    fillOpacity: 1,
+                    strokeWeight: 4,
+                    strokeColor: '#FFFFFF',
+                    scale: 7
+                  }}
+                />
+                {stores.map((store) => {
+                  const lat = store.location?.lat || store.location?.latitude;
+                  const lng = store.location?.lng || store.location?.longitude;
+                  if (!lat || !lng) return null;
+
+                  return (
+                    <MarkerF
+                      key={store.id}
+                      position={{ lat: Number(lat), lng: Number(lng) }}
+                      title={store.name}
+                      onClick={() => setActiveStoreId(store.id)}
+                    />
+                  );
+                })}
+              </GoogleMap>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="animate-spin w-7 h-7 border-4 border-primary border-t-transparent rounded-full" />
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4 bg-surface-container-lowest">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-4 bg-surface-container-lowest">
           {stores.map((store, i) => (
             <motion.div 
               key={store.id}
               initial={{ x: -20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: i * 0.1 }}
+              onClick={() => setActiveStoreId(store.id)}
               className={`p-5 rounded-3xl border-2 transition-all cursor-pointer group hover:scale-[1.02] ${
-                store.id === selectedStoreId ? 'border-primary bg-primary/10 shadow-lg scale-[1.03]' : (store.isHot ? 'border-primary/40 bg-primary/5 shadow-sm' : 'border-surface-container bg-white hover:border-outline-variant shadow-sm')
+                store.id === activeStoreId ? 'border-primary bg-primary/10 shadow-lg scale-[1.03]' : (store.isHot ? 'border-primary/40 bg-primary/5 shadow-sm' : 'border-surface-container bg-white hover:border-outline-variant shadow-sm')
               }`}
             >
               <div className="flex justify-between items-start mb-3">
                 <div>
-                  <h3 className={`text-xl font-bold ${store.id === selectedStoreId || store.isHot ? 'text-primary' : 'text-on-surface'}`}>{store.name}</h3>
+                  <h3 className={`text-xl font-bold ${store.id === activeStoreId || store.isHot ? 'text-primary' : 'text-on-surface'}`}>{store.name}</h3>
                   <p className="flex items-center gap-1 text-xs font-bold text-on-surface-variant mt-1">
                     <ICONS.Location className="w-3 h-3" /> {store.distance}
                   </p>
                 </div>
-                {(store.id === selectedStoreId || store.isHot) && (
+                {(store.id === activeStoreId || store.isHot) && (
                   <span className="bg-primary text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full">
-                    {store.id === selectedStoreId ? 'Selected' : 'Closest'}
+                    {store.id === activeStoreId ? 'Selected' : 'Closest'}
                   </span>
                 )}
               </div>
@@ -190,14 +246,14 @@ export default function StoreLocatorView({
       {/* Map Content */}
       <div className="hidden md:block flex-1 relative bg-surface-container-high overflow-hidden">
         {isLoaded ? (
-          <GoogleMap
-            mapContainerStyle={mapContainerStyle}
-            center={userCoords}
-            zoom={13}
-            onLoad={map => setMap(map)}
-            onUnmount={onUnmount}
-            options={mapOptions}
-          >
+              <GoogleMap
+                mapContainerStyle={mapContainerStyle}
+                center={center}
+                zoom={13}
+                onLoad={(instance) => setMap(instance)}
+                onUnmount={onUnmount}
+                options={mapOptions}
+              >
             {/* User Location Marker */}
             <MarkerF
               position={userCoords}
@@ -223,6 +279,7 @@ export default function StoreLocatorView({
                   position={{ lat: Number(lat), lng: Number(lng) }}
                   title={store.name}
                   onClick={() => {
+                    setActiveStoreId(store.id);
                     if (map) {
                       map.panTo({ lat: Number(lat), lng: Number(lng) });
                       map.setZoom(15);

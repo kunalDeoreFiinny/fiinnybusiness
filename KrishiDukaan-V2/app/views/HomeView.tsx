@@ -1,6 +1,7 @@
 import { ICONS, CROPS, PRODUCTS } from '../constants';
 import { motion } from 'framer-motion';
 import { MarketplaceProduct } from '../../types/product';
+import { useI18n } from '../i18n/I18nContext';
 
 interface HomeViewProps {
   products?: MarketplaceProduct[];
@@ -9,30 +10,32 @@ interface HomeViewProps {
 }
 
 export default function HomeView({ products = PRODUCTS, onProductClick, onHubClick }: HomeViewProps) {
+  const { t } = useI18n();
+
   return (
     <div className="flex flex-col gap-10 py-6 md:py-10">
       {/* Hero Section */}
       <section className="px-4 md:px-10 max-w-7xl mx-auto w-full">
         <div className="relative rounded-3xl overflow-hidden shadow-ambient min-h-[400px] flex flex-col justify-center p-8 md:p-12">
           <div className="absolute inset-0 z-0">
-            <img 
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcJewaf8J1gWZEdY6ipzy3p0M5aZoePmxCri9BSh7nbzy4FW-i7Azi-fBl6G0vr9TDZY9Q0XxD_GHq2_mJECmXU0oGsqJSZEnh1-5IRtoFi-mxGzKT9SHQH5HJW6wrhRD4Z98Wjo19TKEXGiIpyPXcFVZVvSuhCD9bXXV1kQRL_o0HNQ6-7KIySLLVdAddKSxPd14-jD0W8uG58KaJpjHYahRINJqJMRzG_CvOOiM2CGpIBu5yKjDn4P8gspnpRXThlkMm_JgsHX0L" 
+            <img
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcJewaf8J1gWZEdY6ipzy3p0M5aZoePmxCri9BSh7nbzy4FW-i7Azi-fBl6G0vr9TDZY9Q0XxD_GHq2_mJECmXU0oGsqJSZEnh1-5IRtoFi-mxGzKT9SHQH5HJW6wrhRD4Z98Wjo19TKEXGiIpyPXcFVZVvSuhCD9bXXV1kQRL_o0HNQ6-7KIySLLVdAddKSxPd14-jD0W8uG58KaJpjHYahRINJqJMRzG_CvOOiM2CGpIBu5yKjDn4P8gspnpRXThlkMm_JgsHX0L"
               className="w-full h-full object-cover"
               alt="Farm hero"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary/40" />
           </div>
-          
+
           <div className="relative z-10 max-w-2xl">
-            <motion.h1 
+            <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-white text-5xl md:text-7xl font-bold font-sans tracking-tight leading-[1.1] mb-4"
+              className="text-white text-5xl md:text-7xl font-bold font-sans tracking-tight leading-[1.3] mb-4"
             >
-              Modern Produce,<br />Rooted Locally.
+              {t('heroTitleLine1')}<br />{t('heroTitleLine2')}
             </motion.h1>
             <p className="text-white text-lg md:text-xl max-w-lg mb-8">
-              Find the freshest harvest and agricultural supplies directly from local stores in your area.
+              {t('heroSubtitle')}
             </p>
 
             <button
@@ -40,7 +43,7 @@ export default function HomeView({ products = PRODUCTS, onProductClick, onHubCli
               className="bg-white text-primary font-bold px-8 py-3 rounded-xl w-full sm:w-auto hover:bg-primary-container hover:text-white transition-colors flex items-center justify-center gap-2 shadow-xl max-w-xs"
             >
               <ICONS.ArrowRight className="w-5 h-5" />
-              Explore Products
+              {t('exploreProducts')}
             </button>
           </div>
         </div>
@@ -48,10 +51,10 @@ export default function HomeView({ products = PRODUCTS, onProductClick, onHubCli
 
       {/* Shop by Crop */}
       <section className="px-4 md:px-10 max-w-7xl mx-auto w-full">
-        <h2 className="text-3xl font-bold text-on-surface mb-8">Shop by Crop</h2>
+        <h2 className="text-3xl font-bold text-on-surface mb-8">{t('shopByCrop')}</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           {CROPS.map((crop, i) => (
-            <motion.button 
+            <motion.button
               key={crop.id}
               whileHover={{ y: -5 }}
               onClick={onHubClick}
@@ -69,12 +72,12 @@ export default function HomeView({ products = PRODUCTS, onProductClick, onHubCli
       {/* Trending Section */}
       <section className="px-4 md:px-10 max-w-7xl mx-auto w-full py-10 bg-white shadow-sm border-y border-surface-container">
         <div className="flex justify-between items-end mb-8">
-          <h2 className="text-3xl font-bold text-on-surface">Trending Near You</h2>
+          <h2 className="text-3xl font-bold text-on-surface">{t('trendingNearYou')}</h2>
           <button className="text-primary font-bold flex items-center gap-2 hover:translate-x-1 transition-transform">
-            View All <ICONS.ArrowRight className="w-4 h-4" />
+            {t('viewAll')} <ICONS.ArrowRight className="w-4 h-4" />
           </button>
         </div>
-        
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {products.length > 0 ? products.map((product) => (
             <motion.div 
@@ -95,13 +98,13 @@ export default function HomeView({ products = PRODUCTS, onProductClick, onHubCli
                 </div>
                 <p className="text-on-surface-variant text-sm mb-6 flex-1 line-clamp-2">{product.description}</p>
                 <div className="flex gap-3">
-                  <button className="flex-1 bg-primary text-white font-bold py-3 rounded-xl hover:bg-primary/90 transition-colors">View Details</button>
+                  <button className="flex-1 bg-primary text-white font-bold py-3 rounded-xl hover:bg-primary/90 transition-colors">{t('viewDetails')}</button>
                 </div>
               </div>
             </motion.div>
           )) : (
             <div className="col-span-full py-10 text-center bg-surface-container-low rounded-3xl border border-dashed border-surface-container">
-              <p className="text-on-surface-variant font-medium">No trending products found in your area.</p>
+              <p className="text-on-surface-variant font-medium">{t('noTrending')}</p>
             </div>
           )}
         </div>
@@ -111,14 +114,14 @@ export default function HomeView({ products = PRODUCTS, onProductClick, onHubCli
       <section className="px-4 md:px-10 max-w-7xl mx-auto w-full mb-10">
         <div className="bg-surface-container-low rounded-3xl p-8 md:p-16 flex flex-col md:flex-row gap-12 items-center">
           <div className="flex-1">
-            <h2 className="text-4xl font-bold text-on-surface mb-6">Why Krishidukan?</h2>
+            <h2 className="text-4xl font-bold text-on-surface mb-6">{t('whyKrishidukan')}</h2>
             <p className="text-on-surface-variant text-lg mb-10">
-              We bridge the gap between traditional agricultural values and contemporary digital efficiency, ensuring you get the best supplies right when you need them.
+              {t('whySubtitle')}
             </p>
             <div className="flex flex-col gap-8">
               {[
-                { icon: ICONS.Trust, title: 'Local Trust', desc: 'Connect directly with verified sellers in your farming community.' },
-                { icon: ICONS.Efficiency, title: 'Digital Efficiency', desc: 'Fast, frictionless ordering and tracking designed for your device.' }
+                { icon: ICONS.Trust, title: t('localTrustTitle'), desc: t('localTrustDesc') },
+                { icon: ICONS.Efficiency, title: t('digitalEfficiencyTitle'), desc: t('digitalEfficiencyDesc') }
               ].map((prop, i) => (
                 <div key={i} className="flex items-start gap-4">
                   <div className="bg-primary-container text-white p-3 rounded-2xl shadow-sm">

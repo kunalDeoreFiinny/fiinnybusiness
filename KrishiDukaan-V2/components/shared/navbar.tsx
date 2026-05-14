@@ -6,6 +6,7 @@ import { ICONS } from '../../app/constants';
 import { auth, getUserProfile } from '../../app/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { useEffect, useState } from 'react';
+import { useI18n } from '../../app/i18n/I18nContext';
 
 type View = 'home' | 'market' | 'hub' | 'product' | 'map' | 'about' | 'profile' | 'login' | 'signup' | 'subscription';
 
@@ -42,7 +43,7 @@ export function Navbar({
   const user = externalUser !== undefined ? externalUser : localUser;
   const userRole = externalUserRole !== undefined ? externalUserRole : localUserRole;
   const userProfile = externalUserProfile !== undefined ? externalUserProfile : localUserProfile;
-  const [language, setLanguage] = useState('EN');
+  const { language, setLanguage, t } = useI18n();
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
 
   const fetchLocation = async () => {
@@ -145,10 +146,10 @@ export function Navbar({
   };
 
   const navItems = [
-    { id: 'home', label: 'Home' },
-    { id: 'market', label: 'Market' },
-    { id: 'hub', label: 'Hub' },
-    { id: 'map', label: 'Stores' }
+    { id: 'home', label: t('home') },
+    { id: 'market', label: t('market') },
+    { id: 'hub', label: t('hub') },
+    { id: 'map', label: t('stores') }
   ];
   const canAccessDashboard = (userRole === 'retailer' || userRole === 'manufacturer') && userProfile.isPaid && !isDashboard;
 
@@ -187,7 +188,7 @@ export function Navbar({
               <ICONS.Search className="w-4 h-4 text-outline group-focus-within:text-primary transition-colors shrink-0 ml-3" />
               <input
                 type="text"
-                placeholder="Search by product or shop name..."
+                placeholder={t('searchPlaceholder')}
                 value={productSearch}
                 onChange={e => setProductSearch(e.target.value)}
                 className="flex-1 bg-transparent border-none focus:ring-0 text-xs text-on-surface px-2 py-2 placeholder-on-surface-variant font-medium"
@@ -222,22 +223,21 @@ export function Navbar({
               className="inline-flex items-center gap-1.5 bg-surface-container-high text-on-surface text-xs font-bold px-3.5 py-2 rounded-xl hover:bg-surface-container-highest transition-all"
               aria-label="Open account menu"
             >
-              Account
+              {t('account')}
               <ICONS.ChevronRight className="w-3.5 h-3.5 rotate-90" />
             </button>
 
             <div className="absolute right-0 top-full mt-2 z-50 w-52 bg-white border border-surface-container rounded-2xl shadow-ambient p-2 hidden group-hover:block group-focus-within:block">
               <div className="px-2 py-1.5 border-b border-surface-container mb-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Language</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">{t('language')}</label>
                 <select
                   value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
+                  onChange={(e) => setLanguage(e.target.value as any)}
                   className="mt-1 w-full bg-surface-container-low border border-outline-variant rounded-lg px-2 py-1.5 text-xs font-semibold text-on-surface focus:ring-0"
                   aria-label="Select language"
                 >
-                  <option value="EN">EN</option>
-                  <option value="HI">HI</option>
-                  <option value="MR">MR</option>
+                  <option value="en">English</option>
+                  <option value="mr">मराठी</option>
                 </select>
               </div>
 
@@ -248,20 +248,20 @@ export function Navbar({
                       onClick={() => router.push('/dashboard')}
                       className="w-full text-left px-2.5 py-2 text-xs font-bold text-on-surface hover:bg-surface-container-low rounded-lg transition-colors"
                     >
-                      Dashboard
+                      {t('dashboard')}
                     </button>
                   )}
                   <button
                     onClick={() => navigate('profile')}
                     className="w-full text-left px-2.5 py-2 text-xs font-bold text-on-surface hover:bg-surface-container-low rounded-lg transition-colors"
                   >
-                    Profile
+                    {t('profile')}
                   </button>
                   <button
                     onClick={handleLogout}
                     className="w-full text-left px-2.5 py-2 text-xs font-bold text-primary hover:bg-primary/10 rounded-lg transition-colors"
                   >
-                    Logout
+                    {t('logout')}
                   </button>
                 </>
               ) : (
@@ -269,7 +269,7 @@ export function Navbar({
                   onClick={() => navigate('login')}
                   className="w-full text-left px-2.5 py-2 text-xs font-bold text-primary hover:bg-primary/10 rounded-lg transition-colors"
                 >
-                  Login
+                  {t('login')}
                 </button>
               )}
             </div>
@@ -283,7 +283,7 @@ export function Navbar({
             <ICONS.Search className="w-4 h-4 text-outline group-focus-within:text-primary transition-colors shrink-0 ml-3" />
             <input
               type="text"
-              placeholder="Search by product or shop name..."
+              placeholder={t('searchPlaceholder')}
               value={productSearch}
               onChange={e => setProductSearch(e.target.value)}
               className="w-full bg-transparent border-none focus:ring-0 text-xs text-on-surface px-2 py-2.5 placeholder-on-surface-variant font-medium"

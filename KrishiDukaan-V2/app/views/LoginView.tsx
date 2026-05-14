@@ -3,6 +3,7 @@ import { ICONS } from '../constants';
 import { motion } from 'framer-motion';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth, getUserProfile } from '../firebase';
+import { useI18n } from '../i18n/I18nContext';
 
 interface LoginViewProps {
   onBack: () => void;
@@ -11,6 +12,7 @@ interface LoginViewProps {
 }
 
 export default function LoginView({ onBack, onNavigateToSignup, onSuccess }: LoginViewProps) {
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -48,11 +50,11 @@ export default function LoginView({ onBack, onNavigateToSignup, onSuccess }: Log
         className="bg-white p-8 rounded-3xl shadow-ambient w-full max-w-md border border-surface-container"
       >
         <button onClick={onBack} className="mb-6 flex items-center gap-2 text-primary font-bold hover:translate-x-1 transition-transform">
-          <ICONS.ChevronRight className="w-4 h-4 rotate-180" /> Back to Store
+          <ICONS.ChevronRight className="w-4 h-4 rotate-180" /> {t('backToStore')}
         </button>
 
-        <h1 className="text-3xl font-bold text-on-surface mb-2">Welcome Back</h1>
-        <p className="text-on-surface-variant mb-8 font-medium">Log in to manage your shop or track your activity.</p>
+        <h1 className="text-3xl font-bold text-on-surface mb-2">{t('welcomeBack')}</h1>
+        <p className="text-on-surface-variant mb-8 font-medium">{t('loginSubtitle')}</p>
 
         {error && (
           <div className="bg-red-50 text-red-700 p-4 rounded-2xl border border-red-100 mb-6 text-sm font-medium">
@@ -62,7 +64,7 @@ export default function LoginView({ onBack, onNavigateToSignup, onSuccess }: Log
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <label className="text-xs font-black uppercase tracking-widest text-on-surface-variant ml-1">Email Address</label>
+            <label className="text-xs font-black uppercase tracking-widest text-on-surface-variant ml-1">{t('emailAddress')}</label>
             <input 
               type="email" 
               required
@@ -75,7 +77,7 @@ export default function LoginView({ onBack, onNavigateToSignup, onSuccess }: Log
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-black uppercase tracking-widest text-on-surface-variant ml-1">Password</label>
+            <label className="text-xs font-black uppercase tracking-widest text-on-surface-variant ml-1">{t('password')}</label>
             <input 
               type="password" 
               required
@@ -92,14 +94,14 @@ export default function LoginView({ onBack, onNavigateToSignup, onSuccess }: Log
             disabled={loading}
             className="w-full bg-primary text-white font-black uppercase tracking-widest py-4 rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all mt-4 disabled:opacity-70 disabled:scale-100"
           >
-            {loading ? 'Signing In...' : 'Sign In'}
+            {loading ? t('signingIn') : t('signIn')}
           </button>
         </form>
 
         <div className="mt-8 text-center">
           <p className="text-sm text-on-surface-variant font-medium">
-            Don&apos;t have an account? 
-            <button onClick={onNavigateToSignup} className="text-primary font-bold ml-1 hover:underline">Create Account</button>
+            {t('noAccount')} 
+            <button onClick={onNavigateToSignup} className="text-primary font-bold ml-1 hover:underline">{t('createAccount')}</button>
           </p>
         </div>
       </motion.div>

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ICONS } from '../constants';
 import { getUserProfile, updateSubscriptionStatus } from '../firebase';
+import { useI18n } from '../i18n/I18nContext';
 
 interface SubscriptionViewProps {
   user: any;
@@ -20,46 +21,31 @@ declare global {
 
 type PremiumRole = 'retailer' | 'manufacturer';
 
-const PREMIUM_CONTENT: Record<
-  PremiumRole,
-  {
-    badge: string;
-    title: string;
-    subtitle: string;
-    benefits: string[];
-  }
-> = {
-  retailer: {
-    badge: 'Retailer Premium',
-    title: 'Retailer Listing Access',
-    subtitle: 'Get discovered by nearby farmers and grow your in-store sales with verified listing access.',
-    benefits: [
-      'Farmers can locate your products with a single click',
-      'Break distributor monopoly — no longer dependent on a single source',
-      'Drive higher footfall to your physical store',
-      'Increase overall revenue through digital visibility'
-    ]
-  },
-  manufacturer: {
-    badge: 'Manufacturer Premium',
-    title: 'Manufacturer Network Access',
-    subtitle: 'Launch your products across local retailer networks with stronger distribution visibility.',
-    benefits: [
-      'Exponential increase in product visibility',
-      'Direct connection with a wide network of local retailers',
-      'Reduce traditional marketing spend',
-      'Increase revenue through stronger distribution reach'
-    ]
-  }
-};
-
 export default function SubscriptionView({ user, role, onSuccess, onLogout }: SubscriptionViewProps) {
+  const { t } = useI18n();
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [seatCount, setSeatCount] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const premiumRole: PremiumRole = role === 'manufacturer' ? 'manufacturer' : 'retailer';
-  const content = PREMIUM_CONTENT[premiumRole];
+  
+  const content = {
+    badge: premiumRole === 'retailer' ? t('retailerPremiumBadge') : t('manufacturerPremiumBadge'),
+    title: premiumRole === 'retailer' ? t('retailerPremiumTitle') : t('manufacturerPremiumTitle'),
+    subtitle: premiumRole === 'retailer' ? t('retailerPremiumSubtitle') : t('manufacturerPremiumSubtitle'),
+    benefits: premiumRole === 'retailer' ? [
+      t('retailerBenefit1'),
+      t('retailerBenefit2'),
+      t('retailerBenefit3'),
+      t('retailerBenefit4')
+    ] : [
+      t('manufacturerBenefit1'),
+      t('manufacturerBenefit2'),
+      t('manufacturerBenefit3'),
+      t('manufacturerBenefit4')
+    ]
+  };
+  
   const accent = premiumRole === 'manufacturer' ? 'text-secondary' : 'text-primary';
 
   const handlePayment = async () => {
@@ -166,15 +152,15 @@ export default function SubscriptionView({ user, role, onSuccess, onLogout }: Su
     {verifying && (
       <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm">
         <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full mb-4" />
-        <p className="font-bold text-primary text-base">Verifying payment...</p>
-        <p className="text-on-surface-variant text-sm mt-1 font-medium">Setting up your account, please wait</p>
+        <p className="font-bold text-primary text-base">{t('verifyingPayment')}</p>
+        <p className="text-on-surface-variant text-sm mt-1 font-medium">{t('settingUpAccount')}</p>
       </div>
     )}
-    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-2 md:px-4 py-2 md:py-6">
+    <div className="min-h-[calc(100vh-64px)] flex items-start md:items-center justify-center px-2 md:px-4 py-2 md:py-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white p-3 md:p-6 rounded-3xl shadow-ambient w-full max-w-lg border border-surface-container text-center relative overflow-hidden"
+        className="bg-white p-3 md:p-6 rounded-3xl shadow-ambient w-full max-w-lg max-h-[calc(100vh-84px)] md:max-h-none overflow-y-auto border border-surface-container text-center relative"
       >
         <div className="absolute inset-x-0 top-0 h-16 md:h-24 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent pointer-events-none" />
 
@@ -194,13 +180,13 @@ export default function SubscriptionView({ user, role, onSuccess, onLogout }: Su
 
         <div className="bg-surface-container-low rounded-2xl p-3 md:p-4 mb-3 md:mb-5 border border-outline-variant text-left">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-on-surface-variant font-bold uppercase tracking-widest text-xs">Plan</span>
+            <span className="text-on-surface-variant font-bold uppercase tracking-widest text-xs">{t('plan')}</span>
             <span className={`font-black uppercase tracking-widest text-xs ${accent}`}>{content.badge}</span>
           </div>
 
           <div className="flex flex-col gap-3 pb-3 border-b border-outline-variant">
             <div className="flex justify-between items-center">
-              <span className="text-on-surface-variant font-bold uppercase tracking-widest text-xs">Number of Seats</span>
+              <span className="text-on-surface-variant font-bold uppercase tracking-widest text-xs">{t('numberOfSeats')}</span>
               <div className="flex items-center gap-3">
                 <button 
                   onClick={() => setSeatCount(Math.max(1, seatCount - 1))}
@@ -219,10 +205,10 @@ export default function SubscriptionView({ user, role, onSuccess, onLogout }: Su
             </div>
             
             <div className="flex justify-between items-center">
-              <span className="text-on-surface-variant font-bold uppercase tracking-widest text-xs">Total Price</span>
+              <span className="text-on-surface-variant font-bold uppercase tracking-widest text-xs">{t('totalPrice')}</span>
               <div className="text-right">
                 <span className="text-lg md:text-xl font-black text-on-surface">₹{seatCount * 21}.00</span>
-                <p className="text-[10px] text-on-surface-variant font-bold uppercase">₹21 per product seat</p>
+                <p className="text-[10px] text-on-surface-variant font-bold uppercase">₹21 {t('perProductSeat')}</p>
               </div>
             </div>
           </div>
@@ -232,10 +218,10 @@ export default function SubscriptionView({ user, role, onSuccess, onLogout }: Su
             disabled={loading}
             className="w-full mt-3 bg-primary text-white text-[11px] md:text-sm font-black uppercase tracking-widest py-2.5 md:py-3 rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-95 transition-all disabled:opacity-70"
           >
-            {loading ? 'Processing...' : `Pay ₹${seatCount * 21} & Unlock ${seatCount} Seats`}
+            {loading ? t('processing') : t('payUnlock', { amount: seatCount * 21, seats: seatCount })}
           </button>
 
-          <h3 className={`mt-3 md:mt-4 text-[11px] md:text-xs font-black uppercase tracking-widest mb-2 ${accent}`}>Included benefits</h3>
+          <h3 className={`mt-3 md:mt-4 text-[11px] md:text-xs font-black uppercase tracking-widest mb-2 ${accent}`}>{t('includedBenefits')}</h3>
           <ul className="space-y-1.5 md:space-y-2.5">
             {content.benefits.map((feature, i) => (
               <li
@@ -248,7 +234,7 @@ export default function SubscriptionView({ user, role, onSuccess, onLogout }: Su
             ))}
             <li className="flex items-start gap-2.5 text-xs md:text-sm font-medium text-on-surface leading-snug">
               <ICONS.Check className={`w-3.5 h-3.5 md:w-4 md:h-4 shrink-0 mt-0.5 ${accent}`} />
-              List up to {seatCount} products in our marketplace
+              {t('listUpTo', { seats: seatCount })}
             </li>
           </ul>
         </div>
@@ -264,12 +250,12 @@ export default function SubscriptionView({ user, role, onSuccess, onLogout }: Su
             onClick={onLogout}
             className="text-on-surface-variant font-bold text-xs md:text-sm hover:text-primary transition-colors"
           >
-            Logout and go back
+            {t('logoutGoBack')}
           </button>
         </div>
 
         <p className="mt-3 md:mt-5 text-[10px] text-on-surface-variant font-medium uppercase tracking-widest">
-          Secure payment via Razorpay
+          {t('securePayment')}
         </p>
       </motion.div>
     </div>
