@@ -333,28 +333,52 @@ export default function AdminHubsPage() {
 
               {/* Seeds */}
               <div className="border-t border-surface-container pt-5">
-                <h3 className="text-xs font-black uppercase tracking-widest text-primary mb-4">Seeds / Products</h3>
-                <ArrayField
-                  label="Seeds (with images)"
-                  items={f.seeds}
-                  onChange={seeds => setF(p => ({ ...p, seeds }))}
-                  fields={[
-                    { key: "name", placeholder: "Seed name" },
-                    { key: "price", placeholder: "Price (₹)" },
-                    { key: "img", placeholder: "Image URL" },
-                  ]}
-                  addLabel="Add Seed"
-                />
-                {/* Seed image previews */}
-                {f.seeds.some(s => s.img) && (
-                  <div className="flex gap-2 mt-3 flex-wrap">
-                    {f.seeds.filter(s => s.img).map((s, i) => (
-                      <div key={i} className="w-14 h-14 rounded-xl overflow-hidden border border-surface-container">
-                        <img src={s.img} alt={s.name} className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-primary">Seeds / Products</h3>
+                  <button type="button"
+                    onClick={() => setF(p => ({ ...p, seeds: [...p.seeds, { name: "", price: "", img: "" }] }))}
+                    className="text-xs font-bold text-primary flex items-center gap-1 hover:underline">
+                    <Plus className="h-3 w-3" /> Add Seed
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {f.seeds.map((seed, i) => (
+                    <div key={i} className="rounded-2xl border border-outline-variant bg-surface-container-low p-3 space-y-2">
+                      {/* Row 1: name + price + delete */}
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="text" value={seed.name} placeholder="Seed / product name"
+                          onChange={e => { const s = [...f.seeds]; s[i] = { ...s[i], name: e.target.value }; setF(p => ({ ...p, seeds: s })); }}
+                          className="flex-1 min-w-0 rounded-xl border border-outline-variant bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20" />
+                        <input
+                          type="text" value={seed.price} placeholder="Price (₹)"
+                          onChange={e => { const s = [...f.seeds]; s[i] = { ...s[i], price: e.target.value }; setF(p => ({ ...p, seeds: s })); }}
+                          className="w-24 shrink-0 rounded-xl border border-outline-variant bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20" />
+                        <button type="button"
+                          onClick={() => setF(p => ({ ...p, seeds: p.seeds.filter((_, j) => j !== i) }))}
+                          className="p-2 text-on-surface-variant hover:text-red-500 transition-colors shrink-0">
+                          <X className="h-4 w-4" />
+                        </button>
                       </div>
-                    ))}
-                  </div>
-                )}
+                      {/* Row 2: image URL full-width + preview */}
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="text" value={seed.img} placeholder="Image URL (https://...)"
+                          onChange={e => { const s = [...f.seeds]; s[i] = { ...s[i], img: e.target.value }; setF(p => ({ ...p, seeds: s })); }}
+                          className="flex-1 min-w-0 rounded-xl border border-outline-variant bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20" />
+                        {seed.img && (
+                          <div className="w-10 h-10 rounded-xl overflow-hidden border border-surface-container shrink-0">
+                            <img src={seed.img} alt={seed.name} className="w-full h-full object-cover"
+                              onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {f.seeds.length === 0 && (
+                    <p className="text-xs text-on-surface-variant text-center py-4">No seeds yet. Click Add Seed.</p>
+                  )}
+                </div>
               </div>
 
               {/* Nutrition */}
