@@ -21,6 +21,7 @@ export default function StoreLocatorView({
   userCoords = { lat: 18.5204, lng: 73.8567 }
 }: StoreLocatorViewProps) {
   const [storeSearch, setStoreSearch] = useState('');
+  const [detailStore, setDetailStore] = useState<any | null>(null);
 
   const filteredStores = storeSearch.trim()
     ? stores.filter(store => {
@@ -124,6 +125,7 @@ export default function StoreLocatorView({
   };
 
   return (
+    <>
     <div className="flex flex-col md:flex-row h-[calc(100vh-64px)] overflow-hidden">
       {/* Sidebar */}
       <div className="w-full md:w-[400px] bg-white border-r border-surface-container flex flex-col z-20 shadow-xl overflow-hidden">
@@ -271,7 +273,10 @@ export default function StoreLocatorView({
                 <button className="flex-1 bg-primary text-white py-2.5 rounded-xl text-xs font-bold hover:scale-[1.02] active:scale-95 transition-transform flex items-center justify-center gap-2">
                   <ICONS.Directions className="w-4 h-4" /> Get Directions
                 </button>
-                <button className="flex-1 border border-outline-variant text-on-surface py-2.5 rounded-xl text-xs font-bold hover:bg-white transition-colors">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setDetailStore(store); }}
+                  className="flex-1 border border-outline-variant text-on-surface py-2.5 rounded-xl text-xs font-bold hover:bg-white transition-colors"
+                >
                   Details
                 </button>
               </div>
@@ -358,5 +363,115 @@ export default function StoreLocatorView({
         </div>
       </div>
     </div>
+
+    {/* Store Details Modal */}
+    {detailStore && (
+      <div
+        className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+        onClick={() => setDetailStore(null)}
+      >
+        <motion.div
+          initial={{ y: 60, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 60, opacity: 0 }}
+          transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
+          onClick={(e) => e.stopPropagation()}
+          className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[85vh] overflow-y-auto"
+        >
+          <div className="p-6">
+            <div className="flex items-start justify-between mb-5">
+              <div>
+                <h2 className="text-2xl font-bold text-on-surface">{detailStore.name || detailStore.shopName}</h2>
+                {detailStore.ownerName && (
+                  <p className="text-sm text-on-surface-variant mt-1">Owner: {detailStore.ownerName}</p>
+                )}
+              </div>
+              <button
+                onClick={() => setDetailStore(null)}
+                className="p-2 hover:bg-surface-container-low rounded-full transition-colors ml-2 shrink-0"
+              >
+                <svg className="w-5 h-5 text-on-surface-variant" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {detailStore.address && (
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <ICONS.Location className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-0.5">Address</p>
+                    <p className="text-sm text-on-surface font-semibold">{detailStore.address}</p>
+                    {(detailStore.city || detailStore.state) && (
+                      <p className="text-xs text-on-surface-variant mt-0.5">
+                        {[detailStore.city, detailStore.state, detailStore.pincode].filter(Boolean).join(', ')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {detailStore.phone && (
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-2xl bg-green-50 flex items-center justify-center shrink-0">
+                    <svg className="w-4 h-4 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.38 2 2 0 0 1 3.6 1.21h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.04 6.04l1.86-1.86a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-0.5">Phone</p>
+                    <a href={`tel:${detailStore.phone}`} className="text-sm font-semibold text-green-600 hover:underline">{detailStore.phone}</a>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-2xl bg-surface-container-low flex items-center justify-center shrink-0">
+                  <div className={`w-2.5 h-2.5 rounded-full ${(detailStore.status || '').includes('Open') ? 'bg-green-500' : 'bg-amber-500'}`} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-0.5">Status</p>
+                  <p className="text-sm font-semibold text-on-surface">{detailStore.status || 'Active'}</p>
+                </div>
+              </div>
+
+              {(detailStore.stock || []).length > 0 && (
+                <div>
+                  <p className="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2">Products in Stock</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(detailStore.stock || []).map((item: string) => (
+                      <span key={item} className="px-3 py-1 rounded-xl bg-primary/10 text-primary text-xs font-bold border border-primary/20">
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              {detailStore.location?.lat && detailStore.location?.lng && (detailStore.location.lat !== 0 || detailStore.location.lng !== 0) && (
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${detailStore.location.lat},${detailStore.location.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 bg-primary text-white py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
+                >
+                  <ICONS.Directions className="w-4 h-4" /> Get Directions
+                </a>
+              )}
+              {detailStore.phone && (
+                <a
+                  href={`tel:${detailStore.phone}`}
+                  className="flex-1 border border-outline-variant text-on-surface py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-surface-container transition-colors"
+                >
+                  Call Store
+                </a>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    )}
+    </>
   );
 }

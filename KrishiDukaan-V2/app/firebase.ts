@@ -229,12 +229,15 @@ export async function fetchStores(): Promise<Store[]> {
         ownerName: data.ownerName,
         phone: data.phone,
         address: data.address,
+        city: data.city,
+        state: data.state,
+        pincode: data.pincode,
         distance: 'Nearby',
         status: data.status || 'Active',
-        stock: (data.products || []).map((p: any) => p.name),
-        location: { 
-          lat: data.location?.latitude || 0, 
-          lng: data.location?.longitude || 0 
+        stock: Array.isArray(data.products) ? data.products.map((p: any) => p.name || p) : [],
+        location: {
+          lat: data.location?.latitude ?? data.location?.lat ?? 0,
+          lng: data.location?.longitude ?? data.location?.lng ?? 0
         }
       } as Store;
     });
