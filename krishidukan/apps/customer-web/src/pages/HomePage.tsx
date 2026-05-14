@@ -1,131 +1,281 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Handshake, Zap, MapPin } from 'lucide-react';
-import { PRODUCTS, CATEGORIES } from '../demoData';
+import {
+  MapPin, Phone, Star, Clock3, Truck, ShieldCheck, Tag,
+  ArrowRight, ChevronRight, Navigation,
+} from 'lucide-react';
+import { PRODUCTS, CATEGORIES, RETAILER_STOCK, formatDistance } from '../demoData';
 import { useLocation } from '../LocationContext';
-import { motion } from 'motion/react';
-
-const CROP_ITEMS = [
-  { id: 'fertilizers', name: 'Fertilizers', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDSGbELbnV8HdsslJ8hy2mq0a_hvzZrr4cwUKHrze-GEeDpv0Z0VAvA62LryAUopIvuvGVeMWJJbVbRbtq1vKgcoaC4k3njelp3OPJb4_vjrijsdG-_1eEve_PojVdVNedf02IxptPKFjsUkGRH1oiP1H0007UHuQJ18mVTW7N6Vr0wdS7106fBV-qwwwXtBDWxaYcfvkouSyItxhdz24OL3GaUYJVj1YAyxMbObWYCQ7RpC1_QTpxN-wK8fDzDpx5JjUPaRwkLJq3m' },
-  { id: 'seeds', name: 'Seeds', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAGRxeg57dLoYXGSyDjQg4KIlhXhDoSLcH2TL8JTunYEXVl92RlHqTVRxoaRdOAkh3zaNzYyWA_A6fqz_nGVpYX89iPffRc3YZiMWnP3sK_95HetWGqVfdRImiWjILpEm4QSjNlbAjMj-OUvIStUKdMz3rJIgBpfZfwS_bvvqnp4MW5nmL3clqHayheyeb4JjIMAQ-gLUSD5MwF4wfv6V6n8zzhE4j4TuAAZTe6ghT4RN968zaDf-5pElvcbSJgD-qRjSWhoK-bxv2E' },
-  { id: 'pesticides', name: 'Pesticides', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAqKjRa6JNKk1ATRrRh-34rnzxN5NuF1db88XkLpgwid9VCayDeG7-CfYbyq33aukNBgreqb0c5M1Int2-qanv5_m-SOu2lBMifHXZZH-RkGgsKGAFKGT4r5Nog_CeGGEI5cwu7us5a6k3pdYmXKuO71MT-e41ku3KL7OkdDlJTeQtkq8qzokwhrXf4vzscnmQVRktLp-RhAVdgE10R9kSDmAf-j8yl9-6ONkKTzkj3c4RrUIIUYJjM2l3q8EFdtQT0CPWTr3JIG98a' },
-  { id: 'tools', name: 'Tools', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAi13WleIFmuHicYHUY0W-rwufSddyMDo6kb2AcbrntT8BejZDYLjTxaKtV_Y7mnIsnnZJB27-jLhcDJJ-INGrThJKx-ezn-v1eICtCBg9KvmrOIjxCzqye2mi_tIn2fzO64bWu8QByBgH2JQTivKMjxsEsgphoj0fCIMsFB7enUvlyLg-6IkDTTWxfnEszM37GZrGUGaIDzJCwiztMcbaYmVPS8EIuSqQY0ewtQb8oZbCMTLeltwk9U7G9_lPwLTyFLt5WcDAd8f1r' },
-];
+import { useNearbyShops } from '../hooks/useNearbyShops';
+import { NearbyRowSkeleton } from '../components/SkeletonLoader';
+import { relativeTime } from '../hooks/useFormatTime';
+import { productIcon, categoryIcon, ShopIcon } from '../components/icons';
+import { useTranslation } from 'react-i18next';
 
 export function HomePage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  const { location } = useLocation();
+  const { location, requestGps } = useLocation();
+  const { data, loading } = useNearbyShops(location.lat, location.lng);
+  const nearby = (data?.shops ?? []).slice(0, 4);
 
   return (
-    <div className="flex flex-col gap-10 py-6 md:py-10">
-      {/* Hero */}
-      <section className="px-4 md:px-10 max-w-7xl mx-auto w-full">
-        <div className="relative rounded-3xl overflow-hidden shadow-ambient min-h-[400px] flex flex-col justify-center p-8 md:p-12">
-          <div className="absolute inset-0 z-0">
-            <img
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcJewaf8J1gWZEdY6ipzy3p0M5aZoePmxCri9BSh7nbzy4FW-i7Azi-fBl6G0vr9TDZY9Q0XxD_GHq2_mJECmXU0oGsqJSZEnh1-5IRtoFi-mxGzKT9SHQH5HJW6wrhRD4Z98Wjo19TKEXGiIpyPXcFVZVvSuhCD9bXXV1kQRL_o0HNQ6-7KIySLLVdAddKSxPd14-jD0W8uG58KaJpjHYahRINJqJMRzG_CvOOiM2CGpIBu5yKjDn4P8gspnpRXThlkMm_JgsHX0L"
-              className="w-full h-full object-cover" alt="Farm hero"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary/40" />
-          </div>
-          <div className="relative z-10 max-w-2xl">
-            <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-              className="text-white text-5xl md:text-7xl font-bold tracking-tight leading-[1.1] mb-4">
-              Modern Produce,<br />Rooted Locally.
-            </motion.h1>
-            <p className="text-white/80 text-lg md:text-xl max-w-lg mb-8">
-              Find the freshest harvest and agricultural supplies directly from local stores near {location.label}.
-            </p>
-            <button onClick={() => navigate('/market')}
-              className="bg-white text-primary font-bold px-8 py-3 rounded-xl w-full sm:w-auto hover:bg-surface transition-colors flex items-center justify-center gap-2 shadow-xl max-w-xs">
-              <ArrowRight className="w-5 h-5" /> Explore Products
-            </button>
-          </div>
+    <div>
+      {/* Hero — modern delivery-promise card */}
+      <section
+        style={{
+          background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+          padding: '28px 16px 36px',
+          color: '#fff',
+          borderBottomLeftRadius: 24,
+          borderBottomRightRadius: 24,
+        }}
+      >
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.18)', padding: '5px 12px', borderRadius: 999, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 14 }}>
+          <Clock3 size={12} strokeWidth={2.4} /> {t('home.hero.tag')}
         </div>
-      </section>
+        <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2, marginBottom: 8 }}>
+          {t('common.appName')}
+        </h1>
+        <p style={{ fontSize: 14, opacity: 0.92, marginBottom: 18, lineHeight: 1.55, maxWidth: 480 }}>
+          {t('home.hero.tagline')}
+        </p>
 
-      {/* Shop by Category */}
-      <section className="px-4 md:px-10 max-w-7xl mx-auto w-full">
-        <h2 className="text-3xl font-bold text-on-surface mb-8">Shop by Category</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {CROP_ITEMS.map((crop) => (
-            <motion.button key={crop.id} whileHover={{ y: -5 }} onClick={() => navigate(`/market`)}
-              className="group bg-surface-container-low rounded-3xl p-6 flex flex-col items-center gap-4 shadow-sm hover:shadow-ambient hover:bg-surface-container transition-all border border-transparent hover:border-outline-variant">
-              <div className="w-20 h-20 rounded-full bg-white shadow-sm overflow-hidden border border-surface-container group-hover:scale-110 transition-transform">
-                <img src={crop.image} alt={crop.name} className="w-full h-full object-cover" />
-              </div>
-              <span className="font-bold text-on-surface">{crop.name}</span>
-            </motion.button>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 4 }}>
+          {[
+            { icon: Truck, label: t('home.hero.trustSameDay') },
+            { icon: ShieldCheck, label: t('home.hero.trustGenuine') },
+            { icon: Tag, label: t('home.hero.trustPrices') },
+          ].map(({ icon: Icon, label }) => (
+            <div key={label} style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 12, padding: '10px 8px', textAlign: 'center' }}>
+              <Icon size={18} color="#fff" strokeWidth={2.1} style={{ marginBottom: 4 }} />
+              <div style={{ fontSize: 11, fontWeight: 600, opacity: 0.95, lineHeight: 1.3 }}>{label}</div>
+            </div>
           ))}
         </div>
+
+        {location.source === 'default' && (
+          <button
+            onClick={requestGps}
+            style={{ marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 6, background: '#fff', color: '#15803d', border: 'none', borderRadius: 999, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+          >
+            <Navigation size={13} strokeWidth={2.3} /> {t('home.hero.enableGps')}
+          </button>
+        )}
       </section>
 
-      {/* Trending Products */}
-      <section className="px-4 md:px-10 max-w-7xl mx-auto w-full py-10 bg-white shadow-sm border-y border-surface-container">
-        <div className="flex justify-between items-end mb-8">
-          <h2 className="text-3xl font-bold text-on-surface">Trending Products</h2>
-          <button onClick={() => navigate('/market')} className="text-primary font-bold flex items-center gap-2 hover:translate-x-1 transition-transform">
-            View All <ArrowRight className="w-4 h-4" />
+      {/* Categories — horizontal rail */}
+      <section style={{ padding: '20px 16px 8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 800, color: '#111827', letterSpacing: '-0.01em' }}>{t('home.categoriesTitle')}</h2>
+        </div>
+        <div
+          className="kd-hide-scrollbar"
+          style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4, marginLeft: -4, marginRight: -4, paddingLeft: 4, paddingRight: 4 }}
+        >
+          {CATEGORIES.map((c) => {
+            const Icon = categoryIcon(c.id);
+            return (
+              <button
+                key={c.id}
+                onClick={() => navigate(`/search?category=${c.id}`)}
+                style={{
+                  flex: '0 0 96px',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start',
+                  background: '#fff', border: '1px solid #eef0f3', borderRadius: 16,
+                  padding: '14px 8px 12px', cursor: 'pointer',
+                  boxShadow: '0 1px 2px rgba(15, 23, 42, 0.03)',
+                }}
+              >
+                <span style={{
+                  width: 52, height: 52, borderRadius: 14,
+                  background: `${c.color}15`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  marginBottom: 8,
+                }}>
+                  <Icon size={26} color={c.color} strokeWidth={1.9} />
+                </span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#111827', textAlign: 'center', lineHeight: 1.3 }}>{c.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Products grid */}
+      <section style={{ padding: '16px 16px 8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 800, color: '#111827', letterSpacing: '-0.01em' }}>{t('home.bestSellersTitle')}</h2>
+          <button onClick={() => navigate('/search')} style={{ background: 'none', border: 'none', color: '#16a34a', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+            {t('common.seeAll')} <ChevronRight size={14} strokeWidth={2.4} />
           </button>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {PRODUCTS.slice(0, 4).map((product) => (
-            <motion.div key={product.id} whileHover={{ y: -4 }}
-              className="bg-surface rounded-3xl overflow-hidden shadow-ambient border border-surface-container flex flex-col group cursor-pointer"
-              onClick={() => navigate(`/product/${product.id}`)}>
-              <div className="h-48 relative overflow-hidden flex items-center justify-center"
-                style={{ background: `linear-gradient(135deg, ${product.imageColor}12, ${product.imageColor}28)` }}>
-                <span style={{ fontSize: 64 }}>{product.emoji}</span>
-                <div className="absolute top-4 left-4 bg-primary-container/90 text-on-primary-container backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold shadow-sm">
-                  {product.categoryLabel}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+          {PRODUCTS.map((p) => {
+            const Icon = productIcon(p.id);
+            const stocking = RETAILER_STOCK.filter((i) => i.productId === p.id && i.inStock).length;
+            const prices = RETAILER_STOCK.filter((i) => i.productId === p.id).map((i) => i.price);
+            const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+            return (
+              <button
+                key={p.id}
+                onClick={() => navigate(`/product/${p.id}`)}
+                style={{
+                  background: '#fff', border: '1px solid #eef0f3', borderRadius: 16,
+                  padding: 0, overflow: 'hidden', cursor: 'pointer', textAlign: 'left',
+                  display: 'flex', flexDirection: 'column',
+                  boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
+                }}
+              >
+                <div style={{
+                  height: 120,
+                  background: `linear-gradient(135deg, ${p.imageColor}12, ${p.imageColor}28)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  position: 'relative',
+                }}>
+                  <Icon size={48} color={p.imageColor} strokeWidth={1.7} />
+                  {stocking > 0 && (
+                    <span style={{
+                      position: 'absolute', top: 8, left: 8,
+                      background: '#16a34a', color: '#fff',
+                      fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999,
+                      display: 'inline-flex', alignItems: 'center', gap: 3,
+                    }}>
+                      <Clock3 size={10} strokeWidth={2.5} /> {t('common.today')}
+                    </span>
+                  )}
                 </div>
-              </div>
-              <div className="p-5 flex flex-col flex-1">
-                <h3 className="text-lg font-bold text-on-surface line-clamp-1 mb-1">{product.shortName}</h3>
-                <p className="text-on-surface-variant text-sm mb-4 flex-1 line-clamp-2">{product.description}</p>
-                <div className="flex gap-3">
-                  <button className="flex-1 bg-surface-container-high text-on-surface font-bold py-2.5 rounded-xl hover:bg-surface-container transition-colors text-sm">Details</button>
-                  <button className="flex-1 bg-primary text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-1.5 hover:bg-primary-container transition-colors text-sm">
-                    + Add
-                  </button>
+                <div style={{ padding: 12, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+                    {p.categoryLabel}
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', lineHeight: 1.3, marginBottom: 4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: 34 }}>
+                    {p.shortName}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 10 }}>
+                    {p.packSizes.slice(0, 2).join(' · ')}
+                  </div>
+                  <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: '#111827', lineHeight: 1 }}>
+                        {minPrice > 0 ? `₹${minPrice}` : '—'}
+                      </div>
+                      <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 2 }}>{t('home.shopsCount', { count: stocking })}</div>
+                    </div>
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 3,
+                      background: '#f0fdf4', color: '#15803d',
+                      border: '1px solid #bbf7d0', borderRadius: 8,
+                      fontSize: 12, fontWeight: 700, padding: '6px 10px',
+                    }}>
+                      {t('home.add')}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
+              </button>
+            );
+          })}
         </div>
       </section>
 
-      {/* Why Krishidukan */}
-      <section className="px-4 md:px-10 max-w-7xl mx-auto w-full mb-10">
-        <div className="bg-surface-container-low rounded-3xl p-8 md:p-16 flex flex-col md:flex-row gap-12 items-center">
-          <div className="flex-1">
-            <h2 className="text-4xl font-bold text-on-surface mb-6">Why Krishidukan?</h2>
-            <p className="text-on-surface-variant text-lg mb-10">
-              We bridge the gap between traditional agricultural values and contemporary digital efficiency, ensuring you get the best supplies right when you need them.
-            </p>
-            <div className="flex flex-col gap-8">
-              {[
-                { icon: Handshake, title: 'Local Trust', desc: 'Connect directly with verified sellers in your farming community.' },
-                { icon: Zap, title: 'Digital Efficiency', desc: 'Fast, frictionless ordering and tracking designed for your device.' },
-                { icon: MapPin, title: 'Near You', desc: `Showing stores and products available near ${location.label}.` },
-              ].map((prop, i) => (
-                <div key={i} className="flex items-start gap-4">
-                  <div className="bg-primary-container text-white p-3 rounded-2xl shadow-sm">
-                    <prop.icon className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h4 className="text-xl font-bold text-on-surface">{prop.title}</h4>
-                    <p className="text-on-surface-variant">{prop.desc}</p>
+      {/* Nearby shops */}
+      <section style={{ padding: '16px 16px 28px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 800, color: '#111827', letterSpacing: '-0.01em' }}>{t('home.nearbyShopsTitle')}</h2>
+          <button onClick={() => navigate('/retailers')} style={{ background: 'none', border: 'none', color: '#16a34a', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+            {t('common.seeAll')} <ChevronRight size={14} strokeWidth={2.4} />
+          </button>
+        </div>
+
+        {data && (
+          <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 12 }}>
+            {data.scope === 'radius' && data.radiusKm > 0 && t('home.nearbyScopeRadius', { km: data.radiusKm, label: location.label })}
+            {data.scope === 'district' && t('home.nearbyScopeDistrict')}
+            {data.scope === 'state' && t('home.nearbyScopeState')}
+            {data.fromCache && data.cachedAt && (
+              <span style={{ marginLeft: 6, color: '#92400e' }}>· {t('home.lastUpdated', { when: relativeTime(data.cachedAt) })}</span>
+            )}
+          </p>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {loading && !data ? (
+            <>
+              <NearbyRowSkeleton />
+              <NearbyRowSkeleton />
+              <NearbyRowSkeleton />
+            </>
+          ) : nearby.length === 0 ? (
+            <div style={{ background: '#fff', border: '1px solid #eef0f3', borderRadius: 14, padding: 24, textAlign: 'center', color: '#6b7280', fontSize: 13 }}>
+              {t('home.nearbyEmpty')}
+            </div>
+          ) : (
+            nearby.map(({ retailer, distanceM: d }) => (
+              <button
+                key={retailer.id}
+                onClick={() => navigate(`/retailer/${retailer.id}`)}
+                style={{
+                  background: '#fff', border: '1px solid #eef0f3', borderRadius: 14,
+                  padding: 14, display: 'flex', alignItems: 'center', gap: 12,
+                  cursor: 'pointer', textAlign: 'left', width: '100%',
+                  boxShadow: '0 1px 2px rgba(15, 23, 42, 0.03)',
+                }}
+              >
+                <div style={{ width: 48, height: 48, borderRadius: 12, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <ShopIcon size={22} color="#16a34a" strokeWidth={1.9} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{retailer.businessName}</div>
+                  <div style={{ fontSize: 12, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <Star size={11} fill="#f59e0b" stroke="none" />
+                    <span style={{ fontWeight: 700, color: '#374151' }}>{retailer.rating.toFixed(1)}</span>
+                    <span>·</span>
+                    <span>{retailer.city}</span>
                   </div>
                 </div>
-              ))}
-            </div>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: '#16a34a' }}>{formatDistance(d)}</div>
+                  <a href={`tel:${retailer.phone}`} onClick={(e) => e.stopPropagation()} style={{ marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
+                    <Phone size={11} strokeWidth={2.2} /> {t('home.callShort')}
+                  </a>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      </section>
+
+      {/* Trust strip */}
+      <section style={{ padding: '0 16px 28px' }}>
+        <div style={{ background: '#fff', border: '1px solid #eef0f3', borderRadius: 16, padding: 18, boxShadow: '0 1px 2px rgba(15, 23, 42, 0.03)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+            {[
+              { icon: ShieldCheck, title: t('home.trust.genuineTitle'), body: t('home.trust.genuineBody') },
+              { icon: MapPin, title: t('home.trust.stockTitle'), body: t('home.trust.stockBody') },
+              { icon: Phone, title: t('home.trust.callTitle'), body: t('home.trust.callBody') },
+              { icon: Truck, title: t('home.trust.navTitle'), body: t('home.trust.navBody') },
+            ].map(({ icon: Icon, title, body }) => (
+              <div key={title} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <span style={{ width: 32, height: 32, borderRadius: 10, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Icon size={16} color="#16a34a" strokeWidth={2.1} />
+                </span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 2 }}>{title}</div>
+                  <div style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.5 }}>{body}</div>
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="flex-1 w-full relative">
-            <div className="w-full max-w-md mx-auto relative z-10 hover:scale-105 transition-transform duration-500">
-              <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcJewaf8J1gWZEdY6ipzy3p0M5aZoePmxCri9BSh7nbzy4FW-i7Azi-fBl6G0vr9TDZY9Q0XxD_GHq2_mJECmXU0oGsqJSZEnh1-5IRtoFi-mxGzKT9SHQH5HJW6wrhRD4Z98Wjo19TKEXGiIpyPXcFVZVvSuhCD9bXXV1kQRL_o0HNQ6-7KIySLLVdAddKSxPd14-jD0W8uG58KaJpjHYahRINJqJMRzG_CvOOiM2CGpIBu5yKjDn4P8gspnpRXThlkMm_JgsHX0L"
-                alt="Farmer" className="w-full h-auto rounded-3xl object-cover shadow-ambient" />
-            </div>
-          </div>
+          <button
+            onClick={() => navigate('/retailers')}
+            style={{
+              marginTop: 16, width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              background: '#16a34a', color: '#fff', border: 'none', borderRadius: 12, padding: '12px',
+              fontSize: 14, fontWeight: 700, cursor: 'pointer',
+              boxShadow: '0 2px 6px rgba(22, 163, 74, 0.25)',
+            }}
+          >
+            {t('home.browseAllRetailers')} <ArrowRight size={15} strokeWidth={2.3} />
+          </button>
         </div>
       </section>
     </div>

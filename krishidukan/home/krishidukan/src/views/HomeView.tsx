@@ -2,11 +2,12 @@ import { ICONS, CROPS, PRODUCTS } from '../constants';
 import { motion } from 'motion/react';
 
 interface HomeViewProps {
+  products?: typeof PRODUCTS;
   onProductClick: (id: string) => void;
   onHubClick: () => void;
 }
 
-export default function HomeView({ onProductClick, onHubClick }: HomeViewProps) {
+export default function HomeView({ products = PRODUCTS, onProductClick, onHubClick }: HomeViewProps) {
   return (
     <div className="flex flex-col gap-10 py-6 md:py-10">
       {/* Hero Section */}
@@ -74,7 +75,7 @@ export default function HomeView({ onProductClick, onHubClick }: HomeViewProps) 
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {PRODUCTS.map((product) => (
+          {products.map((product) => (
             <motion.div 
               key={product.id}
               className="bg-surface rounded-3xl overflow-hidden shadow-ambient border border-surface-container flex flex-col group cursor-pointer"

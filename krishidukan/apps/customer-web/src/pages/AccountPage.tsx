@@ -9,16 +9,19 @@ export function AccountPage() {
   const { t } = useTranslation();
   const { location, requestGps } = useLocation();
   const navigate = useNavigate();
-  const { user, isAuthenticated, requireLogin, logout } = useAuth();
+  // TEMP_DISABLED: Login/auth feature disabled for current release
+  const { user, isAuthenticated } = useAuth();
   const { cart, wishlist, addresses } = useCart();
 
-  function gated(path: string, intent: Parameters<typeof requireLogin>[1]) {
-    return () => requireLogin(() => navigate(path), intent);
+  // TEMP_DISABLED: Login/auth feature disabled — navigate directly
+  function gated(path: string, _intent?: string) {
+    return () => navigate(path);
   }
 
   const accountItems = [
-    { icon: ShoppingCart, label: t('account.items.cart'),      sub: isAuthenticated ? t('account.items.cartCount',      { count: cart.length })      : t('account.items.cartGuest'),      action: gated('/cart',      'add-to-cart') },
-    { icon: Heart,        label: t('account.items.wishlist'),  sub: isAuthenticated ? t('account.items.wishlistCount',  { count: wishlist.length })  : t('account.items.wishlistGuest'),  action: gated('/wishlist',  'wishlist') },
+    // TEMP_DISABLED: Cart and wishlist items hidden
+    // { icon: ShoppingCart, label: t('account.items.cart'),      sub: isAuthenticated ? t('account.items.cartCount',      { count: cart.length })      : t('account.items.cartGuest'),      action: gated('/cart',      'add-to-cart') },
+    // { icon: Heart,        label: t('account.items.wishlist'),  sub: isAuthenticated ? t('account.items.wishlistCount',  { count: wishlist.length })  : t('account.items.wishlistGuest'),  action: gated('/wishlist',  'wishlist') },
     { icon: MapPin,       label: t('account.items.addresses'), sub: isAuthenticated ? t('account.items.addressesCount', { count: addresses.length }) : t('account.items.addressesGuest'), action: gated('/addresses', 'save-address') },
   ];
 
@@ -47,7 +50,8 @@ export function AccountPage() {
       </div>
 
       <div style={{ padding: '20px 16px' }}>
-        {!isAuthenticated && (
+        {/* TEMP_DISABLED: Login/auth feature disabled — sign-in button hidden */}
+        {/* {!isAuthenticated && (
           <button
             onClick={() => requireLogin(() => {}, 'generic')}
             style={{
@@ -58,7 +62,7 @@ export function AccountPage() {
           >
             <LogIn size={16} /> {t('account.signIn')}
           </button>
-        )}
+        )} */}
 
         <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', overflow: 'hidden', marginBottom: 16 }}>
           {accountItems.map(({ icon: Icon, label, sub, action }, i) => (
@@ -119,7 +123,8 @@ export function AccountPage() {
           <Phone size={16} /> {t('account.browseProducts')}
         </button>
 
-        {isAuthenticated && (
+        {/* TEMP_DISABLED: Login/auth feature disabled — logout hidden */}
+        {/* {isAuthenticated && (
           <button
             onClick={logout}
             style={{
@@ -130,7 +135,7 @@ export function AccountPage() {
           >
             <LogOut size={15} /> {t('account.signOut')}
           </button>
-        )}
+        )} */}
 
         <div style={{ background: '#f0fdf4', borderRadius: 14, padding: 16, border: '1px solid #bbf7d0' }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: '#15803d', marginBottom: 6, display: 'inline-flex', alignItems: 'center', gap: 6 }}>

@@ -1,20 +1,24 @@
-import { useEffect } from 'react';
+// TEMP_DISABLED: Login/auth feature disabled for current release
+// import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Heart, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PRODUCTS } from '../demoData';
-import { useAuth } from '../contexts/AuthContext';
+// TEMP_DISABLED: Login/auth feature disabled for current release
+// import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 
 export function WishlistPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { isAuthenticated, requireLogin } = useAuth();
+  // TEMP_DISABLED: Login/auth feature disabled for current release
+  // const { isAuthenticated, requireLogin } = useAuth();
   const { wishlist, toggleWishlist } = useCart();
 
-  useEffect(() => {
-    if (!isAuthenticated) requireLogin(() => {}, 'wishlist');
-  }, [isAuthenticated, requireLogin]);
+  // TEMP_DISABLED: Auth gate removed
+  // useEffect(() => {
+  //   if (!isAuthenticated) requireLogin(() => {}, 'wishlist');
+  // }, [isAuthenticated, requireLogin]);
 
   const items = wishlist
     .map((id) => PRODUCTS.find((p) => p.id === id))

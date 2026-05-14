@@ -32,57 +32,43 @@ interface AuthState {
 const Ctx = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(() => loadStoredUser());
-  const [gateOpen, setGateOpen] = useState(false);
-  const [gateIntent, setGateIntent] = useState<LoginIntent>('generic');
+  // TEMP_DISABLED: Login/auth feature disabled for current release
+  const [user] = useState<AuthUser | null>(null);
+  const [gateOpen] = useState(false);
+  const [gateIntent] = useState<LoginIntent>('generic');
   const pendingRef = useRef<PendingAction | null>(null);
 
-  const requireLogin = useCallback((action: () => void, intent: LoginIntent = 'generic') => {
-    if (user) {
-      action();
-      return;
-    }
-    pendingRef.current = { intent, run: action };
-    setGateIntent(intent);
-    setGateOpen(true);
-  }, [user]);
+  // TEMP_DISABLED: requireLogin always runs action immediately (no gate)
+  const requireLogin = useCallback((action: () => void, _intent: LoginIntent = 'generic') => {
+    action();
+  }, []);
 
+  // TEMP_DISABLED: closeGate is a no-op
   const closeGate = useCallback(() => {
     pendingRef.current = null;
-    setGateOpen(false);
   }, []);
 
-  const requestOtp = useCallback(async (phone: string) => {
-    return svcRequestOtp(phone);
+  // TEMP_DISABLED: OTP flow disabled — always returns failure
+  const requestOtp = useCallback(async (_phone: string) => {
+    return { ok: false as const, error: 'Login is temporarily disabled' };
   }, []);
 
-  const verifyOtp = useCallback(async (phone: string, otp: string) => {
-    const result = await svcVerifyOtp(phone, otp);
-    if (result.ok) {
-      setUser(result.user);
-      setGateOpen(false);
-      // Replay the deferred action AFTER the modal is closed and state has settled.
-      const pending = pendingRef.current;
-      pendingRef.current = null;
-      if (pending) setTimeout(() => pending.run(), 0);
-      return { ok: true as const };
-    }
-    return result;
+  const verifyOtp = useCallback(async (_phone: string, _otp: string) => {
+    return { ok: false as const, error: 'Login is temporarily disabled' };
   }, []);
 
-  const logout = useCallback(() => {
-    svcLogout();
-    setUser(null);
-  }, []);
+  // TEMP_DISABLED: logout is a no-op
+  const logout = useCallback(() => {}, []);
 
   // Keep a single tab in sync if we ever open multiples.
-  useEffect(() => {
-    function onStorage(e: StorageEvent) {
-      if (e.key === 'kd_auth_user') setUser(loadStoredUser());
-    }
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, []);
+  // TEMP_DISABLED: storage sync disabled
+  // useEffect(() => {
+  //   function onStorage(e: StorageEvent) {
+  //     if (e.key === 'kd_auth_user') setUser(loadStoredUser());
+  //   }
+  //   window.addEventListener('storage', onStorage);
+  //   return () => window.removeEventListener('storage', onStorage);
+  // }, []);
 
   const value = useMemo<AuthState>(() => ({
     user,

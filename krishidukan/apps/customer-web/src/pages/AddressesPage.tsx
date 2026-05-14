@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+// TEMP_DISABLED: Login/auth feature disabled for current release
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Trash2, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -22,16 +23,19 @@ const EMPTY_FORM: Form = {
 export function AddressesPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { isAuthenticated, requireLogin, user } = useAuth();
+  // TEMP_DISABLED: Login/auth feature disabled for current release
+  const { isAuthenticated, user } = useAuth();
+  // const { requireLogin } = useAuth();
   const { addresses, saveAddress, removeAddress } = useCart();
   const { location } = useLocation();
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState<Form>(EMPTY_FORM);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isAuthenticated) requireLogin(() => {}, 'save-address');
-  }, [isAuthenticated, requireLogin]);
+  // TEMP_DISABLED: Auth gate removed
+  // useEffect(() => {
+  //   if (!isAuthenticated) requireLogin(() => {}, 'save-address');
+  // }, [isAuthenticated, requireLogin]);
 
   function startAdd() {
     setForm({
