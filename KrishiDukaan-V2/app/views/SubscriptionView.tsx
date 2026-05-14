@@ -55,6 +55,7 @@ const PREMIUM_CONTENT: Record<
 
 export default function SubscriptionView({ user, role, onSuccess, onLogout }: SubscriptionViewProps) {
   const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const [seatCount, setSeatCount] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const premiumRole: PremiumRole = role === 'manufacturer' ? 'manufacturer' : 'retailer';
@@ -94,6 +95,7 @@ export default function SubscriptionView({ user, role, onSuccess, onLogout }: Su
         description: `Purchase ${seatCount} Product Listing Seat(s)`,
         order_id: order.id,
         handler: async function (paymentResponse: any) {
+          setVerifying(true);
           try {
             // 3. Verify payment on server
             const verifyRes = await fetch('/api/payment/verify', {
@@ -130,6 +132,7 @@ export default function SubscriptionView({ user, role, onSuccess, onLogout }: Su
             }
             setError(err.message || 'Payment completed but profile update failed. Please refresh.');
           } finally {
+            setVerifying(false);
             setLoading(false);
           }
         },
@@ -159,35 +162,43 @@ export default function SubscriptionView({ user, role, onSuccess, onLogout }: Su
   };
 
   return (
-    <div className="min-h-[80vh] flex items-start md:items-center justify-center px-3 md:px-4 py-4 md:py-10">
+    <>
+    {verifying && (
+      <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm">
+        <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full mb-4" />
+        <p className="font-bold text-primary text-base">Verifying payment...</p>
+        <p className="text-on-surface-variant text-sm mt-1 font-medium">Setting up your account, please wait</p>
+      </div>
+    )}
+    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-2 md:px-4 py-2 md:py-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white p-4 md:p-8 rounded-3xl shadow-ambient w-full max-w-xl border border-surface-container text-center relative overflow-hidden"
+        className="bg-white p-3 md:p-6 rounded-3xl shadow-ambient w-full max-w-lg border border-surface-container text-center relative overflow-hidden"
       >
-        <div className="absolute inset-x-0 top-0 h-24 md:h-36 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent pointer-events-none" />
+        <div className="absolute inset-x-0 top-0 h-16 md:h-24 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent pointer-events-none" />
 
-        <div className="relative z-10 w-14 h-14 md:w-20 md:h-20 bg-white border border-primary/20 rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg shadow-primary/10">
-          <ICONS.Star className="w-7 h-7 md:w-10 md:h-10 text-primary" />
+        <div className="relative z-10 w-12 h-12 md:w-16 md:h-16 bg-white border border-primary/20 rounded-full flex items-center justify-center mx-auto mb-2 md:mb-3 shadow-lg shadow-primary/10">
+          <ICONS.Star className="w-6 h-6 md:w-8 md:h-8 text-primary" />
         </div>
 
-        <div className="relative z-10 inline-flex items-center gap-2 px-3 md:px-4 py-1 rounded-full bg-primary/10 border border-primary/20 mb-3 md:mb-4">
+        <div className="relative z-10 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 mb-2 md:mb-3">
           <ICONS.Trust className={`w-4 h-4 ${accent}`} />
           <span className={`text-[11px] font-black uppercase tracking-widest ${accent}`}>{content.badge}</span>
         </div>
 
-        <h1 className="text-2xl md:text-3xl font-bold text-on-surface mb-1.5 md:mb-2">{content.title}</h1>
-        <p className="text-xs md:text-base text-on-surface-variant mb-4 md:mb-8 font-medium max-w-xl mx-auto">
+        <h1 className="text-xl md:text-2xl font-bold text-on-surface mb-1 md:mb-1.5">{content.title}</h1>
+        <p className="text-[11px] md:text-sm text-on-surface-variant mb-3 md:mb-5 font-medium max-w-xl mx-auto">
           {content.subtitle}
         </p>
 
-        <div className="bg-surface-container-low rounded-2xl p-4 md:p-6 mb-4 md:mb-8 border border-outline-variant text-left">
-          <div className="flex justify-between items-center mb-3">
+        <div className="bg-surface-container-low rounded-2xl p-3 md:p-4 mb-3 md:mb-5 border border-outline-variant text-left">
+          <div className="flex justify-between items-center mb-2">
             <span className="text-on-surface-variant font-bold uppercase tracking-widest text-xs">Plan</span>
             <span className={`font-black uppercase tracking-widest text-xs ${accent}`}>{content.badge}</span>
           </div>
 
-          <div className="flex flex-col gap-4 pb-4 border-b border-outline-variant">
+          <div className="flex flex-col gap-3 pb-3 border-b border-outline-variant">
             <div className="flex justify-between items-center">
               <span className="text-on-surface-variant font-bold uppercase tracking-widest text-xs">Number of Seats</span>
               <div className="flex items-center gap-3">
@@ -197,7 +208,7 @@ export default function SubscriptionView({ user, role, onSuccess, onLogout }: Su
                 >
                   -
                 </button>
-                <span className="text-lg font-bold w-6 text-center">{seatCount}</span>
+                <span className="text-base font-bold w-6 text-center">{seatCount}</span>
                 <button 
                   onClick={() => setSeatCount(seatCount + 1)}
                   className="w-8 h-8 rounded-full border border-outline-variant flex items-center justify-center hover:bg-surface-container-high transition-colors"
@@ -210,7 +221,7 @@ export default function SubscriptionView({ user, role, onSuccess, onLogout }: Su
             <div className="flex justify-between items-center">
               <span className="text-on-surface-variant font-bold uppercase tracking-widest text-xs">Total Price</span>
               <div className="text-right">
-                <span className="text-xl md:text-2xl font-black text-on-surface">₹{seatCount * 21}.00</span>
+                <span className="text-lg md:text-xl font-black text-on-surface">₹{seatCount * 21}.00</span>
                 <p className="text-[10px] text-on-surface-variant font-bold uppercase">₹21 per product seat</p>
               </div>
             </div>
@@ -219,17 +230,17 @@ export default function SubscriptionView({ user, role, onSuccess, onLogout }: Su
           <button
             onClick={handlePayment}
             disabled={loading}
-            className="w-full mt-4 bg-primary text-white text-xs md:text-sm font-black uppercase tracking-widest py-3 md:py-4 rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-95 transition-all disabled:opacity-70"
+            className="w-full mt-3 bg-primary text-white text-[11px] md:text-sm font-black uppercase tracking-widest py-2.5 md:py-3 rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-95 transition-all disabled:opacity-70"
           >
             {loading ? 'Processing...' : `Pay ₹${seatCount * 21} & Unlock ${seatCount} Seats`}
           </button>
 
-          <h3 className={`mt-4 md:mt-6 text-[11px] md:text-xs font-black uppercase tracking-widest mb-2 md:mb-3 ${accent}`}>Included benefits</h3>
-          <ul className="space-y-2 md:space-y-3">
+          <h3 className={`mt-3 md:mt-4 text-[11px] md:text-xs font-black uppercase tracking-widest mb-2 ${accent}`}>Included benefits</h3>
+          <ul className="space-y-1.5 md:space-y-2.5">
             {content.benefits.map((feature, i) => (
               <li
                 key={i}
-                className={`items-start gap-2.5 text-xs md:text-sm font-medium text-on-surface leading-snug ${i > 1 ? 'hidden md:flex' : 'flex'}`}
+                className={`items-start gap-2 text-xs md:text-sm font-medium text-on-surface leading-snug ${i > 0 ? 'hidden md:flex' : 'flex'}`}
               >
                 <ICONS.Check className={`w-3.5 h-3.5 md:w-4 md:h-4 shrink-0 mt-0.5 ${accent}`} />
                 {feature}
@@ -243,24 +254,25 @@ export default function SubscriptionView({ user, role, onSuccess, onLogout }: Su
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-700 p-4 rounded-2xl border border-red-100 mb-6 text-sm font-medium">
+          <div className="bg-red-50 text-red-700 p-3 rounded-2xl border border-red-100 mb-4 text-xs md:text-sm font-medium">
             {error}
           </div>
         )}
 
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           <button
             onClick={onLogout}
-            className="text-on-surface-variant font-bold text-sm hover:text-primary transition-colors"
+            className="text-on-surface-variant font-bold text-xs md:text-sm hover:text-primary transition-colors"
           >
             Logout and go back
           </button>
         </div>
 
-        <p className="mt-4 md:mt-8 text-[10px] text-on-surface-variant font-medium uppercase tracking-widest">
+        <p className="mt-3 md:mt-5 text-[10px] text-on-surface-variant font-medium uppercase tracking-widest">
           Secure payment via Razorpay
         </p>
       </motion.div>
     </div>
+    </>
   );
 }

@@ -228,7 +228,23 @@ export default function App() {
   };
 
   const handleSubscriptionSuccess = async () => {
-    setUserProfile(prev => ({ ...prev, isPaid: true }));
+    if (user) {
+      const profileData = await getUserProfile(user.uid);
+      if (profileData) {
+        setUserProfile({
+          name: profileData.name || '',
+          email: profileData.email || user.email || '',
+          phone: profileData.phone || '',
+          isPaid: profileData.isPaid || false,
+          totalSeats: profileData.totalSeats || 0,
+          productCount: profileData.productCount || 0,
+        });
+      } else {
+        setUserProfile(prev => ({ ...prev, isPaid: true }));
+      }
+    } else {
+      setUserProfile(prev => ({ ...prev, isPaid: true }));
+    }
     navigate('profile', { replace: true });
   };
 
@@ -274,6 +290,26 @@ export default function App() {
       );
     });
   }, [allProducts, productSearch, storeNameById]);
+
+  const searchedStores = useMemo(() => {
+    const query = productSearch.trim().toLowerCase();
+    if (!query) return allStores;
+
+    return allStores.filter((store) => {
+      const stockItems = Array.isArray(store.stock) ? store.stock.join(' ') : '';
+      const searchable = [
+        String(store.name || ''),
+        String(store.shopName || ''),
+        String(store.ownerName || ''),
+        String(store.address || ''),
+        String(store.distance || ''),
+        stockItems
+      ]
+        .join(' ')
+        .toLowerCase();
+      return searchable.includes(query);
+    });
+  }, [allStores, productSearch]);
 
   const marketProducts = useMemo(() => {
     if (selectedCategory === 'all') return searchedProducts;
@@ -324,7 +360,7 @@ export default function App() {
           />
         );
       case 'hub':
-        return <HubView />;
+        return <HubView searchQuery={productSearch} />;
       case 'product':
         return <ProductDetailView products={allProducts} stores={allStores} productId={selectedProductId} onBack={() => navigate('market')} onStoreClick={navigateToMap} />;
       case 'map':
@@ -332,7 +368,7 @@ export default function App() {
           <StoreLocatorView 
             onBack={() => navigate('home')} 
             selectedStoreId={selectedStoreId} 
-            stores={allStores}
+            stores={searchedStores}
             location={locationQuery}
             onLocationChange={(loc, coords) => {
               setLocationQuery(loc);
@@ -346,7 +382,6 @@ export default function App() {
           <ProfileView
             role={userRole}
             profile={userProfile}
-            onRoleChange={setUserRole}
             onProfileSave={handleProfileSave}
             onRetailerProductSaved={loadData}
             onNavigate={navigate}
@@ -367,16 +402,19 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-surface">
-      <Navbar 
-        currentView={currentView} 
-        onNavigate={navigate} 
-        productSearch={productSearch} 
-        setProductSearch={setProductSearch} 
+      <Navbar
+        currentView={currentView}
+        onNavigate={navigate}
+        productSearch={productSearch}
+        setProductSearch={setProductSearch}
         locationQuery={locationQuery}
         onLocationChange={(loc, coords) => {
           setLocationQuery(loc);
           if (coords) setCoordinates(coords);
         }}
+        externalUser={user}
+        externalUserRole={userRole}
+        externalUserProfile={userProfile}
       />
 
       {/* Main Content */}

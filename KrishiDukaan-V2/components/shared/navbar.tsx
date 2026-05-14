@@ -17,21 +17,31 @@ interface NavbarProps {
   isDashboard?: boolean;
   locationQuery?: string;
   onLocationChange?: (location: string, coordinates?: { lat: number, lng: number }) => void;
+  externalUser?: any;
+  externalUserRole?: string;
+  externalUserProfile?: { isPaid?: boolean };
 }
 
-export function Navbar({ 
-  currentView, 
-  onNavigate, 
-  productSearch = '', 
+export function Navbar({
+  currentView,
+  onNavigate,
+  productSearch = '',
   setProductSearch,
   isDashboard = false,
   locationQuery = 'Pune, Maharashtra',
-  onLocationChange
+  onLocationChange,
+  externalUser,
+  externalUserRole,
+  externalUserProfile,
 }: NavbarProps) {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [userRole, setUserRole] = useState<string>('customer');
-  const [userProfile, setUserProfile] = useState<any>({ isPaid: false });
+  const [localUser, setLocalUser] = useState<any>(null);
+  const [localUserRole, setLocalUserRole] = useState<string>('customer');
+  const [localUserProfile, setLocalUserProfile] = useState<any>({ isPaid: false });
+
+  const user = externalUser !== undefined ? externalUser : localUser;
+  const userRole = externalUserRole !== undefined ? externalUserRole : localUserRole;
+  const userProfile = externalUserProfile !== undefined ? externalUserProfile : localUserProfile;
   const [language, setLanguage] = useState('EN');
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
 
@@ -97,18 +107,16 @@ export function Navbar({
     
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        setUser(firebaseUser);
+        setLocalUser(firebaseUser);
         const profileData = await getUserProfile(firebaseUser.uid);
         if (profileData) {
-          setUserRole(profileData.role);
-          setUserProfile({
-            isPaid: profileData.isPaid || false
-          });
+          setLocalUserRole(profileData.role);
+          setLocalUserProfile({ isPaid: profileData.isPaid || false });
         }
       } else {
-        setUser(null);
-        setUserRole('customer');
-        setUserProfile({ isPaid: false });
+        setLocalUser(null);
+        setLocalUserRole('customer');
+        setLocalUserProfile({ isPaid: false });
       }
     });
     return () => unsubscribe();

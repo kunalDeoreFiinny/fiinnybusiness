@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ICONS } from '../constants';
 import { motion } from 'framer-motion';
 import { fetchHubs, Hub } from '../firebase';
@@ -108,7 +108,11 @@ const FALLBACK_HUBS: Hub[] = [
   }
 ];
 
-export default function HubView() {
+interface HubViewProps {
+  searchQuery?: string;
+}
+
+export default function HubView({ searchQuery = '' }: HubViewProps) {
   const [hubs, setHubs] = useState<Hub[]>([]);
   const [selectedHub, setSelectedHub] = useState<Hub | null>(null);
   const [loading, setLoading] = useState(true);
@@ -136,10 +140,50 @@ export default function HubView() {
     loadHubs();
   }, []);
 
-  if (loading || !selectedHub) {
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredHubs = useMemo(() => {
+    if (!normalizedQuery) return hubs;
+
+    return hubs.filter((hub) => {
+      const searchable = [
+        hub.name,
+        hub.tagline,
+        ...hub.seeds.map((seed) => seed.name),
+        ...hub.nutrition.map((item) => item.name),
+        hub.advisory.title
+      ]
+        .join(' ')
+        .toLowerCase();
+      return searchable.includes(normalizedQuery);
+    });
+  }, [hubs, normalizedQuery]);
+
+  useEffect(() => {
+    if (!filteredHubs.length) {
+      setSelectedHub(null);
+      return;
+    }
+
+    if (!selectedHub || !filteredHubs.some((hub) => hub.id === selectedHub.id)) {
+      setSelectedHub(filteredHubs[0]);
+    }
+  }, [filteredHubs, selectedHub]);
+
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!selectedHub) {
+    return (
+      <div className="px-4 md:px-10 max-w-7xl mx-auto w-full py-10">
+        <div className="rounded-3xl border border-dashed border-surface-container bg-surface-container-low p-10 text-center">
+          <h2 className="text-xl font-bold text-on-surface mb-2">No hub results found</h2>
+          <p className="text-on-surface-variant">Try a different product, crop, or keyword.</p>
+        </div>
       </div>
     );
   }
@@ -153,7 +197,7 @@ export default function HubView() {
       
       {/* Hub Selector */}
       <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-        {hubs.map((hub) => (
+        {filteredHubs.map((hub) => (
           <button
             key={hub.id}
             onClick={() => setSelectedHub(hub)}

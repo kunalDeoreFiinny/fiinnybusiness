@@ -78,32 +78,41 @@ export default function ProductDetailView({ products = PRODUCTS, stores = STORES
                 }`}
               >
                 {/* Always-visible summary row */}
-                <button
-                  onClick={() => setExpandedStoreId(isExpanded ? null : store.id)}
-                  className="w-full flex items-center gap-4 p-4 text-left"
-                >
-                  <div className={`p-2.5 rounded-xl transition-colors ${isExpanded ? 'bg-primary text-white' : 'bg-white shadow-sm text-on-surface-variant'}`}>
-                    <ICONS.Market className="w-5 h-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="block font-bold text-on-surface truncate">{store.name}</span>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[10px] font-bold text-on-surface-variant flex items-center gap-1">
-                        <ICONS.Location className="w-3 h-3" />{store.distance || 'Nearby'}
-                      </span>
-                      <span className={`w-1.5 h-1.5 rounded-full ${(store.status || '').includes('Open') ? 'bg-green-500' : 'bg-red-400'}`} />
-                      <span className="text-[10px] font-bold text-on-surface-variant">{(store.status || 'Active').split('•')[0].trim()}</span>
+                <div className="w-full flex items-center gap-2 p-4">
+                  <button
+                    onClick={() => setExpandedStoreId(isExpanded ? null : store.id)}
+                    className="flex-1 min-w-0 flex items-center gap-4 text-left"
+                  >
+                    <div className={`p-2.5 rounded-xl transition-colors ${isExpanded ? 'bg-primary text-white' : 'bg-white shadow-sm text-on-surface-variant'}`}>
+                      <ICONS.Market className="w-5 h-5" />
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
-                      availability?.stockLevel === 'In Stock' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
-                    }`}>
-                      {availability?.stockLevel}
-                    </span>
-                    <ICONS.ChevronRight className={`w-4 h-4 text-outline transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                  </div>
-                </button>
+                    <div className="flex-1 min-w-0">
+                      <span className="block font-bold text-on-surface truncate">{store.name}</span>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px] font-bold text-on-surface-variant flex items-center gap-1">
+                          <ICONS.Location className="w-3 h-3" />{store.distance || 'Nearby'}
+                        </span>
+                        <span className={`w-1.5 h-1.5 rounded-full ${(store.status || '').includes('Open') ? 'bg-green-500' : 'bg-red-400'}`} />
+                        <span className="text-[10px] font-bold text-on-surface-variant">{(store.status || 'Active').split('•')[0].trim()}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
+                        availability?.stockLevel === 'In Stock' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                      }`}>
+                        {availability?.stockLevel}
+                      </span>
+                      <ICONS.ChevronRight className={`w-4 h-4 text-outline transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => onStoreClick(store.id)}
+                    className="shrink-0 inline-flex items-center justify-center gap-1.5 bg-primary text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all"
+                  >
+                    <ICONS.Directions className="w-3.5 h-3.5" />
+                    Map
+                  </button>
+                </div>
 
                 {/* Expanded details */}
                 <AnimatePresence>
@@ -127,13 +136,7 @@ export default function ProductDetailView({ products = PRODUCTS, stores = STORES
                           )}
                         </div>
                         <div className="flex gap-2">
-                          <button
-                            onClick={() => onStoreClick(store.id)}
-                            className="flex-1 bg-primary text-white py-2.5 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-1.5 hover:scale-[1.02] active:scale-95 transition-all"
-                          >
-                            <ICONS.Directions className="w-3.5 h-3.5" /> View on Map
-                          </button>
-                          <button className="flex-1 border border-outline-variant text-on-surface py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-surface-container transition-colors flex items-center justify-center gap-1.5">
+                          <button className="w-full border border-outline-variant text-on-surface py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-surface-container transition-colors flex items-center justify-center gap-1.5">
                             <ICONS.Phone className="w-3.5 h-3.5" /> Call Store
                           </button>
                         </div>
