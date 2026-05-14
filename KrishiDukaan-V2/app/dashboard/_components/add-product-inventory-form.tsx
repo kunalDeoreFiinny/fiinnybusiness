@@ -156,14 +156,26 @@ export function AddProductInventoryForm({
         </label>
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="font-medium text-on-surface">Unit</span>
-          <input
+          <select
             required
             disabled={disabled || submitting || !retailerId || isLimitReached || noSeats}
-            className="rounded-xl border border-outline-variant/40 bg-surface-container-low px-3 py-2 text-on-surface outline-none ring-primary/30 focus:ring-2 disabled:opacity-50"
+            className="rounded-xl border border-outline-variant/40 bg-surface-container-low px-3 py-2 text-on-surface outline-none ring-primary/30 focus:ring-2 disabled:opacity-50 appearance-none"
             value={form.unit}
             onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}
-            placeholder="pkt, bag, L..."
-          />
+          >
+            <option value="pkt">Packet (pkt)</option>
+            <option value="kg">Kilogram (kg)</option>
+            <option value="g">Gram (g)</option>
+            <option value="L">Litre (L)</option>
+            <option value="ml">Millilitre (ml)</option>
+            <option value="bag">Bag</option>
+            <option value="pcs">Piece (pcs)</option>
+            <option value="box">Box</option>
+            <option value="bottle">Bottle</option>
+            <option value="bundle">Bundle</option>
+            <option value="can">Can</option>
+            <option value="drum">Drum</option>
+          </select>
         </label>
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="font-medium text-on-surface">Stock quantity</span>

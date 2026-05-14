@@ -186,6 +186,8 @@ export async function fetchMarketplaceProducts(): Promise<MarketplaceProduct[]> 
           stock: String(data.stock || 'In Stock'),
           store: String(data.store || 'Local Store'),
           distance: String(data.distance || 'Nearby'),
+          retailerId: data.retailerId ? String(data.retailerId) : undefined,
+          manufacturerId: data.manufacturerId ? String(data.manufacturerId) : undefined,
           availability: data.availability || undefined
         } as MarketplaceProduct;
       })

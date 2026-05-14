@@ -17,11 +17,19 @@ interface ProductDetailViewProps {
   productId: string | null;
   onBack: () => void;
   onStoreClick: (storeId: string) => void;
+  onProductClick?: (id: string) => void;
+  onViewSellerAll?: (storeName: string) => void;
 }
 
-export default function ProductDetailView({ products = PRODUCTS, stores = STORES, productId, onBack, onStoreClick }: ProductDetailViewProps) {
+export default function ProductDetailView({ products = PRODUCTS, stores = STORES, productId, onBack, onStoreClick, onProductClick, onViewSellerAll }: ProductDetailViewProps) {
   const product = products.find(p => p.id === productId) || products[0];
   const [expandedStoreId, setExpandedStoreId] = useState<string | null>(null);
+
+  const sellerProducts = products.filter(p => {
+    if (p.id === product.id) return false;
+    if (product.retailerId && p.retailerId) return p.retailerId === product.retailerId;
+    return product.store !== 'Local Store' && p.store === product.store;
+  }).slice(0, 6);
 
   const availabilityStoreIds = new Set((product.availability || []).map((item) => item.storeId));
   const matchingStores = stores.filter((store) => availabilityStoreIds.has(store.id));
@@ -250,6 +258,44 @@ export default function ProductDetailView({ products = PRODUCTS, stores = STORES
           </div>
         </div>
       </section>
+
+      {/* Seller Portfolio */}
+      {sellerProducts.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-2xl font-bold text-on-surface">More from {product.store}</h2>
+              <p className="text-xs text-on-surface-variant mt-0.5">Other products listed by this seller</p>
+            </div>
+            {onViewSellerAll && (
+              <button
+                onClick={() => onViewSellerAll(product.store)}
+                className="text-xs font-black uppercase tracking-widest text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
+              >
+                View All <ICONS.ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          <div className="flex gap-4 overflow-x-auto pb-2 hide-scrollbar">
+            {sellerProducts.map(p => (
+              <div
+                key={p.id}
+                onClick={() => onProductClick?.(p.id)}
+                className="shrink-0 w-44 cursor-pointer rounded-2xl border border-surface-container bg-white shadow-sm hover:shadow-md hover:border-primary/30 transition-all hover:scale-[1.02] overflow-hidden"
+              >
+                <div className="aspect-square overflow-hidden bg-surface-container-low">
+                  <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                </div>
+                <div className="p-3 flex flex-col gap-0.5">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-primary">{p.category}</span>
+                  <p className="font-bold text-on-surface text-sm truncate leading-tight">{p.name}</p>
+                  <span className="text-secondary font-extrabold text-sm">₹{p.price}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

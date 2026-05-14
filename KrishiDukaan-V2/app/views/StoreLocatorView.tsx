@@ -12,16 +12,31 @@ interface StoreLocatorViewProps {
   userCoords?: { lat: number, lng: number };
 }
 
-export default function StoreLocatorView({ 
-  onBack, 
-  selectedStoreId, 
-  stores = [], 
+export default function StoreLocatorView({
+  onBack,
+  selectedStoreId,
+  stores = [],
   location = 'Pune, Maharashtra',
   onLocationChange,
   userCoords = { lat: 18.5204, lng: 73.8567 }
 }: StoreLocatorViewProps) {
+  const [storeSearch, setStoreSearch] = useState('');
+
+  const filteredStores = storeSearch.trim()
+    ? stores.filter(store => {
+        const searchable = [
+          store.name || '',
+          store.shopName || '',
+          store.ownerName || '',
+          store.address || '',
+          ...(Array.isArray(store.stock) ? store.stock : [])
+        ].join(' ').toLowerCase();
+        return searchable.includes(storeSearch.toLowerCase());
+      })
+    : stores;
+
   const [activeStoreId, setActiveStoreId] = useState<string | null>(selectedStoreId || (stores[0]?.id ?? null));
-  const focusedStore = stores.length > 0 ? (stores.find((s) => s.id === activeStoreId) || stores[0]) : null;
+  const focusedStore = filteredStores.length > 0 ? (filteredStores.find((s) => s.id === activeStoreId) || filteredStores[0]) : null;
   const [map, setMap] = useState<google.maps.Map | null>(null);
 
   const { isLoaded } = useJsApiLoader({
@@ -120,18 +135,35 @@ export default function StoreLocatorView({
             <h2 className="text-2xl font-bold text-on-surface">Nearby Stores</h2>
           </div>
 
-          {/* Location search — only on this tab */}
-          <div className="flex items-center bg-surface-container-low rounded-2xl px-4 py-3 mb-4 border border-outline-variant group focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+          {/* Location search */}
+          <div className="flex items-center bg-surface-container-low rounded-2xl px-4 py-3 mb-3 border border-outline-variant group focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
             <ICONS.Location className="w-4 h-4 text-outline mr-3 group-focus-within:text-primary transition-colors shrink-0" />
-              <input
-                type="text"
-                value={location}
-                onChange={handleLocationChange}
-                onKeyDown={handleLocationSubmit}
-                placeholder="Enter your location..."
-                className="bg-transparent border-none w-full focus:ring-0 text-sm text-on-surface font-semibold placeholder:font-normal"
-              />
-            </div>
+            <input
+              type="text"
+              value={location}
+              onChange={handleLocationChange}
+              onKeyDown={handleLocationSubmit}
+              placeholder="Enter your location..."
+              className="bg-transparent border-none w-full focus:ring-0 text-sm text-on-surface font-semibold placeholder:font-normal"
+            />
+          </div>
+
+          {/* Store name / product search */}
+          <div className="flex items-center bg-surface-container-low rounded-2xl px-4 py-3 mb-4 border border-outline-variant group focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+            <ICONS.Search className="w-4 h-4 text-outline mr-3 group-focus-within:text-primary transition-colors shrink-0" />
+            <input
+              type="text"
+              value={storeSearch}
+              onChange={e => setStoreSearch(e.target.value)}
+              placeholder="Search stores or products..."
+              className="bg-transparent border-none w-full focus:ring-0 text-sm text-on-surface font-semibold placeholder:font-normal"
+            />
+            {storeSearch && (
+              <button onClick={() => setStoreSearch('')} className="text-outline hover:text-on-surface transition-colors ml-1">
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            )}
+          </div>
 
           <div className="flex gap-2 overflow-x-auto pb-4 hide-scrollbar">
             <button className="whitespace-nowrap px-5 py-2 rounded-full bg-primary text-white text-xs font-bold shadow-lg shadow-primary/20 flex items-center gap-2">
@@ -166,7 +198,7 @@ export default function StoreLocatorView({
                     scale: 7
                   }}
                 />
-                {stores.map((store) => {
+                {filteredStores.map((store) => {
                   const lat = store.location?.lat || store.location?.latitude;
                   const lng = store.location?.lng || store.location?.longitude;
                   if (!lat || !lng) return null;
@@ -190,12 +222,18 @@ export default function StoreLocatorView({
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-4 bg-surface-container-lowest">
-          {stores.map((store, i) => (
-            <motion.div 
+          {filteredStores.length === 0 && storeSearch.trim() ? (
+            <div className="py-12 text-center text-on-surface-variant">
+              <ICONS.Search className="w-8 h-8 mx-auto mb-3 opacity-30" />
+              <p className="font-bold text-sm">No stores found</p>
+              <p className="text-xs mt-1">Try a different name or product</p>
+            </div>
+          ) : filteredStores.map((store, i) => (
+            <motion.div
               key={store.id}
               initial={{ x: -20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: i * 0.1 }}
+              transition={{ delay: i * 0.05 }}
               onClick={() => setActiveStoreId(store.id)}
               className={`p-5 rounded-3xl border-2 transition-all cursor-pointer group hover:scale-[1.02] ${
                 store.id === activeStoreId ? 'border-primary bg-primary/10 shadow-lg scale-[1.03]' : (store.isHot ? 'border-primary/40 bg-primary/5 shadow-sm' : 'border-surface-container bg-white hover:border-outline-variant shadow-sm')
@@ -217,11 +255,11 @@ export default function StoreLocatorView({
 
               <div className="mb-6 space-y-2">
                 <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${store.status.includes('Open') ? 'bg-green-500' : 'bg-error'}`} />
-                  <span className="text-xs font-bold text-on-surface-variant">{store.status}</span>
+                  <div className={`w-2 h-2 rounded-full ${(store.status || '').includes('Open') ? 'bg-green-500' : 'bg-error'}`} />
+                  <span className="text-xs font-bold text-on-surface-variant">{store.status || 'Active'}</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {store.stock.map(item => (
+                  {(store.stock || []).map((item: string) => (
                     <span key={item} className="px-2 py-0.5 rounded-lg bg-surface-container-high text-on-surface-variant text-[9px] font-black uppercase tracking-widest border border-surface-container-highest">
                       {item}
                     </span>
@@ -268,11 +306,11 @@ export default function StoreLocatorView({
             />
 
             {/* Store Markers */}
-            {stores.map(store => {
+            {filteredStores.map(store => {
               const lat = store.location?.lat || store.location?.latitude;
               const lng = store.location?.lng || store.location?.longitude;
               if (!lat || !lng) return null;
-              
+
               return (
                 <MarkerF
                   key={store.id}

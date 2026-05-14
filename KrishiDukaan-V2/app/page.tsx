@@ -239,13 +239,22 @@ export default function App() {
           totalSeats: profileData.totalSeats || 0,
           productCount: profileData.productCount || 0,
         });
+        if (profileData.role === 'retailer' || profileData.role === 'manufacturer') {
+          window.location.href = '/dashboard';
+          return;
+        }
       } else {
         setUserProfile(prev => ({ ...prev, isPaid: true }));
       }
     } else {
       setUserProfile(prev => ({ ...prev, isPaid: true }));
     }
-    navigate('profile', { replace: true });
+
+    if (userRole === 'retailer' || userRole === 'manufacturer') {
+      window.location.href = '/dashboard';
+    } else {
+      navigate('profile', { replace: true });
+    }
   };
 
   const handleProfileSave = (profile: UserProfile) => {
@@ -362,7 +371,18 @@ export default function App() {
       case 'hub':
         return <HubView searchQuery={productSearch} />;
       case 'product':
-        return <ProductDetailView products={allProducts} stores={allStores} productId={selectedProductId} onBack={() => navigate('market')} onStoreClick={navigateToMap} />;
+        return <ProductDetailView
+          products={allProducts}
+          stores={allStores}
+          productId={selectedProductId}
+          onBack={() => navigate('market')}
+          onStoreClick={navigateToMap}
+          onProductClick={navigateToProduct}
+          onViewSellerAll={(storeName) => {
+            setProductSearch(storeName);
+            navigate('market');
+          }}
+        />;
       case 'map':
         return (
           <StoreLocatorView 
@@ -415,6 +435,10 @@ export default function App() {
         externalUser={user}
         externalUserRole={userRole}
         externalUserProfile={userProfile}
+        allProducts={allProducts}
+        allStores={allStores}
+        onProductClick={navigateToProduct}
+        onStoreClick={navigateToMap}
       />
 
       {/* Main Content */}
