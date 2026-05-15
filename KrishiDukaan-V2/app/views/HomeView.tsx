@@ -7,10 +7,11 @@ import { HelperIcon } from '../../components/helpers';
 interface HomeViewProps {
   products?: MarketplaceProduct[];
   onProductClick: (id: string) => void;
-  onHubClick: () => void;
+  onHubClick: (hubId?: string) => void;
+  hubs?: any[];
 }
 
-export default function HomeView({ products = PRODUCTS, onProductClick, onHubClick }: HomeViewProps) {
+export default function HomeView({ products = PRODUCTS, onProductClick, onHubClick, hubs = [] }: HomeViewProps) {
   const { t } = useI18n();
 
   return (
@@ -74,15 +75,15 @@ export default function HomeView({ products = PRODUCTS, onProductClick, onHubCli
           />
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {CROPS.map((crop, i) => (
+          {(hubs.length > 0 ? hubs : CROPS).map((crop, i) => (
             <motion.button
               key={crop.id}
               whileHover={{ y: -5 }}
-              onClick={onHubClick}
+              onClick={() => onHubClick(crop.id)}
               className="group bg-surface-container-low rounded-3xl p-6 flex flex-col items-center gap-4 shadow-sm hover:shadow-ambient hover:bg-surface-container transition-all border border-transparent hover:border-outline-variant"
             >
               <div className="w-20 h-20 rounded-full bg-white shadow-sm overflow-hidden border border-surface-container-highest group-hover:scale-110 transition-transform">
-                <img src={crop.image} alt={crop.name} className="w-full h-full object-cover" />
+                <img src={crop.image || crop.heroImage} alt={crop.name} className="w-full h-full object-cover" />
               </div>
               <span className="font-bold text-on-surface">{crop.name}</span>
             </motion.button>

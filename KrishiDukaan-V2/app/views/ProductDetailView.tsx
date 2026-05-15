@@ -1,8 +1,9 @@
 import { MarketplaceProduct } from "../../types/product";
 import { ICONS, PRODUCTS, STORES } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { StoreWithDistance } from '../utils/nearby';
+import { trackProductClick } from '../firebase';
 
 type StoreListItem = {
   id: string;
@@ -35,6 +36,12 @@ export default function ProductDetailView({
 }: ProductDetailViewProps) {
   const product = products.find(p => p.id === productId) || products[0];
   const [expandedStoreId, setExpandedStoreId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (product && product.id) {
+      trackProductClick(product.id);
+    }
+  }, [product.id]);
 
   const sellerProducts = products.filter(p => {
     if (p.id === product.id) return false;

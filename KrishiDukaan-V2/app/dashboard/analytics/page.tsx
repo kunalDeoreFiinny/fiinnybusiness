@@ -1,21 +1,50 @@
-import type { Metadata } from "next";
+'use client';
+
+import { useEffect, useState } from "react";
 import {
   callsOverTime,
   directionRequests,
   insightCards,
-  searchAppearance,
   viewsOverTime,
 } from "../_data/mock";
 import { PageHeader } from "../_components/page-header";
 import { MetricTile } from "../_components/metric-tile";
 import { SimpleBarChart } from "../_components/simple-bar-chart";
 import { InsightCard } from "../_components/insight-card";
-
-export const metadata: Metadata = {
-  title: "Analytics",
-};
+import { fetchRetailerAnalytics } from "../_lib/analytics-firestore";
+import { auth } from "../../firebase";
 
 export default function AnalyticsPage() {
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadStats() {
+      if (auth.currentUser) {
+        try {
+          const realStats = await fetchRetailerAnalytics(auth.currentUser.uid);
+          setStats(realStats);
+        } catch (error) {
+          console.error("Failed to load analytics:", error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    }
+    loadStats();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="p-20 text-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+        <p className="text-on-surface-variant font-medium">Loading real-time analytics...</p>
+      </div>
+    );
+  }
+
+  const appearance = stats?.searchAppearance || { impressions: "0", ctr: "0.0%", avgPosition: "—" };
+
   return (
     <>
       <PageHeader
@@ -26,28 +55,28 @@ export default function AnalyticsPage() {
       <section aria-label="Search appearance" className="grid gap-3 md:grid-cols-3">
         <MetricTile
           label="Impressions"
-          value={searchAppearance.impressions}
-          hint="Mock search & maps surfaces"
+          value={appearance.impressions}
+          hint="Appearances in search results"
         />
-        <MetricTile label="CTR" value={searchAppearance.ctr} hint="Click-through rate" />
+        <MetricTile label="CTR" value={appearance.ctr} hint="Click-through rate" />
         <MetricTile
           label="Avg. position"
-          value={searchAppearance.avgPosition}
-          hint="Lower is better"
+          value={appearance.avgPosition}
+          hint="Lower is better (1.0 is top)"
         />
       </section>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <SimpleBarChart
           title="Views over time"
-          subtitle="Last 7 days · profile & product views"
-          data={viewsOverTime}
+          subtitle="Real data tracking started"
+          data={stats?.viewsOverTime || viewsOverTime}
           accentClass="bg-primary"
         />
         <SimpleBarChart
           title="Calls made"
           subtitle="Tap-to-call from your listing"
-          data={callsOverTime}
+          data={stats?.callsOverTime || callsOverTime}
           accentClass="bg-secondary"
         />
       </div>
@@ -56,7 +85,7 @@ export default function AnalyticsPage() {
         <SimpleBarChart
           title="Direction requests"
           subtitle="Turn-by-turn opens from maps"
-          data={directionRequests}
+          data={stats?.directionRequests || directionRequests}
           accentClass="bg-harvest"
         />
       </div>
@@ -64,7 +93,7 @@ export default function AnalyticsPage() {
       <section aria-label="Insights" className="mt-6">
         <h2 className="text-lg font-semibold text-on-surface">Insights</h2>
         <p className="mt-1 text-sm text-on-surface-variant">
-          Plain-language takeaways from your mock metrics
+          Personalized takeaways from your live metrics
         </p>
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           {insightCards.map((i) => (

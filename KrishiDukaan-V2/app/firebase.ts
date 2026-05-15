@@ -11,6 +11,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  updateDoc,
   where
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
@@ -486,6 +487,31 @@ export interface Hub {
   nutrition: { name: string; desc: string; icon: string }[];
   irrigation: { image: string; items: { name: string; price: string }[] };
   advisory: { title: string; description: string };
+}
+
+export async function trackProductImpression(productId: string, position: number) {
+  try {
+    const ref = doc(db, 'products', productId);
+    await updateDoc(ref, {
+      impressions: increment(1),
+      positionSum: increment(position)
+    });
+  } catch (error) {
+    // Silent fail for analytics
+    console.warn('Impression track failed', error);
+  }
+}
+
+export async function trackProductClick(productId: string) {
+  try {
+    const ref = doc(db, 'products', productId);
+    await updateDoc(ref, {
+      clicks: increment(1)
+    });
+  } catch (error) {
+    // Silent fail for analytics
+    console.warn('Click track failed', error);
+  }
 }
 
 export async function fetchHubs(): Promise<Hub[]> {
