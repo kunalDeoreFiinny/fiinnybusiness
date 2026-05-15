@@ -2,7 +2,7 @@
 
 import { ICONS } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { GoogleMap, useJsApiLoader, MarkerF } from '@react-google-maps/api';
 import { LatLng } from '../utils/haversine';
 import { cacheLocation, reverseGeocodeToDisplay } from '../utils/geolocation';
@@ -19,6 +19,19 @@ interface StoreLocatorViewProps {
   userCoords?: { lat: number, lng: number };
 }
 
+function makePinSvg(color: string, selected: boolean): string {
+  const r = selected ? 14 : 11;
+  const cx = selected ? 18 : 15;
+  const total = cx * 2;
+  const tailH = selected ? 10 : 8;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${total}" height="${total + tailH}" viewBox="0 0 ${total} ${total + tailH}">
+    <circle cx="${cx}" cy="${cx}" r="${r}" fill="${color}" stroke="white" stroke-width="2.5"/>
+    <polygon points="${cx - 5},${cx + r - 2} ${cx},${total + tailH} ${cx + 5},${cx + r - 2}" fill="${color}"/>
+    <circle cx="${cx}" cy="${cx}" r="${Math.round(r * 0.38)}" fill="white" fill-opacity="0.9"/>
+  </svg>`;
+  return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
+}
+
 export default function StoreLocatorView({ 
   onBack, 
   selectedStoreId, 
@@ -32,6 +45,8 @@ export default function StoreLocatorView({
   const [storeSearch, setStoreSearch] = useState('');
   const [showMobileMap, setShowMobileMap] = useState(false);
   const [detailStore, setDetailStore] = useState<any | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
@@ -71,6 +86,17 @@ export default function StoreLocatorView({
       map.panTo(center);
     }
   }, [map, center]);
+
+  // Scroll sidebar to selected store card when map marker is clicked
+  useEffect(() => {
+    if (!activeStoreId) return;
+    const card = cardRefs.current.get(activeStoreId);
+    if (card && listRef.current) {
+      const container = listRef.current;
+      const cardTop = card.offsetTop - container.offsetTop;
+      container.scrollTo({ top: cardTop - 16, behavior: 'smooth' });
+    }
+  }, [activeStoreId]);
 
   const handleStoreClick = (storeId: string) => {
     onStoreSelect?.(storeId);
@@ -263,12 +289,16 @@ export default function StoreLocatorView({
           </p>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4 bg-surface-container-lowest">
+        <div ref={listRef} className="flex-1 overflow-y-auto p-6 flex flex-col gap-4 bg-surface-container-lowest">
           {displayedStores.map((store, i) => {
             const addressLine = storeAddressToDisplayString(store.address);
             return (
             <motion.div
               key={store.id}
+              ref={(el) => {
+                if (el) cardRefs.current.set(store.id, el);
+                else cardRefs.current.delete(store.id);
+              }}
               initial={{ x: -20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: i * 0.07 }}
@@ -378,7 +408,7 @@ export default function StoreLocatorView({
               position={userCoords}
               icon={{
                 path: google.maps.SymbolPath.CIRCLE,
-                fillColor: '#3B82F6',
+                fillColor: '#4285F4',
                 fillOpacity: 1,
                 strokeWeight: 4,
                 strokeColor: '#FFFFFF',
@@ -396,19 +426,20 @@ export default function StoreLocatorView({
               const pos = { lat: Number(lat), lng: Number(lng) };
               const isSelected = store.id === activeStoreId;
 
+              const pinUrl = makePinSvg(isSelected ? '#16A34A' : '#DC2626', isSelected);
+              const pinSize = isSelected
+                ? new google.maps.Size(36, 46)
+                : new google.maps.Size(30, 38);
+              const pinAnchor = isSelected
+                ? new google.maps.Point(18, 46)
+                : new google.maps.Point(15, 38);
+
               return (
                 <MarkerF
                   key={store.id}
                   position={pos}
                   title={store.name}
-                  icon={{
-                    path: google.maps.SymbolPath.CIRCLE,
-                    fillColor: isSelected ? '#EA580C' : '#16A34A',
-                    fillOpacity: 1,
-                    strokeWeight: 2,
-                    strokeColor: '#FFFFFF',
-                    scale: isSelected ? 10 : 7,
-                  }}
+                  icon={{ url: pinUrl, scaledSize: pinSize, anchor: pinAnchor }}
                   onClick={() => {
                     handleStoreClick(store.id);
                     map?.panTo(pos);
@@ -428,7 +459,7 @@ export default function StoreLocatorView({
           <HelperTooltip
             side="left"
             title="Map legend"
-            content="Green markers represent nearby agricultural stores. Click a store card to highlight it on the map."
+            content="Red pins are nearby stores. Click a store card to highlight it — the pin turns green."
           >
             <button
               type="button"
@@ -504,7 +535,7 @@ export default function StoreLocatorView({
                     </div>
                     <div>
                       <p className="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-0.5">Address</p>
-                      <p className="text-sm text-on-surface font-semibold">{detailStore.address}</p>
+                      <p className="text-sm text-on-surface font-semibold">{storeAddressToDisplayString(detailStore.address)}</p>
                       {(detailStore.city || detailStore.state) && (
                         <p className="text-xs text-on-surface-variant mt-0.5">
                           {[detailStore.city, detailStore.state, detailStore.pincode].filter(Boolean).join(', ')}
