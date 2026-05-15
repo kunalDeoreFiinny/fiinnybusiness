@@ -368,6 +368,18 @@ export function Navbar({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {/* Cart icon (placeholder) */}
+          <button
+            className="relative p-2 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-colors text-on-surface"
+            aria-label="Cart"
+            title="Cart (coming soon)"
+          >
+            <ICONS.Market className="w-4 h-4" />
+            <span className="absolute -top-1 -right-1 bg-secondary text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+              0
+            </span>
+          </button>
+
           {/* Current Location Display */}
           <div
             data-tour="location"

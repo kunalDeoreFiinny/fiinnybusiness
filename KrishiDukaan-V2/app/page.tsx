@@ -26,6 +26,7 @@ import { getUserLocation, DEFAULT_LOCATION, DEFAULT_LOCATION_LABEL, GeoResult } 
 import { computeStoreDistances } from './utils/nearby';
 
 import { Navbar } from '../components/shared/navbar';
+import Footer from '../components/shared/footer';
 import { GuidedTour, TourStep } from '../components/helpers';
 
 type View = 'home' | 'market' | 'hub' | 'product' | 'map' | 'about' | 'profile' | 'login' | 'signup' | 'subscription';
@@ -431,10 +432,12 @@ export default function App() {
 
     return storesWithDistance.filter((store) => {
       const stockItems = Array.isArray(store.stock) ? store.stock.join(' ') : '';
+      const shopName = 'shopName' in store ? String(store.shopName || '') : '';
+      const ownerName = 'ownerName' in store ? String(store.ownerName || '') : '';
       const searchable = [
         String(store.name || ''),
-        String(store.shopName || ''),
-        String(store.ownerName || ''),
+        shopName,
+        ownerName,
         String(store.address || ''),
         String(store.distance || ''),
         stockItems
@@ -550,27 +553,25 @@ export default function App() {
 
     switch (currentView) {
       case 'home':
-        return <HomeView 
-          products={homeProducts} 
-          onProductClick={navigateToProduct} 
-          onHubClick={(hubId?: string) => navigate('hub', { hubId: hubId || null })}
-          hubs={hubs}
-        />;
+        return (
+          <HomeView
+            products={homeProducts}
+            onProductClick={navigateToProduct}
+            onHubClick={() => navigate('hub')}
+            onCategoryClick={(cat) => {
+              setSelectedCategory(cat);
+              navigate('market');
+            }}
+          />
+        );
       case 'market':
         return (
-          <MarketView 
-            products={marketProducts} 
-            onProductClick={navigateToProduct} 
+          <MarketView
+            products={marketProducts}
+            onProductClick={navigateToProduct}
             selectedCategory={selectedCategory}
             onCategoryChange={setSelectedCategory}
-            maxDistance={maxDistance}
-            onMaxDistanceChange={setMaxDistance}
-            showFilters={showFilters}
-            onToggleFilters={() => setShowFilters(!showFilters)}
-            inStockOnly={inStockOnly}
-            onInStockOnlyChange={setInStockOnly}
-            sortBy={sortBy}
-            onSortByChange={setSortBy}
+            storesWithDistance={storesWithDistance}
           />
         );
       case 'hub':
@@ -630,7 +631,17 @@ export default function App() {
       case 'about':
         return <AboutView />;
       default:
-        return <HomeView products={homeProducts} onProductClick={navigateToProduct} onHubClick={() => navigate('hub')} />;
+        return (
+          <HomeView
+            products={homeProducts}
+            onProductClick={navigateToProduct}
+            onHubClick={() => navigate('hub')}
+            onCategoryClick={(cat) => {
+              setSelectedCategory(cat);
+              navigate('market');
+            }}
+          />
+        );
     }
   };
 
@@ -670,6 +681,11 @@ export default function App() {
           </motion.div>
         </AnimatePresence>
       </main>
+
+      <Footer
+        onNavigate={(view) => navigate(view as View)}
+        onCategoryClick={(cat) => { setSelectedCategory(cat); navigate('market'); }}
+      />
 
       {/* Onboarding Tour — only runs on first visit, only on home view */}
       {currentView === 'home' && !loading && !errorMsg ? (
