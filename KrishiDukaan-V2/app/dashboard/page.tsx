@@ -8,6 +8,7 @@ import { StatCard } from "./_components/stat-card";
 import { QuickActions } from "./_components/quick-actions";
 import { RecentReviews } from "./_components/recent-reviews";
 import { DashboardInventoryHealth } from "./_components/dashboard-inventory-health";
+import { fetchRetailerAnalytics } from "./_lib/analytics-firestore";
 import type { StatMetric, ReviewItem, InventoryProduct } from "./_data/mock";
 
 export default function DashboardPage() {
@@ -29,6 +30,8 @@ export default function DashboardPage() {
               products = await fetchManufacturerProducts(user.uid);
             }
 
+            const analytics = await fetchRetailerAnalytics(user.uid);
+
             // Calculate stats from real data
             const productCount = products.length;
             const inStock = products.filter(p => p.stock !== 'Out of Stock' && p.stock !== '0').length;
@@ -36,10 +39,10 @@ export default function DashboardPage() {
             const outOfStock = productCount - inStock;
 
             setStats([
-              { id: "views", label: "Total Views", value: (productCount * 142).toLocaleString(), change: "+5.4%", trend: "up" },
-              { id: "calls", label: "Calls Received", value: (productCount * 4).toLocaleString(), change: "+2.1%", trend: "up" },
-              { id: "directions", label: "Directions", value: (productCount * 22).toLocaleString(), change: "-0.5%", trend: "down" },
-              { id: "products", label: "Products Listed", value: productCount.toString(), change: `+${productCount > 0 ? 1 : 0}`, trend: "up" },
+              { id: "views", label: "Total Views", value: analytics.totalImpressions.toLocaleString(), change: "+0.0%", trend: "neutral" },
+              { id: "calls", label: "Interactions", value: analytics.totalClicks.toLocaleString(), change: "+0.0%", trend: "neutral" },
+              { id: "directions", label: "Directions", value: "0", change: "0.0%", trend: "neutral" },
+              { id: "products", label: "Products Listed", value: productCount.toString(), change: "0", trend: "neutral" },
             ]);
 
             setInventoryHealth({

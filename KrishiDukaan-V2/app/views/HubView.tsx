@@ -111,9 +111,10 @@ const FALLBACK_HUBS: Hub[] = [
 
 interface HubViewProps {
   searchQuery?: string;
+  initialHubId?: string | null;
 }
 
-export default function HubView({ searchQuery = '' }: HubViewProps) {
+export default function HubView({ searchQuery = '', initialHubId = null }: HubViewProps) {
   const [hubs, setHubs] = useState<Hub[]>([]);
   const [selectedHub, setSelectedHub] = useState<Hub | null>(null);
   const [loading, setLoading] = useState(true);
@@ -122,12 +123,23 @@ export default function HubView({ searchQuery = '' }: HubViewProps) {
     const loadHubs = async () => {
       try {
         const fetchedHubs = await fetchHubs();
+        let finalHubs = [];
         if (fetchedHubs && fetchedHubs.length > 0) {
-          setHubs(fetchedHubs);
-          setSelectedHub(fetchedHubs[0]);
+          finalHubs = fetchedHubs;
         } else {
-          setHubs(FALLBACK_HUBS);
-          setSelectedHub(FALLBACK_HUBS[0]);
+          finalHubs = FALLBACK_HUBS;
+        }
+        setHubs(finalHubs);
+
+        if (initialHubId) {
+          const found = finalHubs.find(h => h.id === initialHubId);
+          if (found) {
+            setSelectedHub(found);
+          } else {
+            setSelectedHub(finalHubs[0]);
+          }
+        } else if (finalHubs.length > 0) {
+          setSelectedHub(finalHubs[0]);
         }
       } catch (err) {
         console.warn('Could not load hubs from Firestore, using fallback:', err);
@@ -139,7 +151,7 @@ export default function HubView({ searchQuery = '' }: HubViewProps) {
     };
 
     loadHubs();
-  }, []);
+  }, [initialHubId]);
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const filteredHubs = useMemo(() => {
