@@ -219,13 +219,24 @@ export default function RetailerJoinView({ onBack }: RetailerJoinViewProps) {
                       placeholder="Quantity"
                       className="md:col-span-3 bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                     />
-                    <input
-                      type="text"
+                    <select
                       value={product.unit}
                       onChange={(e) => updateProductField(index, 'unit', e.target.value)}
-                      placeholder="Unit (kg, bag, pcs)"
-                      className="md:col-span-2 bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
+                      className="md:col-span-2 bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary appearance-none"
+                    >
+                      <option value="pkt">Packet (pkt)</option>
+                      <option value="kg">Kilogram (kg)</option>
+                      <option value="g">Gram (g)</option>
+                      <option value="L">Litre (L)</option>
+                      <option value="ml">Millilitre (ml)</option>
+                      <option value="bag">Bag</option>
+                      <option value="pcs">Piece (pcs)</option>
+                      <option value="box">Box</option>
+                      <option value="bottle">Bottle</option>
+                      <option value="bundle">Bundle</option>
+                      <option value="can">Can</option>
+                      <option value="drum">Drum</option>
+                    </select>
                     <button
                       type="button"
                       onClick={() => removeProductRow(index)}

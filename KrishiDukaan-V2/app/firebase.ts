@@ -2,6 +2,7 @@ import { getApp, getApps, initializeApp } from 'firebase/app';
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -186,6 +187,8 @@ export async function fetchMarketplaceProducts(): Promise<MarketplaceProduct[]> 
           stock: String(data.stock || 'In Stock'),
           store: String(data.store || 'Local Store'),
           distance: String(data.distance || 'Nearby'),
+          retailerId: data.retailerId ? String(data.retailerId) : undefined,
+          manufacturerId: data.manufacturerId ? String(data.manufacturerId) : undefined,
           availability: data.availability || undefined
         } as MarketplaceProduct;
       })
@@ -227,12 +230,15 @@ export async function fetchStores(): Promise<Store[]> {
         ownerName: data.ownerName,
         phone: data.phone,
         address: data.address,
+        city: data.city,
+        state: data.state,
+        pincode: data.pincode,
         distance: 'Nearby',
         status: data.status || 'Active',
-        stock: (data.products || []).map((p: any) => p.name),
-        location: { 
-          lat: data.location?.latitude || 0, 
-          lng: data.location?.longitude || 0 
+        stock: Array.isArray(data.products) ? data.products.map((p: any) => p.name || p) : [],
+        location: {
+          lat: data.location?.latitude ?? data.location?.lat ?? 0,
+          lng: data.location?.longitude ?? data.location?.lng ?? 0
         }
       } as Store;
     });
@@ -493,4 +499,56 @@ export async function fetchHubs(): Promise<Hub[]> {
     console.error('Error fetching hubs:', error);
     throw error;
   }
+}
+
+// ─── Admin functions ──────────────────────────────────────────────────────────
+
+export async function fetchAllUsers(): Promise<any[]> {
+  const snapshot = await getDocs(collection(db, 'users'));
+  return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export async function fetchAllRetailers(): Promise<any[]> {
+  const snapshot = await getDocs(collection(db, 'retailers'));
+  return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export async function fetchAllPayments(): Promise<any[]> {
+  const snapshot = await getDocs(collection(db, 'payments'));
+  return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export async function promoteToAdmin(uid: string): Promise<void> {
+  await setDoc(doc(db, 'users', uid), { role: 'admin', isPaid: true, updatedAt: serverTimestamp() }, { merge: true });
+}
+
+export async function adminCreateProduct(product: Omit<MarketplaceProduct, 'id'>): Promise<string> {
+  const ref = await addDoc(collection(db, 'products'), {
+    ...product,
+    source: 'admin',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+export async function adminUpdateProduct(productId: string, product: Partial<MarketplaceProduct>): Promise<void> {
+  await setDoc(doc(db, 'products', productId), { ...product, updatedAt: serverTimestamp() }, { merge: true });
+}
+
+export async function adminDeleteProduct(productId: string): Promise<void> {
+  await deleteDoc(doc(db, 'products', productId));
+}
+
+export async function saveHub(hub: Omit<Hub, 'id'>): Promise<string> {
+  const ref = await addDoc(collection(db, 'hubs'), { ...hub, createdAt: serverTimestamp() });
+  return ref.id;
+}
+
+export async function updateHub(hubId: string, hub: Partial<Omit<Hub, 'id'>>): Promise<void> {
+  await setDoc(doc(db, 'hubs', hubId), { ...hub, updatedAt: serverTimestamp() }, { merge: true });
+}
+
+export async function deleteHub(hubId: string): Promise<void> {
+  await deleteDoc(doc(db, 'hubs', hubId));
 }

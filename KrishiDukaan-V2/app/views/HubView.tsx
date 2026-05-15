@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ICONS } from '../constants';
 import { motion } from 'framer-motion';
 import { fetchHubs, Hub } from '../firebase';
@@ -10,7 +10,7 @@ const FALLBACK_HUBS: Hub[] = [
   {
     id: 'watermelon',
     name: 'Watermelon',
-    heroImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCShWApLmd5orpbfCQ7ygmjWA2q0BgOL3TUTOio-WN0NkMwFg5_h-EH9g3y-w1-6oC0wSXQML-mnfg8yXuc01VGH-dCPmVLcuMxg5_efLEOzm28E4LyalAxJSZ9ovVXj4PGtDA34b_c-3e1eFFqWla8pryOHK4d2XXK0Asc7R2hgGkWwuz68m7DEvfIX02LRu5Yj0ZpYms9UGHBBd5DbaEwinBYuDXuGHpBgAHZUm6G3chxh-S-jrFLwLfPGmA-I1zal0Z0mbzLpPNo',
+    heroImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuShWApLmd5orpbfCQ7ygmjWA2q0BgOL3TUTOio-WN0NkMwFg5_h-EH9g3y-w1-6oC0wSXQML-mnfg8yXuc01VGH-dCPmVLcuMxg5_efLEOzm28E4LyalAxJSZ9ovVXj4PGtDA34b_c-3e1eFFqWla8pryOHK4d2XXK0Asc7R2hgGkWwuz68m7DEvfIX02LRu5Yj0ZpYms9UGHBBd5DbaEwinBYuDXuGHpBgAHZUm6G3chxh-S-jrFLwLfPGmA-I1zal0Z0mbzLpPNo',
     tagline: 'Everything required from seed selection to final harvest, curated for maximum yield.',
     seeds: [
       { name: 'Sugar Baby', price: 250, img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuByv4cPqlB1KYhELYjTmiYEkyUvKp9WVaye2AODgv8iz0zWp-dBoAq4amESYk6lY1LvA9UYb2sVqE6F91lDwmCSWOC86XN8a2C4BjFSsLROvs0SE1MMZLxfMkAfQUDpEBPBHIwHPFGEsrKqWrf2x_MDsMCo3kKhfkoeClw8BmDJOXClpDykV6mx-8Eqktiha67i1uMyfEzJ-maCYo7liILE2i8yqsNNEbYFCZ4sBGfLOasGGPaRcwV1iRU4SNm2L0mzt9_Vzx_1oSfK' },
@@ -109,7 +109,11 @@ const FALLBACK_HUBS: Hub[] = [
   }
 ];
 
-export default function HubView() {
+interface HubViewProps {
+  searchQuery?: string;
+}
+
+export default function HubView({ searchQuery = '' }: HubViewProps) {
   const [hubs, setHubs] = useState<Hub[]>([]);
   const [selectedHub, setSelectedHub] = useState<Hub | null>(null);
   const [loading, setLoading] = useState(true);
@@ -137,10 +141,50 @@ export default function HubView() {
     loadHubs();
   }, []);
 
-  if (loading || !selectedHub) {
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredHubs = useMemo(() => {
+    if (!normalizedQuery) return hubs;
+
+    return hubs.filter((hub) => {
+      const searchable = [
+        hub.name,
+        hub.tagline,
+        ...hub.seeds.map((seed) => seed.name),
+        ...hub.nutrition.map((item) => item.name),
+        hub.advisory.title
+      ]
+        .join(' ')
+        .toLowerCase();
+      return searchable.includes(normalizedQuery);
+    });
+  }, [hubs, normalizedQuery]);
+
+  useEffect(() => {
+    if (!filteredHubs.length) {
+      setSelectedHub(null);
+      return;
+    }
+
+    if (!selectedHub || !filteredHubs.some((hub) => hub.id === selectedHub.id)) {
+      setSelectedHub(filteredHubs[0]);
+    }
+  }, [filteredHubs, selectedHub]);
+
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!selectedHub) {
+    return (
+      <div className="px-4 md:px-10 max-w-7xl mx-auto w-full py-10">
+        <div className="rounded-3xl border border-dashed border-surface-container bg-surface-container-low p-10 text-center">
+          <h2 className="text-xl font-bold text-on-surface mb-2">No hub results found</h2>
+          <p className="text-on-surface-variant">Try a different product, crop, or keyword.</p>
+        </div>
       </div>
     );
   }
@@ -155,7 +199,7 @@ export default function HubView() {
       {/* Hub Selector */}
       <div className="flex items-center gap-2" data-tour="hub-tabs">
         <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide flex-1">
-        {hubs.map((hub) => (
+        {filteredHubs.map((hub) => (
           <button
             key={hub.id}
             onClick={() => setSelectedHub(hub)}

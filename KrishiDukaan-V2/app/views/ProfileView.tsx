@@ -1,7 +1,7 @@
 import { MarketplaceProduct } from "../../types/product";
 import { FormEvent, useState } from 'react';
 import { ICONS } from '../constants';
-import { saveManufacturerProduct, saveRetailerProduct, saveRetailerProfile } from '../firebase';
+import { saveManufacturerProduct, saveRetailerProduct } from '../firebase';
 
 type UserRole = 'customer' | 'retailer' | 'manufacturer';
 
@@ -16,23 +16,9 @@ interface UserProfile {
 interface ProfileViewProps {
   role: UserRole;
   profile: UserProfile;
-  onRoleChange: (role: UserRole) => void;
   onProfileSave: (profile: UserProfile) => void;
   onRetailerProductSaved: () => Promise<void>;
   onNavigate?: (view: any) => void;
-}
-
-interface RetailerFormState {
-  ownerName: string;
-  shopName: string;
-  phone: string;
-  email: string;
-  address: string;
-  city: string;
-  state: string;
-  pincode: string;
-  latitude: string;
-  longitude: string;
 }
 
 interface ProductFormState {
@@ -44,19 +30,6 @@ interface ProductFormState {
   category: string;
   distance: string;
 }
-
-const initialRetailerForm: RetailerFormState = {
-  ownerName: '',
-  shopName: '',
-  phone: '',
-  email: '',
-  address: '',
-  city: '',
-  state: '',
-  pincode: '',
-  latitude: '',
-  longitude: ''
-};
 
 const initialProductForm: ProductFormState = {
   name: '',
@@ -71,43 +44,19 @@ const initialProductForm: ProductFormState = {
 export default function ProfileView({
   role,
   profile,
-  onRoleChange,
   onProfileSave,
   onRetailerProductSaved,
   onNavigate
 }: ProfileViewProps) {
   const [localProfile, setLocalProfile] = useState(profile);
-  const [retailerForm, setRetailerForm] = useState<RetailerFormState>(initialRetailerForm);
   const [productForm, setProductForm] = useState<ProductFormState>(initialProductForm);
   const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [loadingProfile, setLoadingProfile] = useState(false);
   const [loadingProduct, setLoadingProduct] = useState(false);
-
-  const retailerId = localProfile.phone.trim() || localProfile.email.trim() || localProfile.name.trim();
 
   const handleProfileSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     onProfileSave(localProfile);
     setStatus({ type: 'success', message: 'Profile details updated.' });
-  };
-
-  const handleRetailerSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!retailerId) {
-      setStatus({ type: 'error', message: 'Please save your profile phone/email first.' });
-      return;
-    }
-    setLoadingProfile(true);
-    setStatus(null);
-    try {
-      await saveRetailerProfile(retailerId, retailerForm);
-      setStatus({ type: 'success', message: 'Retailer details saved.' });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to save retailer details.';
-      setStatus({ type: 'error', message });
-    } finally {
-      setLoadingProfile(false);
-    }
   };
 
   const handleProductSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -123,7 +72,7 @@ export default function ProfileView({
       if (role === 'retailer') {
         await saveRetailerProduct(userId, {
           ...productForm,
-          store: retailerForm.shopName || localProfile.name
+          store: localProfile.name
         });
       } else {
         await saveManufacturerProduct(userId, {
@@ -181,21 +130,6 @@ export default function ProfileView({
               Manage your business profile and product listings.
             </p>
           </div>
-          <div className="flex items-center gap-2 bg-surface-container-low border border-outline-variant rounded-xl px-3 py-2">
-            <label htmlFor="roleSelect" className="text-xs font-semibold text-on-surface-variant">
-              Account Type
-            </label>
-            <select
-              id="roleSelect"
-              value={role}
-              disabled={true}
-              className="bg-transparent text-sm font-semibold text-on-surface border-none focus:ring-0 opacity-70 cursor-not-allowed"
-            >
-              <option value="retailer">Retailer</option>
-              <option value="manufacturer">Distributor / Mfg</option>
-              <option value="customer">Customer</option>
-            </select>
-          </div>
         </div>
 
         <form onSubmit={handleProfileSubmit} className="grid md:grid-cols-3 gap-4">
@@ -228,29 +162,6 @@ export default function ProfileView({
             className="md:col-span-3 bg-primary text-white font-semibold px-5 py-3 rounded-xl hover:bg-primary/90 transition-colors"
           >
             Save Profile
-          </button>
-        </form>
-      </div>
-
-      <div className="bg-white rounded-3xl border border-surface-container p-6 md:p-8 shadow-ambient">
-        <h2 className="text-xl font-bold text-on-surface mb-4">Retailer Details</h2>
-        <form onSubmit={handleRetailerSubmit} className="grid md:grid-cols-2 gap-4">
-          <input type="text" required value={retailerForm.ownerName} onChange={(e) => setRetailerForm((p) => ({ ...p, ownerName: e.target.value }))} placeholder="Owner Name" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-          <input type="text" required value={retailerForm.shopName} onChange={(e) => setRetailerForm((p) => ({ ...p, shopName: e.target.value }))} placeholder="Shop Name" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-          <input type="tel" required value={retailerForm.phone} onChange={(e) => setRetailerForm((p) => ({ ...p, phone: e.target.value }))} placeholder="Retailer Phone" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-          <input type="email" required value={retailerForm.email} onChange={(e) => setRetailerForm((p) => ({ ...p, email: e.target.value }))} placeholder="Retailer Email" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-          <input type="text" required value={retailerForm.address} onChange={(e) => setRetailerForm((p) => ({ ...p, address: e.target.value }))} placeholder="Address" className="md:col-span-2 bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-          <input type="text" required value={retailerForm.city} onChange={(e) => setRetailerForm((p) => ({ ...p, city: e.target.value }))} placeholder="City" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-          <input type="text" required value={retailerForm.state} onChange={(e) => setRetailerForm((p) => ({ ...p, state: e.target.value }))} placeholder="State" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-          <input type="text" required value={retailerForm.pincode} onChange={(e) => setRetailerForm((p) => ({ ...p, pincode: e.target.value }))} placeholder="Pincode" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-          <input type="number" step="any" required value={retailerForm.latitude} onChange={(e) => setRetailerForm((p) => ({ ...p, latitude: e.target.value }))} placeholder="Latitude" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-          <input type="number" step="any" required value={retailerForm.longitude} onChange={(e) => setRetailerForm((p) => ({ ...p, longitude: e.target.value }))} placeholder="Longitude" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
-          <button
-            type="submit"
-            disabled={loadingProfile}
-            className="md:col-span-2 bg-secondary text-white font-semibold px-5 py-3 rounded-xl hover:bg-on-secondary-container transition-colors disabled:opacity-60"
-          >
-            {loadingProfile ? 'Saving...' : 'Save Retailer Details'}
           </button>
         </form>
       </div>
