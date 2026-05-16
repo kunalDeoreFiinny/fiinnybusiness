@@ -7,13 +7,22 @@ export type MarketplaceProduct = {
   category: string;
   description: string;
   image: string;
-  stock: string;
-  store: string;
-  distance: string;
-  retailerId?: string;
+  /** Ownership */
+  ownerId?: string;
+  ownerType?: "manufacturer" | "retailer";
+  createdBy?: string;
+  source?: string;
+  /** Back-compat / reference fields */
   manufacturerId?: string;
   sellMode?: "online_delivery" | "offline_store_only";
   isOnline?: boolean;
+  manufacturerProductId?: string;
+  retailerId?: string;
+  retailerDocId?: string;
+  /** Legacy display fields — present on older documents only */
+  stock?: string;
+  store?: string;
+  distance?: string;
   availability?: {
     storeId: string;
     stockLevel: string;

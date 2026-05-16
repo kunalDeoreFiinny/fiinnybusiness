@@ -30,6 +30,7 @@ import type { CartItem } from '../types/order';
 import { Navbar } from '../components/shared/navbar';
 import Footer from '../components/shared/footer';
 import { GuidedTour, TourStep } from '../components/helpers';
+import { useI18n } from './i18n/I18nContext';
 
 type View = 'home' | 'market' | 'hub' | 'product' | 'map' | 'about' | 'profile' | 'login' | 'signup' | 'subscription' | 'cart';
 type UserRole = 'customer' | 'retailer' | 'manufacturer';
@@ -46,6 +47,7 @@ const VALID_VIEWS: View[] = ['home', 'market', 'hub', 'product', 'map', 'about',
 const HOME_PRODUCTS_LIMIT = 12;
 
 export default function App() {
+  const { t } = useI18n();
   const [currentView, setCurrentView] = useState<View>('home');
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
@@ -585,68 +587,33 @@ export default function App() {
   };
 
   const tourSteps: TourStep[] = useMemo(() => [
-    {
-      selector: '[data-tour="hero"]',
-      title: 'Welcome to Krishidukan',
-      body: 'Your one-stop platform for nearby agricultural supplies. Let’s show you around — it only takes a moment.',
-      side: 'bottom',
-    },
-    {
-      selector: '[data-tour="search"]',
-      title: 'Search anything',
-      body: 'Find products, crops, fertilizers, or nearby stores — try “Urea” or “Tomato Seeds”.',
-      side: 'bottom',
-    },
-    {
-      selector: '[data-tour="location"]',
-      title: 'Your location',
-      body: 'We use your location to show nearby stores, live stock, and delivery range.',
-      side: 'bottom',
-    },
-    {
-      selector: '[data-tour="shop-by-crop"]',
-      title: 'Shop by Crop',
-      body: 'Open a crop hub to see curated seeds, fertilizers, and tools for that crop.',
-      side: 'top',
-    },
-    {
-      selector: '[data-tour-nav="market"]',
-      title: 'Marketplace filters',
-      body: 'Browse products from local stores and filter by category, stock, or distance.',
-      side: 'top',
-    },
-    {
-      selector: '[data-tour-nav="map"]',
-      title: 'Nearby stores',
-      body: 'View nearby agri stores on a map and get directions in one tap.',
-      side: 'top',
-    },
-    {
-      selector: '[data-tour-nav="hub"]',
-      title: 'Crop Hubs',
-      body: 'Targeted recommendations for seeds, nutrition, and irrigation per crop.',
-      side: 'top',
-    },
+    { selector: '[data-tour="hero"]', textKey: 'tourWelcome', side: 'bottom' },
+    { selector: '[data-tour="search"]', textKey: 'tourSearch', side: 'bottom' },
+    { selector: '[data-tour="location"]', textKey: 'tourLocation', side: 'bottom' },
+    { selector: '[data-tour="shop-by-crop"]', textKey: 'tourShopByCrop', side: 'top' },
+    { selector: '[data-tour-nav="market"]', textKey: 'tourMarket', side: 'top' },
+    { selector: '[data-tour-nav="map"]', textKey: 'tourStores', side: 'top' },
+    { selector: '[data-tour-nav="hub"]', textKey: 'tourHubs', side: 'top' },
   ], []);
 
   const renderView = () => {
     if (loading) return (
       <div className="p-20 text-center">
         <div className="animate-spin w-10 h-10 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
-        <p className="font-bold text-primary">Connecting to Firebase...</p>
+        <p className="font-bold text-primary">{t('connectingFirebase')}</p>
       </div>
     );
 
     if (errorMsg) return (
       <div className="p-20 text-center">
         <div className="bg-red-50 text-red-700 p-6 rounded-2xl border border-red-100 max-w-lg mx-auto">
-          <h3 className="text-xl font-bold mb-2">Data Loading Issue</h3>
+          <h3 className="text-xl font-bold mb-2">{t('dataLoadingIssue')}</h3>
           <p className="mb-4">{errorMsg}</p>
-          <button 
+          <button
             onClick={loadData}
             className="bg-red-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-red-700 transition-colors"
           >
-            Retry Connection
+            {t('retryConnection')}
           </button>
         </div>
       </div>
@@ -825,11 +792,11 @@ export default function App() {
       {/* Mobile Bottom Nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-surface-container flex items-center justify-around px-4 z-50">
         {[
-          { id: 'home', icon: ICONS.Home, label: 'Home' },
-          { id: 'market', icon: ICONS.Market, label: 'Market' },
-          { id: 'hub', icon: ICONS.Hub, label: 'Hub' },
-          { id: 'map', icon: ICONS.Location, label: 'Stores' },
-          { id: 'about', icon: ICONS.Info, label: 'About' }
+          { id: 'home', icon: ICONS.Home, label: t('home') },
+          { id: 'market', icon: ICONS.Market, label: t('market') },
+          { id: 'hub', icon: ICONS.Hub, label: t('hub') },
+          { id: 'map', icon: ICONS.Location, label: t('stores') },
+          { id: 'about', icon: ICONS.Info, label: t('mobileAbout') }
         ].map((item) => (
           <button
             key={item.id}

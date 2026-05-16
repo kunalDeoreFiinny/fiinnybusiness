@@ -3,123 +3,148 @@
 import { FormEvent, useState } from "react";
 import { Loader2, PackagePlus } from "lucide-react";
 import Link from "next/link";
-import { createProductAndInventory } from "../_lib/inventory-firestore";
+import { createManufacturerProduct } from "../_lib/manufacturer-products-firestore";
+import type { SeatStats } from "../_types/subscriptions";
 
-const empty = {
+// ─── Category options ─────────────────────────────────────────────────────────
+
+const CATEGORIES = [
+  "Seeds",
+  "Fertilizers",
+  "Pesticides",
+  "Tools",
+  "Irrigation",
+  "Soil Nutrients",
+  "Growth Promoters",
+  "Equipment",
+  "Animal Feed",
+  "Organic Products",
+  "Others",
+] as const;
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type AddProductInventoryFormProps = {
+  userId: string | null;
+  /** Only "manufacturer" is supported — retailers no longer have product-create permission. */
+  role: "manufacturer" | "retailer";
+  disabled?: boolean;
+  onCreated: () => Promise<void>;
+  /** Real seat availability derived from active subscriptions minus active listings. */
+  seatStats: SeatStats;
+};
+
+const emptyForm = {
   name: "",
-  category: "",
+  category: CATEGORIES[0],
   unit: "pkt",
-  stockQuantity: "",
   sellingPrice: "",
-  reorderThreshold: "",
   description: "",
   imageUrl: "",
   sellMode: "offline_store_only" as "online_delivery" | "offline_store_only",
 };
 
-type AddProductInventoryFormProps = {
-  retailerId: string | null;
-  disabled?: boolean;
-  onCreated: () => Promise<void>;
-  totalSeats?: number;
-  productCount?: number;
-  storeName?: string;
-};
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function AddProductInventoryForm({
-  retailerId,
+  userId,
+  role,
   disabled,
   onCreated,
-  totalSeats = 0,
-  productCount = 0,
-  storeName,
+  seatStats,
 }: AddProductInventoryFormProps) {
-  const [form, setForm] = useState(empty);
+  const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
-  const isLimitReached = productCount >= totalSeats && totalSeats > 0;
-  const noSeats = totalSeats === 0;
+  // Gate: only manufacturers can add products
+  const isManufacturer = role === "manufacturer";
+
+  // Seat availability from real subscription data
+  const hasSeats = seatStats.available > 0;
+  const noSubscription = seatStats.totalPurchased === 0;
+
+  const isDisabled = disabled || submitting || !userId || !hasSeats || !isManufacturer;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!retailerId) {
-      setMessage({ type: "err", text: "You must be signed in to add inventory." });
+    if (!userId || !isManufacturer) return;
+    if (!hasSeats) {
+      setMessage({ type: "err", text: "No seats available. Buy more seats to add products." });
       return;
     }
 
-    if (isLimitReached) {
-      setMessage({ type: "err", text: "You have reached your product listing limit. Please buy more seats." });
-      return;
-    }
-
-    const stockQuantity = Math.max(0, Math.floor(Number(form.stockQuantity)));
     const sellingPrice = Math.max(0, Number(form.sellingPrice));
-    const reorderThreshold = Math.max(0, Math.floor(Number(form.reorderThreshold)));
-
-    if (!form.name.trim() || !form.category.trim() || !form.unit.trim()) {
+    if (!form.name.trim() || !form.category || !form.unit.trim()) {
       setMessage({ type: "err", text: "Name, category, and unit are required." });
       return;
     }
-    if (!Number.isFinite(sellingPrice)) {
-      setMessage({ type: "err", text: "Enter a valid selling price." });
+    if (!Number.isFinite(sellingPrice) || sellingPrice <= 0) {
+      setMessage({ type: "err", text: "Enter a valid price." });
       return;
     }
 
     setSubmitting(true);
     setMessage(null);
     try {
-      await createProductAndInventory(retailerId, {
+      await createManufacturerProduct(userId, {
         name: form.name,
         category: form.category,
         unit: form.unit,
-        stockQuantity,
-        sellingPrice,
-        reorderThreshold,
+        price: sellingPrice,
         description: form.description,
-        imageUrl: form.imageUrl.trim() || undefined,
-        storeName: storeName,
-        sellMode: form.sellMode,
+        image: form.imageUrl.trim() || undefined,
       });
-      setForm(empty);
-      setMessage({ type: "ok", text: "Product and inventory created." });
+      setMessage({ type: "ok", text: "Product added to your catalogue." });
+      setForm(emptyForm);
       await onCreated();
     } catch (err) {
-      const text = err instanceof Error ? err.message : "Failed to create product.";
-      setMessage({ type: "err", text });
+      setMessage({
+        type: "err",
+        text: err instanceof Error ? err.message : "Failed to create product.",
+      });
     } finally {
       setSubmitting(false);
     }
   };
 
+  // Retailer: show informational banner instead of form
+  if (!isManufacturer) {
+    return (
+      <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-low px-5 py-6 text-center text-sm text-on-surface-variant">
+        Products are assigned to your account by manufacturers. Contact your manufacturer partner to
+        have products listed in your store.
+      </div>
+    );
+  }
+
   return (
-    <div className={`rounded-2xl border p-4 shadow-ambient md:p-5 ${isLimitReached || noSeats ? 'border-red-200 bg-red-50/30' : 'border-outline-variant/30 bg-surface-container-lowest'}`}>
+    <div
+      className={`rounded-2xl border p-4 shadow-ambient md:p-5 ${
+        !hasSeats ? "border-red-200 bg-red-50/30" : "border-outline-variant/30 bg-surface-container-lowest"
+      }`}
+    >
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-base font-semibold text-on-surface">Add product</h2>
+        <h2 className="text-base font-semibold text-on-surface">Add product to catalogue</h2>
         <span className="rounded-full bg-surface-container px-2 py-0.5 text-xs text-on-surface-variant">
-          Creates <code className="text-[11px]">products</code> +{" "}
-          <code className="text-[11px]">inventory</code>
+          {seatStats.available} seat{seatStats.available !== 1 ? "s" : ""} available
         </span>
       </div>
-      
-      {noSeats && (
+
+      {/* Seat warnings */}
+      {noSubscription && (
         <p className="mt-2 text-sm font-bold text-red-600">
-          You have 0 seats. Please upgrade to start listing products.
+          No active subscription. Purchase a plan to start listing products.
         </p>
       )}
-
-      {isLimitReached && !noSeats && (
+      {!noSubscription && !hasSeats && (
         <p className="mt-2 text-sm font-bold text-red-600">
-          Listing limit reached ({productCount}/{totalSeats}). Please buy more seats to add new products.
+          All {seatStats.totalPurchased} seat{seatStats.totalPurchased !== 1 ? "s" : ""} used.
+          Buy more to add products.
         </p>
       )}
 
-      {!isLimitReached && !noSeats && (
-        <p className="mt-1 text-sm text-on-surface-variant">
-          New catalog entries use your account as <span className="font-medium">retailerId</span>.
-        </p>
-      )}
-
+      {/* Feedback message */}
       {message ? (
         <div
           className={`mt-4 rounded-xl px-3 py-2 text-sm ${
@@ -133,34 +158,41 @@ export function AddProductInventoryForm({
       ) : null}
 
       <form className="mt-6 grid gap-4 sm:grid-cols-2" onSubmit={handleSubmit}>
+        {/* Product name */}
         <label className="flex flex-col gap-1.5 text-sm sm:col-span-2">
           <span className="font-medium text-on-surface">Product name</span>
           <input
             required
-            disabled={disabled || submitting || !retailerId || isLimitReached || noSeats}
+            disabled={isDisabled}
             className="rounded-xl border border-outline-variant/40 bg-surface-container-low px-3 py-2 text-on-surface outline-none ring-primary/30 focus:ring-2 disabled:opacity-50"
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             placeholder="e.g. Hybrid Tomato Seeds"
           />
         </label>
-        {/* ... (rest of the inputs) ... */}
+
+        {/* Category — dropdown */}
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="font-medium text-on-surface">Category</span>
-          <input
+          <select
             required
-            disabled={disabled || submitting || !retailerId || isLimitReached || noSeats}
-            className="rounded-xl border border-outline-variant/40 bg-surface-container-low px-3 py-2 text-on-surface outline-none ring-primary/30 focus:ring-2 disabled:opacity-50"
+            disabled={isDisabled}
+            className="rounded-xl border border-outline-variant/40 bg-surface-container-low px-3 py-2 text-on-surface outline-none ring-primary/30 focus:ring-2 disabled:opacity-50 appearance-none"
             value={form.category}
-            onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-            placeholder="Seeds, fertilizer..."
-          />
+            onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as typeof CATEGORIES[number] }))}
+          >
+            {CATEGORIES.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
         </label>
+
+        {/* Unit */}
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="font-medium text-on-surface">Unit</span>
           <select
             required
-            disabled={disabled || submitting || !retailerId || isLimitReached || noSeats}
+            disabled={isDisabled}
             className="rounded-xl border border-outline-variant/40 bg-surface-container-low px-3 py-2 text-on-surface outline-none ring-primary/30 focus:ring-2 disabled:opacity-50 appearance-none"
             value={form.unit}
             onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}
@@ -179,6 +211,8 @@ export function AddProductInventoryForm({
             <option value="drum">Drum</option>
           </select>
         </label>
+
+        {/* Price */}
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="font-medium text-on-surface">Sell mode</span>
           <select
@@ -212,56 +246,50 @@ export function AddProductInventoryForm({
         </label>
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="font-medium text-on-surface">Selling price</span>
+          <span className="font-medium text-on-surface">Price (₹)</span>
           <input
             required
             type="number"
             min={0}
             step={0.01}
-            disabled={disabled || submitting || !retailerId || isLimitReached || noSeats}
+            disabled={isDisabled}
             className="rounded-xl border border-outline-variant/40 bg-surface-container-low px-3 py-2 text-on-surface outline-none ring-primary/30 focus:ring-2 disabled:opacity-50"
             value={form.sellingPrice}
             onChange={(e) => setForm((f) => ({ ...f, sellingPrice: e.target.value }))}
           />
         </label>
-        <label className="flex flex-col gap-1.5 text-sm">
-          <span className="font-medium text-on-surface">Reorder threshold</span>
-          <input
-            required
-            type="number"
-            min={0}
-            step={1}
-            disabled={disabled || submitting || !retailerId || isLimitReached || noSeats}
-            className="rounded-xl border border-outline-variant/40 bg-surface-container-low px-3 py-2 text-on-surface outline-none ring-primary/30 focus:ring-2 disabled:opacity-50"
-            value={form.reorderThreshold}
-            onChange={(e) => setForm((f) => ({ ...f, reorderThreshold: e.target.value }))}
-          />
-        </label>
+
+        {/* Description */}
         <label className="flex flex-col gap-1.5 text-sm sm:col-span-2">
           <span className="font-medium text-on-surface">Description</span>
           <textarea
             rows={3}
-            disabled={disabled || submitting || !retailerId || isLimitReached || noSeats}
+            disabled={isDisabled}
             className="rounded-xl border border-outline-variant/40 bg-surface-container-low px-3 py-2 text-on-surface outline-none ring-primary/30 focus:ring-2 disabled:opacity-50"
             value={form.description}
             onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-            placeholder="Product details for buyers"
+            placeholder="Product details for retailers and buyers"
           />
         </label>
+
+        {/* Image URL */}
         <label className="flex flex-col gap-1.5 text-sm sm:col-span-2">
           <span className="font-medium text-on-surface">Image URL (optional)</span>
           <input
             type="url"
-            disabled={disabled || submitting || !retailerId || isLimitReached || noSeats}
+            disabled={isDisabled}
             className="rounded-xl border border-outline-variant/40 bg-surface-container-low px-3 py-2 text-on-surface outline-none ring-primary/30 focus:ring-2 disabled:opacity-50"
             value={form.imageUrl}
             onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
-            placeholder="https://..."
+            placeholder="https://…"
           />
         </label>
+
+        {/* Actions */}
         <div className="sm:col-span-2 flex flex-wrap gap-2">
           <button
             type="submit"
-            disabled={disabled || submitting || !retailerId || isLimitReached || noSeats}
+            disabled={isDisabled}
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:opacity-95 disabled:opacity-50 transition-all"
           >
             {submitting ? (
@@ -269,16 +297,16 @@ export function AddProductInventoryForm({
             ) : (
               <PackagePlus className="h-4 w-4" />
             )}
-            {isLimitReached ? "Limit Reached" : submitting ? "Saving..." : "Create product & inventory"}
+            {!hasSeats ? "No seats available" : submitting ? "Saving…" : "Add to catalogue"}
           </button>
-          
-          {(isLimitReached || noSeats) && (
-             <Link 
-               href="/dashboard/upgrade"
-               className="inline-flex items-center gap-2 rounded-xl border border-primary text-primary px-4 py-2.5 text-sm font-bold hover:bg-primary/5 transition-all"
-             >
-               Upgrade Seats
-             </Link>
+
+          {(!hasSeats) && (
+            <Link
+              href="/dashboard/upgrade"
+              className="inline-flex items-center gap-2 rounded-xl border border-primary text-primary px-4 py-2.5 text-sm font-bold hover:bg-primary/5 transition-all"
+            >
+              Buy More Seats
+            </Link>
           )}
         </div>
       </form>

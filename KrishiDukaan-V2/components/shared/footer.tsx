@@ -1,6 +1,7 @@
 "use client";
 
 import { ICONS } from '../../app/constants';
+import { useI18n } from '../../app/i18n/I18nContext';
 
 type FooterProps = {
   onNavigate?: (view: 'home' | 'market' | 'hub' | 'map' | 'about') => void;
@@ -8,6 +9,23 @@ type FooterProps = {
 };
 
 export default function Footer({ onNavigate, onCategoryClick }: FooterProps) {
+  const { t } = useI18n();
+  const shopLinks = [
+    { label: t('catPesticides'), cat: 'pesticides' },
+    { label: t('catFertilizers'), cat: 'fertilizers' },
+    { label: t('catBioStimulants'), cat: 'fertilizers' },
+    { label: t('footerSprayersTools'), cat: 'tools' },
+    { label: t('catSeeds'), cat: 'seeds' },
+    { label: t('footerViewAllProducts'), cat: 'all' },
+  ];
+  const companyLinks: { label: string; view: 'home' | 'market' | 'hub' | 'map' | 'about' }[] = [
+    { label: t('footerAbout'), view: 'about' },
+    { label: t('footerStores'), view: 'map' },
+    { label: t('footerCropHubs'), view: 'hub' },
+    { label: t('footerBecomeRetailer'), view: 'hub' },
+    { label: t('footerContact'), view: 'about' },
+    { label: t('footerFAQs'), view: 'about' },
+  ];
   return (
     <footer className="bg-surface-container-low border-t border-surface-container mt-16">
       <div className="max-w-7xl mx-auto w-full px-4 md:px-10 py-12">
@@ -16,28 +34,21 @@ export default function Footer({ onNavigate, onCategoryClick }: FooterProps) {
           <div className="col-span-2 md:col-span-1">
             <h3 className="text-2xl font-black text-primary mb-3">Krishidukan</h3>
             <p className="text-on-surface-variant text-sm leading-relaxed mb-4">
-              Connecting Indian farmers with verified retailers and trusted manufacturers.
+              {t('footerTagline')}
             </p>
             <div className="flex items-center gap-2 text-xs text-on-surface-variant">
               <ICONS.Trust className="w-4 h-4 text-primary" />
-              <span className="font-semibold">Genuine products. Direct from manufacturer.</span>
+              <span className="font-semibold">{t('footerGenuine')}</span>
             </div>
           </div>
 
           {/* Categories */}
           <div>
             <h4 className="text-sm font-black text-on-surface uppercase tracking-wider mb-4">
-              Shop
+              {t('footerShop')}
             </h4>
             <ul className="space-y-2 text-sm">
-              {[
-                { label: 'Pesticides', cat: 'pesticides' },
-                { label: 'Fertilizers', cat: 'fertilizers' },
-                { label: 'Bio-Stimulants', cat: 'fertilizers' },
-                { label: 'Sprayers & Tools', cat: 'tools' },
-                { label: 'Seeds', cat: 'seeds' },
-                { label: 'View all products', cat: 'all' },
-              ].map((c) => (
+              {shopLinks.map((c) => (
                 <li key={c.label}>
                   <button
                     onClick={() => onCategoryClick?.(c.cat)}
@@ -53,17 +64,10 @@ export default function Footer({ onNavigate, onCategoryClick }: FooterProps) {
           {/* Useful links */}
           <div>
             <h4 className="text-sm font-black text-on-surface uppercase tracking-wider mb-4">
-              Company
+              {t('footerCompany')}
             </h4>
             <ul className="space-y-2 text-sm">
-              {[
-                { label: 'About us', view: 'about' as const },
-                { label: 'Stores', view: 'map' as const },
-                { label: 'Crop hubs', view: 'hub' as const },
-                { label: 'Become a retailer', view: 'hub' as const },
-                { label: 'Contact', view: 'about' as const },
-                { label: 'FAQs', view: 'about' as const },
-              ].map((l) => (
+              {companyLinks.map((l) => (
                 <li key={l.label}>
                   <button
                     onClick={() => onNavigate?.(l.view)}
@@ -79,7 +83,7 @@ export default function Footer({ onNavigate, onCategoryClick }: FooterProps) {
           {/* Contact + app */}
           <div>
             <h4 className="text-sm font-black text-on-surface uppercase tracking-wider mb-4">
-              Get in touch
+              {t('footerGetInTouch')}
             </h4>
             <div className="space-y-2 text-sm text-on-surface-variant">
               <p className="font-semibold text-on-surface">Karan Arjun Krushi Seva Kendra</p>
@@ -91,14 +95,14 @@ export default function Footer({ onNavigate, onCategoryClick }: FooterProps) {
             </div>
             <div className="mt-5">
               <p className="text-[11px] font-black uppercase tracking-wider text-outline mb-2">
-                Mobile App
+                {t('footerMobileApp')}
               </p>
               <div className="flex gap-2">
                 <span className="text-[10px] font-bold bg-on-surface text-white px-2.5 py-1.5 rounded-lg opacity-70">
-                  Android — coming soon
+                  {t('footerAndroidSoon')}
                 </span>
                 <span className="text-[10px] font-bold bg-on-surface text-white px-2.5 py-1.5 rounded-lg opacity-70">
-                  iOS — coming soon
+                  {t('footerIosSoon')}
                 </span>
               </div>
             </div>
@@ -107,11 +111,11 @@ export default function Footer({ onNavigate, onCategoryClick }: FooterProps) {
 
         {/* Bottom bar */}
         <div className="mt-10 pt-6 border-t border-surface-container flex flex-col md:flex-row items-center justify-between gap-3 text-[11px] text-outline">
-          <p>© {new Date().getFullYear()} Krishidukan. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Krishidukan. {t('footerRights')}</p>
           <div className="flex gap-4">
-            <button className="hover:text-on-surface transition-colors font-semibold">Privacy</button>
-            <button className="hover:text-on-surface transition-colors font-semibold">Terms</button>
-            <button className="hover:text-on-surface transition-colors font-semibold">Cookies</button>
+            <button className="hover:text-on-surface transition-colors font-semibold">{t('footerPrivacy')}</button>
+            <button className="hover:text-on-surface transition-colors font-semibold">{t('footerTerms')}</button>
+            <button className="hover:text-on-surface transition-colors font-semibold">{t('footerCookies')}</button>
           </div>
         </div>
       </div>

@@ -115,14 +115,14 @@ export default function HomeView({
 
   // Quick-access category tiles. Map clicks to Market with that category preselected.
   const categoryTiles = [
-    { id: 'pesticides', label: 'Pesticides', imgUrl: 'https://images.unsplash.com/photo-1574943320219-553eb213f72d?auto=format&fit=crop&w=120&h=120&q=80', color: 'from-emerald-50 to-emerald-100' },
-    { id: 'fertilizers', label: 'Fertilizers', imgUrl: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=120&h=120&q=80', color: 'from-amber-50 to-orange-100' },
-    { id: 'pesticides', label: 'Herbicides', imgUrl: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=120&h=120&q=80', color: 'from-rose-50 to-pink-100' },
-    { id: 'fertilizers', label: 'Bio-Stimulants', imgUrl: 'https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?auto=format&fit=crop&w=120&h=120&q=80', color: 'from-teal-50 to-cyan-100' },
-    { id: 'tools', label: 'Sprayers', imgUrl: 'https://images.unsplash.com/photo-1622383563227-04401ab4e5ea?auto=format&fit=crop&w=120&h=120&q=80', color: 'from-sky-50 to-blue-100' },
-    { id: 'seeds', label: 'Seeds', imgUrl: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=120&h=120&q=80', color: 'from-yellow-50 to-amber-100' },
-    { id: 'tools', label: 'Tools', imgUrl: 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=120&h=120&q=80', color: 'from-slate-50 to-gray-100' },
-    { id: 'all', label: 'View All', imgUrl: 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=120&h=120&q=80', color: 'from-primary/10 to-primary/20' },
+    { id: 'pesticides', label: t('catPesticides'), imgUrl: 'https://images.unsplash.com/photo-1574943320219-553eb213f72d?auto=format&fit=crop&w=120&h=120&q=80', color: 'from-emerald-50 to-emerald-100' },
+    { id: 'fertilizers', label: t('catFertilizers'), imgUrl: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=120&h=120&q=80', color: 'from-amber-50 to-orange-100' },
+    { id: 'pesticides', label: t('catHerbicides'), imgUrl: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=120&h=120&q=80', color: 'from-rose-50 to-pink-100' },
+    { id: 'fertilizers', label: t('catBioStimulants'), imgUrl: 'https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?auto=format&fit=crop&w=120&h=120&q=80', color: 'from-teal-50 to-cyan-100' },
+    { id: 'tools', label: t('catSprayers'), imgUrl: 'https://images.unsplash.com/photo-1622383563227-04401ab4e5ea?auto=format&fit=crop&w=120&h=120&q=80', color: 'from-sky-50 to-blue-100' },
+    { id: 'seeds', label: t('catSeeds'), imgUrl: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=120&h=120&q=80', color: 'from-yellow-50 to-amber-100' },
+    { id: 'tools', label: t('catTools'), imgUrl: 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=120&h=120&q=80', color: 'from-slate-50 to-gray-100' },
+    { id: 'all', label: t('catViewAll'), imgUrl: 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=120&h=120&q=80', color: 'from-primary/10 to-primary/20' },
   ];
 
   return (
@@ -218,7 +218,7 @@ export default function HomeView({
       {/* Shop by Category — 8 tiles */}
       <section className="px-4 md:px-10 max-w-7xl mx-auto w-full">
         <div className="flex items-center gap-2 mb-4">
-          <h2 className="text-2xl md:text-3xl font-bold text-on-surface">Shop by Category</h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-on-surface">{t('shopByCategory')}</h2>
         </div>
         <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
           {categoryTiles.map((c, i) => (
@@ -246,9 +246,8 @@ export default function HomeView({
           <HelperIcon
             size="sm"
             side="right"
-            title="Crop hubs"
+            textKey="shopByCrop"
             ariaLabel="Shop by crop help"
-            content="Crop hubs organize products, fertilizers, and tools specifically for each crop."
           />
         </div>
         <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
@@ -309,7 +308,7 @@ export default function HomeView({
                   onClick={(e) => { e.stopPropagation(); onProductClick(product.id); }}
                   className="mt-2 w-full border-2 border-primary text-primary text-xs font-bold py-1.5 rounded-lg hover:bg-primary hover:text-white transition-colors"
                 >
-                  + Add
+                  {t('addToCart')}
                 </button>
               </div>
             </motion.div>
@@ -330,18 +329,16 @@ export default function HomeView({
             <div className="relative z-10 flex flex-col lg:flex-row gap-10 items-center">
               <div className="flex-1 text-white">
                 <span className="inline-block text-[11px] uppercase tracking-[0.2em] font-black bg-white/20 px-3 py-1 rounded-full mb-4">
-                  Direct from Manufacturer
+                  {t('directFromMfg')}
                 </span>
                 <h2 className="text-3xl md:text-4xl font-bold leading-tight mb-3">
                   KaranArjun<br />Power Plus™
                 </h2>
                 <p className="text-white/90 text-base mb-2 max-w-md">
-                  Premium biostimulant — stimulates deep root growth, improves
-                  fruit colour &amp; weight, and uses advanced water-retention
-                  technology.
+                  {t('powerPlusDesc')}
                 </p>
                 <p className="text-white/80 text-sm font-semibold">
-                  Trusted by <span className="text-white font-black">75,800+ farmers</span>.
+                  {t('trustedByFarmers')} <span className="text-white font-black">75,800+ {t('farmersSuffix')}</span>.
                 </p>
               </div>
               <div className="flex-1 w-full">
@@ -395,12 +392,12 @@ export default function HomeView({
           >
             <ICONS.Sprout className="absolute -bottom-4 -right-4 w-32 h-32 text-white/15 group-hover:scale-110 transition-transform" />
             <div className="relative z-10">
-              <h3 className="text-xl font-black mb-1">Order Power Plus</h3>
+              <h3 className="text-xl font-black mb-1">{t('serviceOrderPowerPlusTitle')}</h3>
               <p className="text-white/85 text-sm mb-4 max-w-[200px]">
-                Pick your pack — 1 L, 3 L, or 5 L — straight from the manufacturer.
+                {t('serviceOrderPowerPlusDesc')}
               </p>
               <span className="inline-block bg-white text-emerald-700 text-xs font-bold px-3 py-1.5 rounded-full">
-                Shop now →
+                {t('serviceShopNow')}
               </span>
             </div>
           </button>
@@ -410,12 +407,12 @@ export default function HomeView({
           >
             <ICONS.Market className="absolute -bottom-4 -right-4 w-32 h-32 text-white/15 group-hover:scale-110 transition-transform" />
             <div className="relative z-10">
-              <h3 className="text-xl font-black mb-1">Become a Retailer</h3>
+              <h3 className="text-xl font-black mb-1">{t('serviceBecomeRetailerTitle')}</h3>
               <p className="text-white/85 text-sm mb-4 max-w-[220px]">
-                Join 50+ shops stocking trusted agri products. List your store, manage inventory.
+                {t('serviceBecomeRetailerDesc')}
               </p>
               <span className="inline-block bg-white text-orange-700 text-xs font-bold px-3 py-1.5 rounded-full">
-                Join the network →
+                {t('serviceJoinNetwork')}
               </span>
             </div>
           </button>
@@ -425,12 +422,12 @@ export default function HomeView({
           >
             <ICONS.Science className="absolute -bottom-4 -right-4 w-32 h-32 text-white/15 group-hover:scale-110 transition-transform" />
             <div className="relative z-10">
-              <h3 className="text-xl font-black mb-1">Free Crop Advisory</h3>
+              <h3 className="text-xl font-black mb-1">{t('serviceAdvisoryTitle')}</h3>
               <p className="text-white/85 text-sm mb-4 max-w-[220px]">
-                Crop-specific hubs with expert dosage, spray schedules &amp; soil-care guidance.
+                {t('serviceAdvisoryDesc')}
               </p>
               <span className="inline-block bg-white text-indigo-700 text-xs font-bold px-3 py-1.5 rounded-full">
-                Explore hubs →
+                {t('serviceExploreHubs')}
               </span>
             </div>
           </button>
