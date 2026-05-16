@@ -209,13 +209,15 @@ export default function StoreLocatorView({
 
           {/* Location label */}
           <div className="flex items-center gap-2 mb-3">
-            <button
-              onClick={handleLocateMe}
-              className="flex items-center gap-2 text-xs font-bold text-primary bg-primary/5 px-3 py-1.5 rounded-full hover:bg-primary/10 transition-colors"
-            >
-              <ICONS.MyPosition className="w-3.5 h-3.5" />
-              {location}
-            </button>
+            <HelperTooltip side="bottom" textKey="storeLocateMe">
+              <button
+                onClick={handleLocateMe}
+                className="flex items-center gap-2 text-xs font-bold text-primary bg-primary/5 px-3 py-1.5 rounded-full hover:bg-primary/10 transition-colors"
+              >
+                <ICONS.MyPosition className="w-3.5 h-3.5" />
+                {location}
+              </button>
+            </HelperTooltip>
           </div>
 
           {/* Location search (geocode on Enter) */}
@@ -314,9 +316,13 @@ export default function StoreLocatorView({
                   <h3 className={`text-xl font-bold ${store.id === activeStoreId || store.isHot ? 'text-primary' : 'text-on-surface'}`}>
                     {store.name}
                   </h3>
-                  <p className="flex items-center gap-1 text-xs font-bold text-on-surface-variant mt-1">
-                    <ICONS.Location className="w-3 h-3" /> {store.distanceLabel || store.distance || 'Nearby'}
-                  </p>
+                  <div onClick={(e) => e.stopPropagation()} className="mt-1 self-start">
+                    <HelperTooltip side="bottom" textKey="storeDistance">
+                      <p className="flex items-center gap-1 text-xs font-bold text-on-surface-variant cursor-help">
+                        <ICONS.Location className="w-3 h-3" /> {store.distanceLabel || store.distance || 'Nearby'}
+                      </p>
+                    </HelperTooltip>
+                  </div>
                 </div>
                 {(store.id === activeStoreId || store.isHot) && (
                   store.id === activeStoreId ? (
@@ -347,28 +353,42 @@ export default function StoreLocatorView({
                 {addressLine ? (
                   <p className="text-[11px] text-on-surface-variant font-medium truncate">{addressLine}</p>
                 ) : null}
-                <div className="flex flex-wrap gap-2">
-                  {store.stock?.map((item: string) => (
-                    <span key={item} className="px-2 py-0.5 rounded-lg bg-surface-container-high text-on-surface-variant text-[9px] font-black uppercase tracking-widest border border-surface-container-highest">
-                      {item}
-                    </span>
-                  ))}
-                </div>
+                {store.stock && store.stock.length > 0 ? (
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <HelperTooltip side="top" textKey="storeInventory">
+                      <div className="flex flex-wrap gap-2 cursor-help">
+                        {store.stock.map((item: string) => (
+                          <span key={item} className="px-2 py-0.5 rounded-lg bg-surface-container-high text-on-surface-variant text-[9px] font-black uppercase tracking-widest border border-surface-container-highest">
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                    </HelperTooltip>
+                  </div>
+                ) : null}
               </div>
 
               <div className={`flex gap-2 transition-all duration-300 ${store.id === activeStoreId ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-0 group-hover:opacity-100 group-hover:translate-y-0'}`}>
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleGetDirections(store); }}
-                  className="flex-1 bg-primary text-white py-2.5 rounded-xl text-xs font-bold hover:scale-[1.02] active:scale-95 transition-transform flex items-center justify-center gap-2"
-                >
-                  <ICONS.Directions className="w-4 h-4" /> Get Directions
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setDetailStore(store); }}
-                  className="flex-1 border border-outline-variant text-on-surface py-2.5 rounded-xl text-xs font-bold hover:bg-white transition-colors"
-                >
-                  Details
-                </button>
+                <div onClick={(e) => e.stopPropagation()} className="flex-1">
+                  <HelperTooltip side="top" textKey="storeDirections">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleGetDirections(store); }}
+                      className="w-full bg-primary text-white py-2.5 rounded-xl text-xs font-bold hover:scale-[1.02] active:scale-95 transition-transform flex items-center justify-center gap-2"
+                    >
+                      <ICONS.Directions className="w-4 h-4" /> Get Directions
+                    </button>
+                  </HelperTooltip>
+                </div>
+                <div onClick={(e) => e.stopPropagation()} className="flex-1">
+                  <HelperTooltip side="top" textKey="storeDetails">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDetailStore(store); }}
+                      className="w-full border border-outline-variant text-on-surface py-2.5 rounded-xl text-xs font-bold hover:bg-white transition-colors"
+                    >
+                      Details
+                    </button>
+                  </HelperTooltip>
+                </div>
               </div>
             </motion.div>
             );
@@ -465,29 +485,33 @@ export default function StoreLocatorView({
               <ICONS.Info className="w-5 h-5" />
             </button>
           </HelperTooltip>
-          <button
-            type="button"
-            onClick={() => map?.panTo(userCoords)}
-            className="w-12 h-12 bg-white rounded-2xl shadow-xl flex items-center justify-center text-primary hover:scale-110 active:scale-90 transition-all border border-surface-container group"
-          >
-            <ICONS.MyPosition className="w-6 h-6 group-hover:animate-pulse" />
-          </button>
-          <div className="flex flex-col bg-white rounded-3xl shadow-xl border border-surface-container overflow-hidden">
+          <HelperTooltip side="left" textKey="storeLocateMe">
             <button
               type="button"
-              onClick={() => map?.setZoom((map.getZoom() || 13) + 1)}
-              className="w-12 h-12 flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors border-b border-surface-container"
+              onClick={() => map?.panTo(userCoords)}
+              className="w-12 h-12 bg-white rounded-2xl shadow-xl flex items-center justify-center text-primary hover:scale-110 active:scale-90 transition-all border border-surface-container group"
             >
-              <ICONS.Plus className="w-5 h-5" />
+              <ICONS.MyPosition className="w-6 h-6 group-hover:animate-pulse" />
             </button>
-            <button
-              type="button"
-              onClick={() => map?.setZoom((map.getZoom() || 13) - 1)}
-              className="w-12 h-12 flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors"
-            >
-              <ICONS.Minus className="w-5 h-5" />
-            </button>
-          </div>
+          </HelperTooltip>
+          <HelperTooltip side="left" textKey="mapZoomControls">
+            <div className="flex flex-col bg-white rounded-3xl shadow-xl border border-surface-container overflow-hidden">
+              <button
+                type="button"
+                onClick={() => map?.setZoom((map.getZoom() || 13) + 1)}
+                className="w-12 h-12 flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors border-b border-surface-container"
+              >
+                <ICONS.Plus className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => map?.setZoom((map.getZoom() || 13) - 1)}
+                className="w-12 h-12 flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors"
+              >
+                <ICONS.Minus className="w-5 h-5" />
+              </button>
+            </div>
+          </HelperTooltip>
         </div>
       </div>
     </div>
@@ -578,19 +602,23 @@ export default function StoreLocatorView({
               </div>
 
               <div className="flex gap-3 mt-6">
-                <button
-                  onClick={() => handleGetDirections(detailStore)}
-                  className="flex-1 bg-primary text-white py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
-                >
-                  <ICONS.Directions className="w-4 h-4" /> Get Directions
-                </button>
-                {detailStore.phone && (
-                  <a
-                    href={`tel:${detailStore.phone}`}
-                    className="flex-1 border border-outline-variant text-on-surface py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-surface-container transition-colors"
+                <HelperTooltip side="top" textKey="storeDirections">
+                  <button
+                    onClick={() => handleGetDirections(detailStore)}
+                    className="flex-1 bg-primary text-white py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
                   >
-                    Call Store
-                  </a>
+                    <ICONS.Directions className="w-4 h-4" /> Get Directions
+                  </button>
+                </HelperTooltip>
+                {detailStore.phone && (
+                  <HelperTooltip side="top" textKey="storeCallAction">
+                    <a
+                      href={`tel:${detailStore.phone}`}
+                      className="flex-1 border border-outline-variant text-on-surface py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-surface-container transition-colors"
+                    >
+                      Call Store
+                    </a>
+                  </HelperTooltip>
                 )}
               </div>
             </div>

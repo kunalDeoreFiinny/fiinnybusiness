@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo, useEffect } from 'react';
 import { StoreWithDistance } from '../utils/nearby';
 import { trackProductClick } from '../firebase';
+import { HelperIcon, HelperTooltip } from '../../components/helpers';
 
 type StoreListItem = {
   id: string;
@@ -91,10 +92,12 @@ export default function ProductDetailView({
             className="aspect-[4/3] rounded-3xl overflow-hidden bg-white shadow-ambient border border-surface-container relative"
           >
             <img src={product.image} className="w-full h-full object-cover" alt={product.name} />
-            <div className="absolute top-6 left-6 bg-primary-container text-on-primary-container px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-2 shadow-lg backdrop-blur-md">
-              <ICONS.Check className="w-4 h-4" />
-              Premium Grade
-            </div>
+            <HelperTooltip side="bottom" textKey="productQualityBadge">
+              <div className="absolute top-6 left-6 bg-primary-container text-on-primary-container px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-2 shadow-lg backdrop-blur-md cursor-help">
+                <ICONS.Check className="w-4 h-4" />
+                Premium Grade
+              </div>
+            </HelperTooltip>
           </motion.div>
           <div className="flex gap-4">
             <div className="w-24 h-24 rounded-2xl border-2 border-primary overflow-hidden cursor-pointer shadow-sm">
@@ -108,7 +111,16 @@ export default function ProductDetailView({
 
         {/* Right — Store cards (click to expand) */}
         <div className="flex flex-col gap-3">
-          <h3 className="font-bold text-on-surface uppercase tracking-widest text-xs mb-1">Available at these Stores</h3>
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="font-bold text-on-surface uppercase tracking-widest text-xs">Available at these Stores</h3>
+            <HelperIcon
+              size="xs"
+              variant="ghost"
+              side="right"
+              textKey="productStoreAvailability"
+              ariaLabel="Available stores help"
+            />
+          </div>
 
           {availableStores.length > 0 ? availableStores.map(store => {
             const availability = product.availability?.find(a => a.storeId === store.id);
@@ -140,21 +152,25 @@ export default function ProductDetailView({
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
-                        availability?.stockLevel === 'In Stock' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
-                      }`}>
-                        {availability?.stockLevel}
-                      </span>
+                      <HelperTooltip side="left" textKey="productStockStatus">
+                        <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full cursor-help ${
+                          availability?.stockLevel === 'In Stock' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                        }`}>
+                          {availability?.stockLevel}
+                        </span>
+                      </HelperTooltip>
                       <ICONS.ChevronRight className={`w-4 h-4 text-outline transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                     </div>
                   </button>
-                  <button
-                    onClick={() => onStoreClick(store.id)}
-                    className="shrink-0 inline-flex items-center justify-center gap-1.5 bg-primary text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all"
-                  >
-                    <ICONS.Directions className="w-3.5 h-3.5" />
-                    Map
-                  </button>
+                  <HelperTooltip side="left" textKey="storeDirections">
+                    <button
+                      onClick={() => onStoreClick(store.id)}
+                      className="shrink-0 inline-flex items-center justify-center gap-1.5 bg-primary text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all"
+                    >
+                      <ICONS.Directions className="w-3.5 h-3.5" />
+                      Map
+                    </button>
+                  </HelperTooltip>
                 </div>
 
                 {/* Expanded details */}
@@ -179,9 +195,11 @@ export default function ProductDetailView({
                           )}
                         </div>
                         <div className="flex gap-2">
-                          <button className="w-full border border-outline-variant text-on-surface py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-surface-container transition-colors flex items-center justify-center gap-1.5">
-                            <ICONS.Phone className="w-3.5 h-3.5" /> Call Store
-                          </button>
+                          <HelperTooltip side="top" textKey="storeCallAction">
+                            <button className="w-full border border-outline-variant text-on-surface py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-surface-container transition-colors flex items-center justify-center gap-1.5">
+                              <ICONS.Phone className="w-3.5 h-3.5" /> Call Store
+                            </button>
+                          </HelperTooltip>
                         </div>
                       </div>
                     </motion.div>
@@ -196,15 +214,17 @@ export default function ProductDetailView({
           )}
 
           {/* Delivery option */}
-          <div className="flex items-center gap-4 p-4 rounded-2xl border-2 border-surface-container hover:border-primary transition-all bg-surface-container-low group cursor-pointer">
-            <div className="p-2.5 rounded-xl bg-white shadow-sm text-on-surface-variant group-hover:bg-primary group-hover:text-white transition-colors">
-              <ICONS.Delivery className="w-5 h-5" />
+          <HelperTooltip side="top" textKey="productDeliveryInfo">
+            <div className="flex items-center gap-4 p-4 rounded-2xl border-2 border-surface-container hover:border-primary transition-all bg-surface-container-low group cursor-pointer">
+              <div className="p-2.5 rounded-xl bg-white shadow-sm text-on-surface-variant group-hover:bg-primary group-hover:text-white transition-colors">
+                <ICONS.Delivery className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="block font-bold text-on-surface">Deliver to Farm</span>
+                <span className="text-[10px] uppercase font-black tracking-widest text-on-surface-variant">Arrival Tomorrow, 10 AM</span>
+              </div>
             </div>
-            <div>
-              <span className="block font-bold text-on-surface">Deliver to Farm</span>
-              <span className="text-[10px] uppercase font-black tracking-widest text-on-surface-variant">Arrival Tomorrow, 10 AM</span>
-            </div>
-          </div>
+          </HelperTooltip>
         </div>
       </div>
 
@@ -213,11 +233,17 @@ export default function ProductDetailView({
         {/* Name + badges */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-4 flex-wrap">
-            <span className="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest border border-secondary/20">Organic Certified</span>
-            <div className="flex items-center gap-1 text-secondary">
-              <ICONS.Star className="w-4 h-4 fill-secondary" />
-              <span className="text-sm font-black">4.8 (124 Reviews)</span>
-            </div>
+            <HelperTooltip side="bottom" textKey="productQualityBadge">
+              <span className="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest border border-secondary/20 cursor-help">
+                Organic Certified
+              </span>
+            </HelperTooltip>
+            <HelperTooltip side="bottom" textKey="productReviews">
+              <div className="flex items-center gap-1 text-secondary cursor-help">
+                <ICONS.Star className="w-4 h-4 fill-secondary" />
+                <span className="text-sm font-black">4.8 (124 Reviews)</span>
+              </div>
+            </HelperTooltip>
           </div>
           <h1 className="text-3xl md:text-4xl font-bold text-on-surface tracking-tight leading-tight">{product.fullName || product.name}</h1>
           <p className="text-on-surface-variant leading-relaxed">
@@ -227,32 +253,52 @@ export default function ProductDetailView({
 
         {/* Price + quantity + CTA */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-6 pt-4 border-t border-surface-container">
-          <div className="flex items-end gap-3">
-            <span className="text-4xl font-extrabold text-secondary tracking-tight">₹{product.price}</span>
-            {product.oldPrice && (
-              <span className="text-xl text-on-surface-variant line-through mb-1">₹{product.oldPrice}</span>
-            )}
-            {product.oldPrice && (
-              <span className="bg-primary-container text-on-primary-container px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest">Save 11%</span>
-            )}
-          </div>
+          <HelperTooltip side="top" textKey="marketPriceInfo">
+            <div className="flex items-end gap-3 cursor-help">
+              <span className="text-4xl font-extrabold text-secondary tracking-tight">₹{product.price}</span>
+              {product.oldPrice && (
+                <span className="text-xl text-on-surface-variant line-through mb-1">₹{product.oldPrice}</span>
+              )}
+              {product.oldPrice && (
+                <span className="bg-primary-container text-on-primary-container px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest">Save 11%</span>
+              )}
+            </div>
+          </HelperTooltip>
 
           <div className="flex items-center gap-4 sm:ml-auto">
-            <button className="h-12 px-8 bg-primary text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2">
-              <ICONS.Phone className="w-5 h-5" /> Contact for Availability
-            </button>
+            <HelperTooltip side="top" textKey="productContact">
+              <button className="h-12 px-8 bg-primary text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2">
+                <ICONS.Phone className="w-5 h-5" /> Contact for Availability
+              </button>
+            </HelperTooltip>
           </div>
         </div>
       </div>
 
       {/* Product Insights */}
       <section>
-        <h2 className="text-2xl font-bold text-on-surface mb-6">Product Insights</h2>
+        <div className="flex items-center gap-2 mb-6">
+          <h2 className="text-2xl font-bold text-on-surface">Product Insights</h2>
+          <HelperIcon
+            size="sm"
+            variant="ghost"
+            side="right"
+            textKey="productInsights"
+            ariaLabel="Product insights help"
+          />
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white rounded-3xl p-6 shadow-sm border border-surface-container flex flex-col gap-4">
             <div className="flex items-center gap-3 text-secondary">
               <ICONS.Science className="w-5 h-5" />
               <h3 className="font-bold uppercase tracking-widest text-xs">Composition</h3>
+              <HelperIcon
+                size="xs"
+                variant="ghost"
+                side="right"
+                textKey="productComposition"
+                ariaLabel="Composition help"
+              />
             </div>
             {[
               { label: 'Nitrogen (N)', val: '19%' },
@@ -270,18 +316,34 @@ export default function ProductDetailView({
             <div className="flex items-center gap-3 text-primary">
               <ICONS.Water className="w-5 h-5" />
               <h3 className="font-bold uppercase tracking-widest text-xs">Application</h3>
+              <HelperIcon
+                size="xs"
+                variant="ghost"
+                side="right"
+                textKey="productApplication"
+                ariaLabel="Application help"
+              />
             </div>
             <p className="text-on-surface-variant font-medium text-sm">Suitable for foliar spray and fertigation. Best applied during active growth phase.</p>
-            <div className="mt-auto bg-primary/5 rounded-2xl p-4 border border-primary/10">
-              <span className="block text-[10px] font-black uppercase tracking-widest text-primary mb-1">Recommended Dosage</span>
-              <span className="text-2xl font-bold text-on-surface">3-5 gm / Litre</span>
-            </div>
+            <HelperTooltip side="top" textKey="productDosage">
+              <div className="mt-auto bg-primary/5 rounded-2xl p-4 border border-primary/10 cursor-help">
+                <span className="block text-[10px] font-black uppercase tracking-widest text-primary mb-1">Recommended Dosage</span>
+                <span className="text-2xl font-bold text-on-surface">3-5 gm / Litre</span>
+              </div>
+            </HelperTooltip>
           </div>
 
           <div className="bg-white rounded-3xl p-6 shadow-sm border border-surface-container flex flex-col gap-4">
             <div className="flex items-center gap-3 text-secondary">
               <ICONS.Sprout className="w-5 h-5" />
               <h3 className="font-bold uppercase tracking-widest text-xs">Best For Crops</h3>
+              <HelperIcon
+                size="xs"
+                variant="ghost"
+                side="right"
+                textKey="productCropSupport"
+                ariaLabel="Best for crops help"
+              />
             </div>
             <div className="flex flex-wrap gap-2">
               {['Tomatoes', 'Wheat', 'Sugarcane', 'Grapes'].map((crop, i) => (

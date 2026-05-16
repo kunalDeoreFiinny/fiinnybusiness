@@ -215,6 +215,204 @@ export const HELPER_TEXTS = {
       hi: 'प्रत्येक फसल के लिए बीज, पोषण और सिंचाई की लक्षित सिफारिशें।',
     },
   },
+
+  // --- Market: extended ---
+  marketCategories: {
+    title: { en: 'Categories', mr: 'श्रेणी', hi: 'श्रेणियाँ' },
+    body: {
+      en: 'Browse products grouped by Seeds, Fertilizers, Pesticides, or Tools.',
+      mr: 'बियाणे, खते, कीटकनाशके किंवा साधने अशा गटांनुसार उत्पादने पाहा.',
+      hi: 'बीज, उर्वरक, कीटनाशक या उपकरणों के अनुसार समूहीकृत उत्पाद देखें।',
+    },
+  },
+  marketNearbyStore: {
+    title: { en: 'Nearby store', mr: 'जवळील दुकान', hi: 'नज़दीकी दुकान' },
+    body: {
+      en: 'Sold by this local store, with the distance from your selected location.',
+      mr: 'या स्थानिक दुकानात विकले जाते, तुमच्या निवडलेल्या स्थानापासूनचे अंतर.',
+      hi: 'इस स्थानीय दुकान द्वारा बेचा जाता है, आपके चयनित स्थान से दूरी सहित।',
+    },
+  },
+  marketPriceInfo: {
+    title: { en: 'Price', mr: 'किंमत', hi: 'मूल्य' },
+    body: {
+      en: 'Latest store price. A struck-through value shows the original price before discount.',
+      mr: 'दुकानाची ताजी किंमत. कापलेली किंमत सवलतीपूर्वीची मूळ किंमत दर्शवते.',
+      hi: 'दुकान का ताज़ा मूल्य। काटा गया मूल्य छूट से पहले की मूल कीमत दर्शाता है।',
+    },
+  },
+  marketAddToCart: {
+    title: { en: 'Quick add', mr: 'त्वरित जोडा', hi: 'त्वरित जोड़ें' },
+    body: {
+      en: 'Opens the product details to confirm size, stock, and the nearest store before reserving.',
+      mr: 'राखीव करण्यापूर्वी आकार, साठा आणि जवळचे दुकान खात्री करण्यासाठी उत्पादन तपशील उघडते.',
+      hi: 'आरक्षित करने से पहले आकार, स्टॉक और निकटतम दुकान की पुष्टि के लिए उत्पाद विवरण खोलता है।',
+    },
+  },
+  marketUnits: {
+    title: { en: 'Pack size', mr: 'पॅक आकार', hi: 'पैक का आकार' },
+    body: {
+      en: 'Quantity in one pack — compare sizes before choosing.',
+      mr: 'एका पॅकमधील प्रमाण — निवडण्यापूर्वी आकारांची तुलना करा.',
+      hi: 'एक पैक में मात्रा — चुनने से पहले आकारों की तुलना करें।',
+    },
+  },
+
+  // --- Product Detail ---
+  productInsights: {
+    title: { en: 'Product insights', mr: 'उत्पादन माहिती', hi: 'उत्पाद जानकारी' },
+    body: {
+      en: 'Key facts about the product — composition, how to apply, and best-fit crops.',
+      mr: 'उत्पादनाची प्रमुख माहिती — रचना, वापर पद्धत आणि योग्य पिके.',
+      hi: 'उत्पाद के मुख्य तथ्य — संरचना, उपयोग विधि और उपयुक्त फसलें।',
+    },
+  },
+  productComposition: {
+    title: { en: 'Composition', mr: 'रचना', hi: 'संरचना' },
+    body: {
+      en: 'Active nutrient percentages in this product.',
+      mr: 'या उत्पादनातील सक्रिय पोषक घटकांची टक्केवारी.',
+      hi: 'इस उत्पाद में सक्रिय पोषक तत्वों का प्रतिशत।',
+    },
+  },
+  productDosage: {
+    title: { en: 'Recommended dosage', mr: 'शिफारस केलेले प्रमाण', hi: 'अनुशंसित मात्रा' },
+    body: {
+      en: 'Use this dosage as a starting point. Always follow the label and consult your local agronomist.',
+      mr: 'हे प्रमाण सुरुवात म्हणून वापरा. लेबल वाचा आणि स्थानिक कृषितज्ज्ञांचा सल्ला घ्या.',
+      hi: 'इस मात्रा को शुरुआती बिंदु मानें। हमेशा लेबल पढ़ें और स्थानीय कृषि विशेषज्ञ से सलाह लें।',
+    },
+  },
+  productApplication: {
+    title: { en: 'Application', mr: 'वापर', hi: 'प्रयोग' },
+    body: {
+      en: 'How and when to apply this product for the best results.',
+      mr: 'सर्वोत्तम परिणामांसाठी हे उत्पादन कधी आणि कसे वापरावे.',
+      hi: 'सर्वोत्तम परिणामों के लिए इस उत्पाद का उपयोग कब और कैसे करें।',
+    },
+  },
+  productCropSupport: {
+    title: { en: 'Best for crops', mr: 'योग्य पिके', hi: 'उपयुक्त फसलें' },
+    body: {
+      en: 'Crops where this product has shown the most consistent results.',
+      mr: 'जिथे या उत्पादनाने सातत्यपूर्ण परिणाम दाखवले आहेत अशी पिके.',
+      hi: 'वे फसलें जहाँ इस उत्पाद ने सबसे लगातार परिणाम दिए हैं।',
+    },
+  },
+  productStoreAvailability: {
+    title: { en: 'Available stores', mr: 'उपलब्ध दुकाने', hi: 'उपलब्ध दुकानें' },
+    body: {
+      en: 'Local stores carrying this product. Tap a store to see stock, status, and directions.',
+      mr: 'हे उत्पादन ठेवणारी स्थानिक दुकाने. साठा, स्थिती आणि दिशा पाहण्यासाठी दुकानावर टॅप करा.',
+      hi: 'इस उत्पाद को रखने वाली स्थानीय दुकानें. स्टॉक, स्थिति और दिशा देखने के लिए दुकान पर टैप करें।',
+    },
+  },
+  productStockStatus: {
+    title: { en: 'Stock status', mr: 'साठा स्थिती', hi: 'स्टॉक स्थिति' },
+    body: {
+      en: '"In Stock" is currently available; "Low Stock" means few units left.',
+      mr: '"साठ्यात" सध्या उपलब्ध आहे; "कमी साठा" म्हणजे काही नग शिल्लक.',
+      hi: '"स्टॉक में" अभी उपलब्ध है; "कम स्टॉक" का मतलब कुछ इकाइयाँ बची हैं।',
+    },
+  },
+  productDeliveryInfo: {
+    title: { en: 'Farm delivery', mr: 'शेतावर पोहोच', hi: 'फार्म डिलीवरी' },
+    body: {
+      en: 'When available, get supplies delivered directly to your farm.',
+      mr: 'जेव्हा उपलब्ध असेल तेव्हा, पुरवठा थेट तुमच्या शेतावर मिळवा.',
+      hi: 'जब उपलब्ध हो, आपूर्ति सीधे आपके खेत तक पहुँचाई जाती है।',
+    },
+  },
+  productQualityBadge: {
+    title: { en: 'Quality badge', mr: 'गुणवत्ता बॅज', hi: 'गुणवत्ता बैज' },
+    body: {
+      en: 'Verified quality — Premium / Organic Certified products are checked for authenticity.',
+      mr: 'पडताळणी केलेली गुणवत्ता — प्रीमियम / सेंद्रिय प्रमाणित उत्पादनांची सत्यता तपासली जाते.',
+      hi: 'सत्यापित गुणवत्ता — प्रीमियम / जैविक प्रमाणित उत्पादों की प्रामाणिकता जाँची जाती है।',
+    },
+  },
+  productReviews: {
+    title: { en: 'Reviews', mr: 'पुनरावलोकने', hi: 'समीक्षाएँ' },
+    body: {
+      en: 'Average rating from verified farmers who bought this product.',
+      mr: 'हे उत्पादन घेतलेल्या पडताळणी केलेल्या शेतकऱ्यांची सरासरी रेटिंग.',
+      hi: 'इस उत्पाद को खरीदने वाले सत्यापित किसानों की औसत रेटिंग।',
+    },
+  },
+  productContact: {
+    title: { en: 'Confirm availability', mr: 'उपलब्धता तपासा', hi: 'उपलब्धता पुष्टि करें' },
+    body: {
+      en: 'Call the store first to confirm current stock and price before visiting.',
+      mr: 'भेट देण्यापूर्वी सध्याचा साठा आणि किंमत खात्री करण्यासाठी आधी दुकानात फोन करा.',
+      hi: 'दौरा करने से पहले मौजूदा स्टॉक और कीमत की पुष्टि के लिए पहले दुकान को फ़ोन करें।',
+    },
+  },
+
+  // --- Store / Map: extended ---
+  storeMapInteraction: {
+    title: { en: 'Map view', mr: 'नकाशा दृश्य', hi: 'मानचित्र दृश्य' },
+    body: {
+      en: 'Tap a pin or a store card — the map will recenter and zoom to that store.',
+      mr: 'पिन किंवा दुकान कार्डवर टॅप करा — नकाशा त्या दुकानावर केंद्रीत आणि झूम होईल.',
+      hi: 'किसी पिन या स्टोर कार्ड पर टैप करें — मानचित्र उस स्टोर पर केंद्रित और ज़ूम होगा।',
+    },
+  },
+  storeDirections: {
+    title: { en: 'Get directions', mr: 'दिशा मिळवा', hi: 'दिशा प्राप्त करें' },
+    body: {
+      en: 'Opens Google Maps with turn-by-turn directions to this store.',
+      mr: 'या दुकानापर्यंत वळणवळण दिशांसह Google नकाशे उघडते.',
+      hi: 'इस दुकान तक मोड़-दर-मोड़ दिशाओं के साथ Google Maps खोलता है।',
+    },
+  },
+  storeDetails: {
+    title: { en: 'Store details', mr: 'दुकान तपशील', hi: 'दुकान विवरण' },
+    body: {
+      en: 'See address, phone, status, and the products this store currently carries.',
+      mr: 'पत्ता, फोन, स्थिती आणि या दुकानात सध्या असलेली उत्पादने पाहा.',
+      hi: 'पता, फ़ोन, स्थिति और इस दुकान में मौजूद उत्पाद देखें।',
+    },
+  },
+  storeDistance: {
+    title: { en: 'Distance', mr: 'अंतर', hi: 'दूरी' },
+    body: {
+      en: 'Straight-line distance from your selected location.',
+      mr: 'तुमच्या निवडलेल्या स्थानापासूनचे सरळ रेषेतील अंतर.',
+      hi: 'आपके चयनित स्थान से सीधी रेखा की दूरी।',
+    },
+  },
+  storeInventory: {
+    title: { en: 'In-stock products', mr: 'साठ्यातील उत्पादने', hi: 'स्टॉक में उत्पाद' },
+    body: {
+      en: 'Popular products this store keeps in stock today.',
+      mr: 'या दुकानात आज साठ्यात असलेली लोकप्रिय उत्पादने.',
+      hi: 'इस दुकान में आज स्टॉक में मौजूद लोकप्रिय उत्पाद।',
+    },
+  },
+  storeLocateMe: {
+    title: { en: 'Use my location', mr: 'माझे स्थान वापरा', hi: 'मेरा स्थान उपयोग करें' },
+    body: {
+      en: 'Detects your current location so distances and nearby stores update automatically.',
+      mr: 'तुमचे सध्याचे स्थान शोधते जेणेकरून अंतर आणि जवळील दुकाने आपोआप अपडेट होतात.',
+      hi: 'आपका वर्तमान स्थान पहचानता है ताकि दूरी और नज़दीकी दुकानें स्वतः अपडेट हों।',
+    },
+  },
+  storeCallAction: {
+    title: { en: 'Call store', mr: 'दुकानात फोन करा', hi: 'दुकान को कॉल करें' },
+    body: {
+      en: 'Dial the store directly to confirm stock, pricing, or hold an item.',
+      mr: 'साठा, किंमत खात्री करण्यासाठी किंवा वस्तू राखून ठेवण्यासाठी दुकानात थेट फोन करा.',
+      hi: 'स्टॉक, मूल्य की पुष्टि या वस्तु रोकने के लिए सीधे दुकान पर कॉल करें।',
+    },
+  },
+  mapZoomControls: {
+    title: { en: 'Zoom', mr: 'झूम', hi: 'ज़ूम' },
+    body: {
+      en: 'Zoom in to inspect a neighborhood or out to see more stores at once.',
+      mr: 'परिसर पाहण्यासाठी झूम इन करा किंवा अधिक दुकाने एकाच वेळी पाहण्यासाठी झूम आउट करा.',
+      hi: 'किसी क्षेत्र को देखने के लिए ज़ूम इन करें या अधिक दुकानें एक साथ देखने के लिए ज़ूम आउट करें।',
+    },
+  },
 } as const;
 
 export type HelperTextKey = keyof typeof HELPER_TEXTS;

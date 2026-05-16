@@ -168,21 +168,40 @@ export function HelperTooltip({
     };
   }, [open]);
 
+  const childProps = (isValidElement(children) ? (children as any).props : {}) || {};
+  const childOnClick: ((e: React.MouseEvent) => void) | undefined = childProps.onClick;
+  const childOnMouseEnter: ((e: React.MouseEvent) => void) | undefined = childProps.onMouseEnter;
+  const childOnMouseLeave: ((e: React.MouseEvent) => void) | undefined = childProps.onMouseLeave;
+  const childOnFocus: ((e: React.FocusEvent) => void) | undefined = childProps.onFocus;
+  const childOnBlur: ((e: React.FocusEvent) => void) | undefined = childProps.onBlur;
+
   const handlers =
     trigger === 'hover'
       ? {
-          onMouseEnter: () => setOpen(true),
-          onMouseLeave: () => setOpen(false),
-          onFocus: () => setOpen(true),
-          onBlur: () => setOpen(false),
-          onClick: (e: React.MouseEvent) => {
-            e.stopPropagation();
-            setOpen((v) => !v);
+          onMouseEnter: (e: React.MouseEvent) => {
+            childOnMouseEnter?.(e);
+            setOpen(true);
           },
+          onMouseLeave: (e: React.MouseEvent) => {
+            childOnMouseLeave?.(e);
+            setOpen(false);
+          },
+          onFocus: (e: React.FocusEvent) => {
+            childOnFocus?.(e);
+            setOpen(true);
+          },
+          onBlur: (e: React.FocusEvent) => {
+            childOnBlur?.(e);
+            setOpen(false);
+          },
+          // On hover devices, click should run the child's original action;
+          // the tooltip is already shown via hover/focus and will close on outside click.
+          onClick: childOnClick,
         }
       : {
+          // On touch devices, run the child's action and toggle the tooltip too.
           onClick: (e: React.MouseEvent) => {
-            e.stopPropagation();
+            childOnClick?.(e);
             setOpen((v) => !v);
           },
         };

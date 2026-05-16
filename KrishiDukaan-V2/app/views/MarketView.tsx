@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { MarketplaceProduct } from "../../types/product";
 import { ICONS, PRODUCTS } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HelperTooltip } from '../../components/helpers';
+import { HelperIcon, HelperTooltip } from '../../components/helpers';
 import { trackProductImpression } from '../firebase';
 import type { StoreWithDistance } from '../utils/nearby';
 
@@ -142,25 +142,34 @@ export default function MarketView({
       </header>
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6 pb-2">
-        <div className="flex gap-3 overflow-x-auto hide-scrollbar">
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => onCategoryChange(cat.id)}
-              className={`flex-shrink-0 px-6 py-2.5 rounded-full font-bold text-sm flex items-center gap-2 transition-all shadow-sm ${
-                selectedCategory === cat.id
-                  ? 'bg-primary text-white shadow-primary/20'
-                  : 'bg-white text-on-surface border border-surface-container-highest hover:bg-surface-container-low'
-              }`}
-            >
-              {cat.icon && <cat.icon className="w-4 h-4 text-secondary" />}
-              {cat.name}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="flex gap-3 overflow-x-auto hide-scrollbar">
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => onCategoryChange(cat.id)}
+                className={`flex-shrink-0 px-6 py-2.5 rounded-full font-bold text-sm flex items-center gap-2 transition-all shadow-sm ${
+                  selectedCategory === cat.id
+                    ? 'bg-primary text-white shadow-primary/20'
+                    : 'bg-white text-on-surface border border-surface-container-highest hover:bg-surface-container-low'
+                }`}
+              >
+                {cat.icon && <cat.icon className="w-4 h-4 text-secondary" />}
+                {cat.name}
+              </button>
+            ))}
+          </div>
+          <HelperIcon
+            size="xs"
+            variant="ghost"
+            side="bottom"
+            textKey="marketCategories"
+            ariaLabel="Category help"
+          />
         </div>
         <div className="flex items-center gap-3 relative" data-tour="market-filters">
           {/* Filter */}
-          <div className="relative">
+          <div className="relative flex items-center gap-1">
             <button
               onClick={() => {
                 setFilterOpen((v) => !v);
@@ -180,6 +189,13 @@ export default function MarketView({
                 </span>
               )}
             </button>
+            <HelperIcon
+              size="xs"
+              variant="ghost"
+              side="bottom"
+              textKey="marketFilter"
+              ariaLabel="Filter help"
+            />
 
             <AnimatePresence>
               {filterOpen && (
@@ -250,7 +266,7 @@ export default function MarketView({
           </div>
 
           {/* Distance */}
-          <div className="relative">
+          <div className="relative flex items-center gap-1">
             <button
               onClick={() => {
                 setDistanceOpen((v) => !v);
@@ -266,6 +282,13 @@ export default function MarketView({
               {distanceLabel}
               <ICONS.ChevronRight className="w-4 h-4 rotate-90" />
             </button>
+            <HelperIcon
+              size="xs"
+              variant="ghost"
+              side="bottom"
+              textKey="marketDistance"
+              ariaLabel="Distance help"
+            />
             <AnimatePresence>
               {distanceOpen && (
                 <motion.div
@@ -343,11 +366,15 @@ export default function MarketView({
                 </div>
 
                 <div className="p-4 flex flex-col flex-1">
-                  <div className="flex items-center gap-1.5 text-secondary mb-2 bg-secondary/5 self-start px-2 py-0.5 rounded-lg">
-                    <ICONS.Market className="w-3 h-3" />
-                    <span className="text-[10px] font-bold tracking-tight">
-                      {product.store} • {formatDistance(dist)}
-                    </span>
+                  <div onClick={(e) => e.stopPropagation()} className="self-start mb-2">
+                    <HelperTooltip side="bottom" textKey="marketNearbyStore">
+                      <div className="flex items-center gap-1.5 text-secondary bg-secondary/5 px-2 py-0.5 rounded-lg cursor-help">
+                        <ICONS.Market className="w-3 h-3" />
+                        <span className="text-[10px] font-bold tracking-tight">
+                          {product.store} • {formatDistance(dist)}
+                        </span>
+                      </div>
+                    </HelperTooltip>
                   </div>
                   <h3 className="font-bold text-on-surface line-clamp-2 leading-tight group-hover:text-primary transition-colors">
                     {product.name}
@@ -357,29 +384,37 @@ export default function MarketView({
                   </p>
 
                   <div className="mt-auto pt-3 flex justify-between items-end border-t border-surface-container">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-outline font-bold uppercase tracking-widest">
-                        {size || 'Per unit'}
-                      </span>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-lg font-bold text-secondary">
-                          ₹{product.price.toLocaleString('en-IN')}
+                    <div className="flex flex-col" onClick={(e) => e.stopPropagation()}>
+                      <HelperTooltip side="top" textKey="marketUnits">
+                        <span className="text-[10px] text-outline font-bold uppercase tracking-widest cursor-help">
+                          {size || 'Per unit'}
                         </span>
-                        {product.oldPrice && product.oldPrice > product.price && (
-                          <span className="text-[10px] text-outline line-through">
-                            ₹{product.oldPrice}
+                      </HelperTooltip>
+                      <HelperTooltip side="top" textKey="marketPriceInfo">
+                        <div className="flex items-baseline gap-1 cursor-help">
+                          <span className="text-lg font-bold text-secondary">
+                            ₹{product.price.toLocaleString('en-IN')}
                           </span>
-                        )}
-                      </div>
+                          {product.oldPrice && product.oldPrice > product.price && (
+                            <span className="text-[10px] text-outline line-through">
+                              ₹{product.oldPrice}
+                            </span>
+                          )}
+                        </div>
+                      </HelperTooltip>
                     </div>
                     <span className="text-[10px] text-outline font-semibold">{brand}</span>
                   </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onProductClick(product.id); }}
-                    className="mt-2 w-full border-2 border-primary text-primary text-xs font-bold py-1.5 rounded-lg hover:bg-primary hover:text-white transition-colors"
-                  >
-                    + Add
-                  </button>
+                  <div onClick={(e) => e.stopPropagation()} className="mt-2">
+                    <HelperTooltip side="top" textKey="marketAddToCart">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onProductClick(product.id); }}
+                        className="w-full border-2 border-primary text-primary text-xs font-bold py-1.5 rounded-lg hover:bg-primary hover:text-white transition-colors"
+                      >
+                        + Add
+                      </button>
+                    </HelperTooltip>
+                  </div>
                 </div>
               </motion.article>
             );
