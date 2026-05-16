@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   BarChart3,
+  CreditCard,
   LayoutDashboard,
   Package,
   Settings,
@@ -26,11 +27,15 @@ const baseNav = [
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ] as const;
 
-const manufacturerNav = {
-  href: "/dashboard/manufacturer/retailers",
-  label: "Retailer network",
-  icon: UsersRound,
+const subscriptionNav = {
+  href: "/dashboard/subscription",
+  label: "Subscription",
+  icon: CreditCard,
 } as const;
+
+const manufacturerExtras = [
+  { href: "/dashboard/manufacturer/retailers", label: "Retailer network", icon: UsersRound },
+] as const;
 
 type SidebarProps = {
   mobileOpen: boolean;
@@ -39,31 +44,42 @@ type SidebarProps = {
 
 export function Sidebar({ mobileOpen, onMobileOpenChange }: SidebarProps) {
   const pathname = usePathname();
-  const [isManufacturer, setIsManufacturer] = useState(false);
+  const [role, setRole] = useState<"manufacturer" | "retailer" | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        setIsManufacturer(false);
+        setRole(null);
         return;
       }
       try {
         const profile = await getUserProfile(user.uid);
-        setIsManufacturer(profile?.role === "manufacturer");
+        const r = profile?.role;
+        setRole(r === "manufacturer" || r === "retailer" ? r : null);
       } catch {
-        setIsManufacturer(false);
+        setRole(null);
       }
     });
     return () => unsub();
   }, []);
 
-  const nav = isManufacturer
-    ? [
-        ...baseNav.slice(0, 4),
-        manufacturerNav,
-        ...baseNav.slice(4),
-      ]
-    : [...baseNav];
+  const nav = (() => {
+    const base = [...baseNav];
+    if (role === "manufacturer") {
+      // Insert: retailer network + subscription after Inventory (index 2)
+      return [
+        ...base.slice(0, 3),
+        ...manufacturerExtras,
+        subscriptionNav,
+        ...base.slice(3),
+      ];
+    }
+    if (role === "retailer") {
+      // Insert: subscription after Inventory (index 2)
+      return [...base.slice(0, 3), subscriptionNav, ...base.slice(3)];
+    }
+    return base;
+  })();
 
   return (
     <>
