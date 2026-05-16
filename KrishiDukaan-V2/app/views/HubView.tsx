@@ -5,6 +5,7 @@ import { ICONS } from '../constants';
 import { motion } from 'framer-motion';
 import { fetchHubs, Hub } from '../firebase';
 import { HelperIcon } from '../../components/helpers';
+import { useI18n } from '../i18n/I18nContext';
 
 const FALLBACK_HUBS: Hub[] = [
   {
@@ -115,6 +116,7 @@ interface HubViewProps {
 }
 
 export default function HubView({ searchQuery = '', initialHubId = null }: HubViewProps) {
+  const { t } = useI18n();
   const [hubs, setHubs] = useState<Hub[]>([]);
   const [selectedHub, setSelectedHub] = useState<Hub | null>(null);
   const [loading, setLoading] = useState(true);
@@ -194,8 +196,8 @@ export default function HubView({ searchQuery = '', initialHubId = null }: HubVi
     return (
       <div className="px-4 md:px-10 max-w-7xl mx-auto w-full py-10">
         <div className="rounded-3xl border border-dashed border-surface-container bg-surface-container-low p-10 text-center">
-          <h2 className="text-xl font-bold text-on-surface mb-2">No hub results found</h2>
-          <p className="text-on-surface-variant">Try a different product, crop, or keyword.</p>
+          <h2 className="text-xl font-bold text-on-surface mb-2">{t('noHubResults')}</h2>
+          <p className="text-on-surface-variant">{t('noHubResultsHint')}</p>
         </div>
       </div>
     );
@@ -221,7 +223,7 @@ export default function HubView({ searchQuery = '', initialHubId = null }: HubVi
                 : 'bg-white text-on-surface border border-surface-container hover:border-primary'
             }`}
           >
-            {hub.name} Hub
+            {hub.name} {t('hubSuffix')}
           </button>
         ))}
         </div>
@@ -245,7 +247,7 @@ export default function HubView({ searchQuery = '', initialHubId = null }: HubVi
         </div>
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-3">
-            <span className="bg-primary-container text-on-primary-container text-[10px] font-black uppercase px-3 py-1 rounded-full inline-block shadow-sm">Featured Crop</span>
+            <span className="bg-primary-container text-on-primary-container text-[10px] font-black uppercase px-3 py-1 rounded-full inline-block shadow-sm">{t('featuredCrop')}</span>
             <HelperIcon
               size="xs"
               variant="onDark"
@@ -254,7 +256,7 @@ export default function HubView({ searchQuery = '', initialHubId = null }: HubVi
               ariaLabel="Featured crop help"
             />
           </div>
-          <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight">{selectedHub.name} Hub</h1>
+          <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight">{selectedHub.name} {t('hubSuffix')}</h1>
           <p className="text-surface-container-low mt-2 max-w-md text-sm md:text-base">{selectedHub.tagline}</p>
         </div>
       </section>
@@ -264,7 +266,7 @@ export default function HubView({ searchQuery = '', initialHubId = null }: HubVi
         {/* Seeds */}
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-surface-container flex flex-col hover:shadow-ambient transition-shadow">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-on-surface">Premium Seeds</h2>
+            <h2 className="text-2xl font-bold text-on-surface">{t('premiumSeeds')}</h2>
             <ICONS.Sprout className="text-secondary w-7 h-7" />
           </div>
           <div className="grid grid-cols-2 gap-4 flex-grow">
@@ -274,18 +276,18 @@ export default function HubView({ searchQuery = '', initialHubId = null }: HubVi
                   <img src={seed.img} alt={seed.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
                 </div>
                 <span className="font-bold text-on-surface text-sm line-clamp-1">{seed.name}</span>
-                <span className="text-secondary font-black text-xs">₹{seed.price}/unit</span>
+                <span className="text-secondary font-black text-xs">₹{seed.price}/{t('perUnit')}</span>
               </div>
             ))}
           </div>
-          <button className="mt-8 py-3 border-2 border-surface-container hover:border-primary text-on-surface font-bold rounded-2xl transition-all">View All Seeds</button>
+          <button className="mt-8 py-3 border-2 border-surface-container hover:border-primary text-on-surface font-bold rounded-2xl transition-all">{t('viewAllSeeds')}</button>
         </div>
 
         {/* Nutrition */}
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-surface-container flex flex-col hover:shadow-ambient transition-shadow">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
-              <h2 className="text-2xl font-bold text-on-surface">Targeted Nutrition</h2>
+              <h2 className="text-2xl font-bold text-on-surface">{t('targetedNutrition')}</h2>
               <HelperIcon
                 size="xs"
                 variant="ghost"
@@ -313,14 +315,14 @@ export default function HubView({ searchQuery = '', initialHubId = null }: HubVi
               );
             })}
           </div>
-          <button className="mt-8 py-3 bg-primary text-white font-bold rounded-2xl shadow-lg shadow-primary/20 hover:bg-primary-container transition-all">Explore Fertilizers</button>
+          <button className="mt-8 py-3 bg-primary text-white font-bold rounded-2xl shadow-lg shadow-primary/20 hover:bg-primary-container transition-all">{t('exploreFertilizers')}</button>
         </div>
 
         {/* Irrigation */}
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-surface-container flex flex-col hover:shadow-ambient transition-shadow">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
-              <h2 className="text-2xl font-bold text-on-surface">Irrigation Tools</h2>
+              <h2 className="text-2xl font-bold text-on-surface">{t('irrigationTools')}</h2>
               <HelperIcon
                 size="xs"
                 variant="ghost"
@@ -354,7 +356,7 @@ export default function HubView({ searchQuery = '', initialHubId = null }: HubVi
         </div>
         <div className="relative z-10 flex-grow">
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-primary">Agronomy Alert</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-primary">{t('agronomyAlert')}</span>
             <div className="w-2 h-2 rounded-full bg-harvest animate-pulse" />
           </div>
           <h2 className="text-2xl font-bold text-on-surface mb-2">{selectedHub.advisory.title}</h2>
@@ -362,7 +364,7 @@ export default function HubView({ searchQuery = '', initialHubId = null }: HubVi
             {selectedHub.advisory.description}
           </p>
           <button className="mt-6 flex items-center gap-2 bg-white text-primary font-bold px-6 py-2.5 rounded-full shadow-sm hover:bg-surface transition-colors">
-            <ICONS.Chat className="w-4 h-4" /> Consult Specialist
+            <ICONS.Chat className="w-4 h-4" /> {t('consultSpecialist')}
           </button>
         </div>
       </section>

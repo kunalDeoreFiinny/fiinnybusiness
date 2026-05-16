@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { HelperIcon, HelperTooltip } from '../../components/helpers';
 import { trackProductImpression } from '../firebase';
 import type { StoreWithDistance } from '../utils/nearby';
+import { useI18n } from '../i18n/I18nContext';
 
 interface MarketViewProps {
   products?: MarketplaceProduct[];
@@ -18,21 +19,13 @@ interface MarketViewProps {
 
 type SortKey = 'default' | 'price-asc' | 'price-desc' | 'name-asc';
 
-const DISTANCE_OPTIONS = [
-  { label: 'Any distance', km: Infinity },
-  { label: 'Within 5 km', km: 5 },
-  { label: 'Within 25 km', km: 25 },
-  { label: 'Within 100 km', km: 100 },
-  { label: 'Within 500 km', km: 500 },
-];
-
 function inferBrand(name: string): string {
   // First word of product name is a reasonable brand proxy for this catalog.
   return name.trim().split(/\s+/)[0] || 'Other';
 }
 
-function formatDistance(km: number): string {
-  if (!Number.isFinite(km)) return 'Nearby';
+function formatDistance(km: number, nearbyLabel: string): string {
+  if (!Number.isFinite(km)) return nearbyLabel;
   if (km < 1) return `${Math.round(km * 1000)} m`;
   if (km < 100) return `${km.toFixed(1)} km`;
   return `${Math.round(km)} km`;
@@ -45,6 +38,14 @@ export default function MarketView({
   onCategoryChange,
   storesWithDistance = [],
 }: MarketViewProps) {
+  const { t } = useI18n();
+  const DISTANCE_OPTIONS = useMemo(() => [
+    { label: t('anyDistance'), km: Infinity },
+    { label: t('within5km'), km: 5 },
+    { label: t('within25km'), km: 25 },
+    { label: t('within100km'), km: 100 },
+    { label: t('within500km'), km: 500 },
+  ], [t]);
   const trackedIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -58,11 +59,11 @@ export default function MarketView({
   }, [products]);
 
   const categories = [
-    { id: 'all', name: 'All Products', icon: null },
-    { id: 'seeds', name: 'Seeds', icon: ICONS.Sprout },
-    { id: 'fertilizers', name: 'Fertilizers', icon: ICONS.Science },
-    { id: 'pesticides', name: 'Pesticides', icon: ICONS.Science },
-    { id: 'tools', name: 'Tools', icon: ICONS.Market },
+    { id: 'all', name: t('allProducts'), icon: null },
+    { id: 'seeds', name: t('catSeeds'), icon: ICONS.Sprout },
+    { id: 'fertilizers', name: t('catFertilizers'), icon: ICONS.Science },
+    { id: 'pesticides', name: t('catPesticides'), icon: ICONS.Science },
+    { id: 'tools', name: t('catTools'), icon: ICONS.Market },
   ];
 
   const [filterOpen, setFilterOpen] = useState(false);
@@ -123,7 +124,7 @@ export default function MarketView({
   }, [products, brandFilter, priceMax, maxDistanceKm, sortBy, storeDistanceMap]);
 
   const distanceLabel =
-    DISTANCE_OPTIONS.find((o) => o.km === maxDistanceKm)?.label || 'Within 5 km';
+    DISTANCE_OPTIONS.find((o) => o.km === maxDistanceKm)?.label || t('within5km');
 
   const activeFilterCount =
     (brandFilter !== 'all' ? 1 : 0) +
@@ -134,10 +135,10 @@ export default function MarketView({
     <div className="px-4 md:px-10 max-w-7xl mx-auto w-full py-8">
       <header className="mb-10">
         <h1 className="text-4xl md:text-5xl font-bold text-on-surface mb-3 tracking-tight">
-          Local Marketplace
+          {t('localMarketplace')}
         </h1>
         <p className="text-on-surface-variant text-lg">
-          Find premium agricultural supplies from trusted stores nearby.
+          {t('marketSubtitle')}
         </p>
       </header>
 
@@ -182,7 +183,7 @@ export default function MarketView({
               }`}
             >
               <ICONS.Efficiency className="w-4 h-4 rotate-90" />
-              Filter
+              {t('filter')}
               {activeFilterCount > 0 && (
                 <span className="ml-1 bg-white text-primary text-[10px] font-black rounded-full px-1.5 py-0.5">
                   {activeFilterCount}
@@ -207,22 +208,22 @@ export default function MarketView({
                 >
                   <div className="mb-4">
                     <label className="text-[11px] font-bold uppercase tracking-wider text-outline">
-                      Sort by
+                      {t('sortBy')}
                     </label>
                     <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value as SortKey)}
                       className="mt-1 w-full border border-surface-container-highest rounded-xl px-3 py-2 text-sm font-medium bg-surface-container-low"
                     >
-                      <option value="default">Nearest first</option>
-                      <option value="price-asc">Price: Low to High</option>
-                      <option value="price-desc">Price: High to Low</option>
-                      <option value="name-asc">Name: A → Z</option>
+                      <option value="default">{t('sortNearest')}</option>
+                      <option value="price-asc">{t('sortPriceLow')}</option>
+                      <option value="price-desc">{t('sortPriceHigh')}</option>
+                      <option value="name-asc">{t('sortNameAsc')}</option>
                     </select>
                   </div>
                   <div className="mb-4">
                     <label className="text-[11px] font-bold uppercase tracking-wider text-outline">
-                      Brand
+                      {t('brand')}
                     </label>
                     <select
                       value={brandFilter}
@@ -231,14 +232,14 @@ export default function MarketView({
                     >
                       {brandOptions.map((b) => (
                         <option key={b} value={b}>
-                          {b === 'all' ? 'All brands' : b}
+                          {b === 'all' ? t('allBrands') : b}
                         </option>
                       ))}
                     </select>
                   </div>
                   <div className="mb-2">
                     <label className="text-[11px] font-bold uppercase tracking-wider text-outline">
-                      Max price: ₹{priceMax.toLocaleString('en-IN')}
+                      {t('maxPrice')}: ₹{priceMax.toLocaleString('en-IN')}
                     </label>
                     <input
                       type="range"
@@ -258,7 +259,7 @@ export default function MarketView({
                     }}
                     className="text-xs font-bold text-primary hover:underline mt-2"
                   >
-                    Reset filters
+                    {t('resetFilters')}
                   </button>
                 </motion.div>
               )}
@@ -319,14 +320,15 @@ export default function MarketView({
       </div>
 
       <p className="text-sm text-outline mb-4 font-medium">
-        Showing <span className="text-on-surface font-bold">{visibleProducts.length}</span> products
-        {brandFilter !== 'all' ? ` from ${brandFilter}` : ''}
+        {t('showing')} <span className="text-on-surface font-bold">{visibleProducts.length}</span> {t('productsLabel')}
+        {brandFilter !== 'all' ? ` ${t('fromBrand')} ${brandFilter}` : ''}
       </p>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {visibleProducts.length > 0 ? (
           visibleProducts.map((product, idx) => {
             const dist = productDistance(product);
+            const distText = formatDistance(dist, t('nearby'));
             const brand = inferBrand(product.name);
             // Try to derive size by stripping the brand-like prefix from fullName.
             const size =
@@ -354,7 +356,7 @@ export default function MarketView({
                       textKey="stockBadge"
                     >
                       <span className="bg-primary-container/90 backdrop-blur-md text-on-primary-container text-[10px] uppercase font-black px-2 py-0.5 rounded-full shadow-sm cursor-help">
-                        In-Stock
+                        {t('inStock')}
                       </span>
                     </HelperTooltip>
                   </div>
@@ -387,7 +389,7 @@ export default function MarketView({
                     <div className="flex flex-col" onClick={(e) => e.stopPropagation()}>
                       <HelperTooltip side="top" textKey="marketUnits">
                         <span className="text-[10px] text-outline font-bold uppercase tracking-widest cursor-help">
-                          {size || 'Per unit'}
+                          {size || t('perUnitCaps')}
                         </span>
                       </HelperTooltip>
                       <HelperTooltip side="top" textKey="marketPriceInfo">
@@ -411,7 +413,7 @@ export default function MarketView({
                         onClick={(e) => { e.stopPropagation(); onProductClick(product.id); }}
                         className="w-full border-2 border-primary text-primary text-xs font-bold py-1.5 rounded-lg hover:bg-primary hover:text-white transition-colors"
                       >
-                        + Add
+                        {t('addToCart')}
                       </button>
                     </HelperTooltip>
                   </div>
@@ -422,8 +424,8 @@ export default function MarketView({
         ) : (
           <div className="col-span-full py-20 text-center bg-white rounded-3xl border border-dashed border-surface-container">
             <ICONS.Search className="w-10 h-10 text-outline-variant mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-on-surface mb-2">No products found</h3>
-            <p className="text-on-surface-variant">Try adjusting your filters or search terms.</p>
+            <h3 className="text-xl font-bold text-on-surface mb-2">{t('noProducts')}</h3>
+            <p className="text-on-surface-variant">{t('noProductsHint')}</p>
           </div>
         )}
       </div>
