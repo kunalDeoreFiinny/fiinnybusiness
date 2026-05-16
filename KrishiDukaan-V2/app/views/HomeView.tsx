@@ -246,9 +246,8 @@ export default function HomeView({
           <HelperIcon
             size="sm"
             side="right"
-            title="Crop hubs"
+            textKey="shopByCrop"
             ariaLabel="Shop by crop help"
-            content="Crop hubs organize products, fertilizers, and tools specifically for each crop."
           />
         </div>
         <div className="grid grid-cols-4 md:grid-cols-8 gap-3">

@@ -258,9 +258,8 @@ export default function StoreLocatorView({
                 size="xs"
                 variant="ghost"
                 side="bottom"
-                title="Search stores"
+                textKey="storeSearch"
                 ariaLabel="Store search help"
-                content="Search by store name, locality, or available products."
               />
             )}
           </div>
@@ -268,8 +267,7 @@ export default function StoreLocatorView({
           <div className="flex gap-2 overflow-x-auto pb-4 hide-scrollbar">
             <HelperTooltip
               side="bottom"
-              title="Open Now"
-              content="Shows stores currently accepting orders or visits."
+              textKey="storeOpenNow"
             >
               <button className="whitespace-nowrap px-5 py-2 rounded-full bg-primary text-white text-xs font-bold shadow-lg shadow-primary/20 flex items-center gap-2">
                 <ICONS.Check className="w-4 h-4" /> Open Now
@@ -328,8 +326,7 @@ export default function StoreLocatorView({
                   ) : (
                     <HelperTooltip
                       side="left"
-                      title="Closest"
-                      content={'“Closest” is based on your currently selected location.'}
+                      textKey="storeClosest"
                     >
                       <span
                         className="bg-primary text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full cursor-help"
@@ -458,8 +455,7 @@ export default function StoreLocatorView({
         <div className="absolute top-10 right-10 flex flex-col gap-4 z-10 pointer-events-auto" data-tour="store-map">
           <HelperTooltip
             side="left"
-            title="Map legend"
-            content="Red pins are nearby stores. Click a store card to highlight it — the pin turns green."
+            textKey="storeMap"
           >
             <button
               type="button"

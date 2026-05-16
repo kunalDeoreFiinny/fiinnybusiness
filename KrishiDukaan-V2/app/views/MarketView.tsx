@@ -328,8 +328,7 @@ export default function MarketView({
                   <div className="absolute top-3 left-3" onClick={(e) => e.stopPropagation()}>
                     <HelperTooltip
                       side="bottom"
-                      title="Stock"
-                      content="“In-Stock” means available at one or more nearby stores."
+                      textKey="stockBadge"
                     >
                       <span className="bg-primary-container/90 backdrop-blur-md text-on-primary-container text-[10px] uppercase font-black px-2 py-0.5 rounded-full shadow-sm cursor-help">
                         In-Stock

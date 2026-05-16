@@ -349,16 +349,9 @@ export function Navbar({
                     size="xs"
                     variant="ghost"
                     side="bottom"
-                    title="Search tip"
+                    textKey="searchBar"
                     ariaLabel="Search help"
                     className="mr-2"
-                    content={
-                      <>
-                        Search products, crops, fertilizers, or nearby stores.
-                        <br />
-                        <span className="text-outline">Example: &ldquo;Urea&rdquo;, &ldquo;Tomato Seeds&rdquo;</span>
-                      </>
-                    }
                   />
                 )}
               </div>
@@ -395,9 +388,8 @@ export function Navbar({
               size="xs"
               variant="ghost"
               side="bottom"
-              title="Why we ask"
+              textKey="location"
               ariaLabel="Location help"
-              content="Your location helps us show nearby stores, stock availability, and delivery range."
             />
           </div>
 
@@ -432,6 +424,7 @@ export function Navbar({
                 >
                   <option value="en">English</option>
                   <option value="mr">मराठी</option>
+                  <option value="hi">हिंदी</option>
                 </select>
               </div>
 
@@ -522,16 +515,9 @@ export function Navbar({
                 size="xs"
                 variant="ghost"
                 side="bottom"
-                title="Search tip"
+                textKey="searchBar"
                 ariaLabel="Search help"
                 className="mr-2"
-                content={
-                  <>
-                    Search products, crops, fertilizers, or nearby stores.
-                    <br />
-                    <span className="text-outline">Example: &ldquo;Urea&rdquo;, &ldquo;Tomato Seeds&rdquo;</span>
-                  </>
-                }
               />
             )}
           </div>

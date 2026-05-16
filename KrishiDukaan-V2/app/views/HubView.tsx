@@ -228,9 +228,8 @@ export default function HubView({ searchQuery = '', initialHubId = null }: HubVi
         <HelperIcon
           size="sm"
           side="left"
-          title="Hubs"
+          textKey="hubTabs"
           ariaLabel="Hub tabs help"
-          content="Each hub contains curated seeds, fertilizers, and tools for that crop."
         />
       </div>
 
@@ -251,9 +250,8 @@ export default function HubView({ searchQuery = '', initialHubId = null }: HubVi
               size="xs"
               variant="onDark"
               side="right"
-              title="Featured Crop"
+              textKey="hubFeatured"
               ariaLabel="Featured crop help"
-              content="Explore agricultural solutions tailored for this crop."
             />
           </div>
           <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight">{selectedHub.name} Hub</h1>
@@ -292,9 +290,8 @@ export default function HubView({ searchQuery = '', initialHubId = null }: HubVi
                 size="xs"
                 variant="ghost"
                 side="right"
-                title="Nutrition"
+                textKey="hubNutrition"
                 ariaLabel="Nutrition help"
-                content="Targeted nutrition products improve crop growth and yield."
               />
             </div>
             <ICONS.Science className="text-secondary w-7 h-7" />
@@ -328,9 +325,8 @@ export default function HubView({ searchQuery = '', initialHubId = null }: HubVi
                 size="xs"
                 variant="ghost"
                 side="right"
-                title="Irrigation"
+                textKey="hubIrrigation"
                 ariaLabel="Irrigation help"
-                content="Efficient irrigation tools help reduce water usage and improve consistency."
               />
             </div>
             <ICONS.Water className="text-secondary w-7 h-7" />

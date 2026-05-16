@@ -484,48 +484,13 @@ export default function App() {
   };
 
   const tourSteps: TourStep[] = useMemo(() => [
-    {
-      selector: '[data-tour="hero"]',
-      title: 'Welcome to Krishidukan',
-      body: 'Your one-stop platform for nearby agricultural supplies. Let’s show you around — it only takes a moment.',
-      side: 'bottom',
-    },
-    {
-      selector: '[data-tour="search"]',
-      title: 'Search anything',
-      body: 'Find products, crops, fertilizers, or nearby stores — try “Urea” or “Tomato Seeds”.',
-      side: 'bottom',
-    },
-    {
-      selector: '[data-tour="location"]',
-      title: 'Your location',
-      body: 'We use your location to show nearby stores, live stock, and delivery range.',
-      side: 'bottom',
-    },
-    {
-      selector: '[data-tour="shop-by-crop"]',
-      title: 'Shop by Crop',
-      body: 'Open a crop hub to see curated seeds, fertilizers, and tools for that crop.',
-      side: 'top',
-    },
-    {
-      selector: '[data-tour-nav="market"]',
-      title: 'Marketplace filters',
-      body: 'Browse products from local stores and filter by category, stock, or distance.',
-      side: 'top',
-    },
-    {
-      selector: '[data-tour-nav="map"]',
-      title: 'Nearby stores',
-      body: 'View nearby agri stores on a map and get directions in one tap.',
-      side: 'top',
-    },
-    {
-      selector: '[data-tour-nav="hub"]',
-      title: 'Crop Hubs',
-      body: 'Targeted recommendations for seeds, nutrition, and irrigation per crop.',
-      side: 'top',
-    },
+    { selector: '[data-tour="hero"]', textKey: 'tourWelcome', side: 'bottom' },
+    { selector: '[data-tour="search"]', textKey: 'tourSearch', side: 'bottom' },
+    { selector: '[data-tour="location"]', textKey: 'tourLocation', side: 'bottom' },
+    { selector: '[data-tour="shop-by-crop"]', textKey: 'tourShopByCrop', side: 'top' },
+    { selector: '[data-tour-nav="market"]', textKey: 'tourMarket', side: 'top' },
+    { selector: '[data-tour-nav="map"]', textKey: 'tourStores', side: 'top' },
+    { selector: '[data-tour-nav="hub"]', textKey: 'tourHubs', side: 'top' },
   ], []);
 
   const renderView = () => {
