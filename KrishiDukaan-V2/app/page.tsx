@@ -18,7 +18,7 @@ import LoginView from './views/LoginView';
 import SignupView from './views/SignupView';
 import SubscriptionView from './views/SubscriptionView';
 import { motion, AnimatePresence } from 'framer-motion';
-import { auth, fetchMarketplaceProducts, fetchStores, syncInitialData, getUserProfile } from './firebase';
+import { auth, fetchMarketplaceProducts, fetchStores, syncInitialData, getUserProfile, fetchHubs } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { MarketplaceProduct } from '../types/product';
 import { LatLng } from './utils/haversine';
@@ -28,6 +28,7 @@ import { computeStoreDistances } from './utils/nearby';
 import { Navbar } from '../components/shared/navbar';
 import Footer from '../components/shared/footer';
 import { GuidedTour, TourStep } from '../components/helpers';
+import { useI18n } from './i18n/I18nContext';
 
 type View = 'home' | 'market' | 'hub' | 'product' | 'map' | 'about' | 'profile' | 'login' | 'signup' | 'subscription';
 type UserRole = 'customer' | 'retailer' | 'manufacturer';
@@ -41,8 +42,10 @@ type UserProfile = {
 };
 
 const VALID_VIEWS: View[] = ['home', 'market', 'hub', 'product', 'map', 'about', 'profile', 'login', 'signup', 'subscription'];
+const HOME_PRODUCTS_LIMIT = 12;
 
 export default function App() {
+  const { t } = useI18n();
   const [currentView, setCurrentView] = useState<View>('home');
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
@@ -50,6 +53,10 @@ export default function App() {
   const [coordinates, setCoordinates] = useState({ lat: 18.5204, lng: 73.8567 }); // Default Pune
   const [productSearch, setProductSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [maxDistance, setMaxDistance] = useState(1000);
+  const [showFilters, setShowFilters] = useState(false);
+  const [inStockOnly, setInStockOnly] = useState(false);
+  const [sortBy, setSortBy] = useState<'none' | 'price-low' | 'price-high'>('none');
   
   const [user, setUser] = useState<any>(null);
   const [userRole, setUserRole] = useState<UserRole>('customer');
@@ -57,6 +64,8 @@ export default function App() {
   
   const [allProducts, setAllProducts] = useState<MarketplaceProduct[]>([]);
   const [allStores, setAllStores] = useState<any[]>([]);
+  const [hubs, setHubs] = useState<any[]>([]);
+  const [selectedHubId, setSelectedHubId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   /** Preserved `inviteCode` query param for manufacturer → retailer signup links (legacy `invite` also read). */
@@ -83,11 +92,13 @@ export default function App() {
       productId?: string | null,
       storeId?: string | null,
       inviteCodeParam?: string | null,
+      hubId?: string | null,
     ) => {
       const params = new URLSearchParams();
       if (view !== 'home') params.set('view', view);
       if (productId) params.set('product', productId);
       if (storeId) params.set('store', storeId);
+      if (hubId) params.set('hub', hubId);
       const code =
         inviteCodeParam === undefined
           ? signupInviteCode?.trim() || null
@@ -106,6 +117,7 @@ export default function App() {
         productId: null as string | null,
         storeId: null as string | null,
         inviteCode: null as string | null,
+        hubId: null as string | null,
       };
     }
 
@@ -123,6 +135,7 @@ export default function App() {
       productId: params.get('product'),
       storeId: params.get('store'),
       inviteCode,
+      hubId: params.get('hub'),
     };
   }, []);
 
@@ -132,6 +145,7 @@ export default function App() {
       options?: {
         productId?: string | null;
         storeId?: string | null;
+        hubId?: string | null;
         replace?: boolean;
         clearInvite?: boolean;
       },
@@ -139,6 +153,7 @@ export default function App() {
       const nextView = resolveViewForAccess(view);
       const nextProductId = options?.productId ?? (nextView === 'product' ? selectedProductId : null);
       const nextStoreId = options?.storeId ?? (nextView === 'map' ? selectedStoreId : null);
+      const nextHubId = options?.hubId ?? (nextView === 'hub' ? selectedHubId : null);
 
       if (options?.clearInvite) {
         setSignupInviteCode(null);
@@ -147,10 +162,11 @@ export default function App() {
       setCurrentView(nextView);
       setSelectedProductId(nextProductId);
       setSelectedStoreId(nextStoreId);
+      setSelectedHubId(nextHubId);
 
       if (typeof window !== 'undefined') {
         const inviteForUrl = options?.clearInvite ? null : undefined;
-        const nextUrl = buildUrl(nextView, nextProductId, nextStoreId, inviteForUrl);
+        const nextUrl = buildUrl(nextView, nextProductId, nextStoreId, inviteForUrl, nextHubId);
         if (options?.replace) {
           window.history.replaceState(null, '', nextUrl);
         } else {
@@ -158,7 +174,7 @@ export default function App() {
         }
       }
     },
-    [buildUrl, resolveViewForAccess, selectedProductId, selectedStoreId],
+    [buildUrl, resolveViewForAccess, selectedProductId, selectedStoreId, selectedHubId],
   );
 
   useEffect(() => {
@@ -170,7 +186,8 @@ export default function App() {
     setCurrentView(routeView);
     setSelectedProductId(route.productId);
     setSelectedStoreId(route.storeId);
-    window.history.replaceState(null, '', buildUrl(routeView, route.productId, route.storeId, route.inviteCode));
+    setSelectedHubId(route.hubId);
+    window.history.replaceState(null, '', buildUrl(routeView, route.productId, route.storeId, route.inviteCode, route.hubId));
 
     const onPopState = () => {
       const next = readRouteFromUrl();
@@ -178,6 +195,7 @@ export default function App() {
       setCurrentView(resolveViewForAccess(next.view));
       setSelectedProductId(next.productId);
       setSelectedStoreId(next.storeId);
+      setSelectedHubId(next.hubId);
     };
 
     window.addEventListener('popstate', onPopState);
@@ -194,9 +212,10 @@ export default function App() {
       setLoading(true);
       setErrorMsg(null);
 
-      console.log('Fetching products and stores...');
+      console.log('Fetching products, stores and hubs...');
       let products = await fetchMarketplaceProducts();
       let stores = await fetchStores();
+      let fetchedHubs = await fetchHubs();
 
       if (products.length === 0 || stores.length === 0) {
         console.log('Firebase data incomplete, attempting sync...', { 
@@ -207,14 +226,17 @@ export default function App() {
         // Fetch again after sync
         products = await fetchMarketplaceProducts();
         stores = await fetchStores();
+        fetchedHubs = await fetchHubs();
       }
 
       console.log('Data loaded successfully:', { 
         products: products.length, 
-        stores: stores.length 
+        stores: stores.length,
+        hubs: fetchedHubs.length
       });
       setAllProducts(products);
       setAllStores(stores);
+      setHubs(fetchedHubs);
       
       if (products.length === 0) {
         setErrorMsg('No products found in database even after sync. Please check your Firestore rules.');
@@ -343,10 +365,47 @@ export default function App() {
     );
   }, [allStores]);
 
+  const storesWithDistance = useMemo(
+    () => computeStoreDistances(allStores, coordinates),
+    [allStores, coordinates]
+  );
+
+  const productsWithDistance = useMemo(() => {
+    const storeMap = new Map(storesWithDistance.map(s => [s.name, s]));
+    const storeIdMap = new Map(storesWithDistance.map(s => [s.id, s]));
+
+    return allProducts.map(product => {
+      let minDistance = Infinity;
+      let distanceLabel = 'Unknown';
+
+      if (product.availability && product.availability.length > 0) {
+        product.availability.forEach(av => {
+          const store = storeIdMap.get(av.storeId);
+          if (store && store.distanceKm < minDistance) {
+            minDistance = store.distanceKm;
+            distanceLabel = store.distanceLabel;
+          }
+        });
+      } else {
+        const store = storeMap.get(product.store);
+        if (store) {
+          minDistance = store.distanceKm;
+          distanceLabel = store.distanceLabel;
+        }
+      }
+
+      return {
+        ...product,
+        distance: distanceLabel,
+        distanceKm: minDistance
+      };
+    });
+  }, [allProducts, storesWithDistance]);
+
   const searchedProducts = useMemo(() => {
     const query = productSearch.trim().toLowerCase();
 
-    return allProducts.filter(p => {
+    return productsWithDistance.filter(p => {
       if (!query) return true;
 
       const availabilityStoreNames = (p.availability || [])
@@ -362,18 +421,25 @@ export default function App() {
         availabilityStoreNames.some((storeName) => storeName.includes(query))
       );
     });
-  }, [allProducts, productSearch, storeNameById]);
+  }, [productsWithDistance, productSearch, storeNameById]);
+
+  const homeProducts = useMemo(
+    () => searchedProducts.slice(0, HOME_PRODUCTS_LIMIT),
+    [searchedProducts]
+  );
 
   const searchedStores = useMemo(() => {
     const query = productSearch.trim().toLowerCase();
-    if (!query) return allStores;
+    if (!query) return storesWithDistance;
 
-    return allStores.filter((store) => {
+    return storesWithDistance.filter((store) => {
       const stockItems = Array.isArray(store.stock) ? store.stock.join(' ') : '';
+      const shopName = 'shopName' in store ? String(store.shopName || '') : '';
+      const ownerName = 'ownerName' in store ? String(store.ownerName || '') : '';
       const searchable = [
         String(store.name || ''),
-        String(store.shopName || ''),
-        String(store.ownerName || ''),
+        shopName,
+        ownerName,
         String(store.address || ''),
         String(store.distance || ''),
         stockItems
@@ -382,17 +448,34 @@ export default function App() {
         .toLowerCase();
       return searchable.includes(query);
     });
-  }, [allStores, productSearch]);
+  }, [storesWithDistance, productSearch]);
 
   const marketProducts = useMemo(() => {
-    if (selectedCategory === 'all') return searchedProducts;
-    return searchedProducts.filter((product) => product.category === selectedCategory);
-  }, [searchedProducts, selectedCategory]);
+    let filtered = searchedProducts;
+    
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter((product) => product.category === selectedCategory);
+    }
 
-  const storesWithDistance = useMemo(
-    () => computeStoreDistances(allStores, coordinates),
-    [allStores, coordinates]
-  );
+    if (maxDistance < 1000) { 
+      filtered = filtered.filter((product) => (product as any).distanceKm <= maxDistance);
+    }
+
+    if (inStockOnly) {
+      filtered = filtered.filter((product) => {
+        const stock = product.stock.toLowerCase();
+        return stock === 'in stock' || stock === 'fast selling' || stock === 'trending';
+      });
+    }
+
+    if (sortBy === 'price-low') {
+      filtered = [...filtered].sort((a, b) => a.price - b.price);
+    } else if (sortBy === 'price-high') {
+      filtered = [...filtered].sort((a, b) => b.price - a.price);
+    }
+
+    return filtered;
+  }, [searchedProducts, selectedCategory, maxDistance, inStockOnly, sortBy]);
 
   const navigateToProduct = (id: string) => {
     navigate('product', { productId: id });
@@ -403,68 +486,33 @@ export default function App() {
   };
 
   const tourSteps: TourStep[] = useMemo(() => [
-    {
-      selector: '[data-tour="hero"]',
-      title: 'Welcome to Krishidukan',
-      body: 'Your one-stop platform for nearby agricultural supplies. Let’s show you around — it only takes a moment.',
-      side: 'bottom',
-    },
-    {
-      selector: '[data-tour="search"]',
-      title: 'Search anything',
-      body: 'Find products, crops, fertilizers, or nearby stores — try “Urea” or “Tomato Seeds”.',
-      side: 'bottom',
-    },
-    {
-      selector: '[data-tour="location"]',
-      title: 'Your location',
-      body: 'We use your location to show nearby stores, live stock, and delivery range.',
-      side: 'bottom',
-    },
-    {
-      selector: '[data-tour="shop-by-crop"]',
-      title: 'Shop by Crop',
-      body: 'Open a crop hub to see curated seeds, fertilizers, and tools for that crop.',
-      side: 'top',
-    },
-    {
-      selector: '[data-tour-nav="market"]',
-      title: 'Marketplace filters',
-      body: 'Browse products from local stores and filter by category, stock, or distance.',
-      side: 'top',
-    },
-    {
-      selector: '[data-tour-nav="map"]',
-      title: 'Nearby stores',
-      body: 'View nearby agri stores on a map and get directions in one tap.',
-      side: 'top',
-    },
-    {
-      selector: '[data-tour-nav="hub"]',
-      title: 'Crop Hubs',
-      body: 'Targeted recommendations for seeds, nutrition, and irrigation per crop.',
-      side: 'top',
-    },
+    { selector: '[data-tour="hero"]', textKey: 'tourWelcome', side: 'bottom' },
+    { selector: '[data-tour="search"]', textKey: 'tourSearch', side: 'bottom' },
+    { selector: '[data-tour="location"]', textKey: 'tourLocation', side: 'bottom' },
+    { selector: '[data-tour="shop-by-crop"]', textKey: 'tourShopByCrop', side: 'top' },
+    { selector: '[data-tour-nav="market"]', textKey: 'tourMarket', side: 'top' },
+    { selector: '[data-tour-nav="map"]', textKey: 'tourStores', side: 'top' },
+    { selector: '[data-tour-nav="hub"]', textKey: 'tourHubs', side: 'top' },
   ], []);
 
   const renderView = () => {
     if (loading) return (
       <div className="p-20 text-center">
         <div className="animate-spin w-10 h-10 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
-        <p className="font-bold text-primary">Connecting to Firebase...</p>
+        <p className="font-bold text-primary">{t('connectingFirebase')}</p>
       </div>
     );
 
     if (errorMsg) return (
       <div className="p-20 text-center">
         <div className="bg-red-50 text-red-700 p-6 rounded-2xl border border-red-100 max-w-lg mx-auto">
-          <h3 className="text-xl font-bold mb-2">Data Loading Issue</h3>
+          <h3 className="text-xl font-bold mb-2">{t('dataLoadingIssue')}</h3>
           <p className="mb-4">{errorMsg}</p>
-          <button 
+          <button
             onClick={loadData}
             className="bg-red-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-red-700 transition-colors"
           >
-            Retry Connection
+            {t('retryConnection')}
           </button>
         </div>
       </div>
@@ -472,7 +520,17 @@ export default function App() {
 
     switch (currentView) {
       case 'home':
-        return <HomeView products={searchedProducts} onProductClick={navigateToProduct} onHubClick={() => navigate('hub')} onCategoryClick={(cat) => { setSelectedCategory(cat); navigate('market'); }} />;
+        return (
+          <HomeView
+            products={homeProducts}
+            onProductClick={navigateToProduct}
+            onHubClick={() => navigate('hub')}
+            onCategoryClick={(cat) => {
+              setSelectedCategory(cat);
+              navigate('market');
+            }}
+          />
+        );
       case 'market':
         return (
           <MarketView
@@ -484,7 +542,7 @@ export default function App() {
           />
         );
       case 'hub':
-        return <HubView searchQuery={productSearch} />;
+        return <HubView searchQuery={productSearch} initialHubId={selectedHubId} />;
       case 'product':
         return <ProductDetailView
           products={allProducts}
@@ -540,7 +598,17 @@ export default function App() {
       case 'about':
         return <AboutView />;
       default:
-        return <HomeView products={searchedProducts} onProductClick={navigateToProduct} onHubClick={() => navigate('hub')} onCategoryClick={(cat) => { setSelectedCategory(cat); navigate('market'); }} />;
+        return (
+          <HomeView
+            products={homeProducts}
+            onProductClick={navigateToProduct}
+            onHubClick={() => navigate('hub')}
+            onCategoryClick={(cat) => {
+              setSelectedCategory(cat);
+              navigate('market');
+            }}
+          />
+        );
     }
   };
 
@@ -594,11 +662,11 @@ export default function App() {
       {/* Mobile Bottom Nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-surface-container flex items-center justify-around px-4 z-50">
         {[
-          { id: 'home', icon: ICONS.Home, label: 'Home' },
-          { id: 'market', icon: ICONS.Market, label: 'Market' },
-          { id: 'hub', icon: ICONS.Hub, label: 'Hub' },
-          { id: 'map', icon: ICONS.Location, label: 'Stores' },
-          { id: 'about', icon: ICONS.Info, label: 'About' }
+          { id: 'home', icon: ICONS.Home, label: t('home') },
+          { id: 'market', icon: ICONS.Market, label: t('market') },
+          { id: 'hub', icon: ICONS.Hub, label: t('hub') },
+          { id: 'map', icon: ICONS.Location, label: t('stores') },
+          { id: 'about', icon: ICONS.Info, label: t('mobileAbout') }
         ].map((item) => (
           <button
             key={item.id}
