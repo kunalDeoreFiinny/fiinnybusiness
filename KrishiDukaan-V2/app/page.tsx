@@ -17,20 +17,22 @@ import AboutView from './views/AboutView';
 import LoginView from './views/LoginView';
 import SignupView from './views/SignupView';
 import SubscriptionView from './views/SubscriptionView';
+import CartView from './views/CartView';
 import { motion, AnimatePresence } from 'framer-motion';
-import { auth, fetchMarketplaceProducts, fetchStores, syncInitialData, getUserProfile, fetchHubs } from './firebase';
+import { auth, fetchMarketplaceProducts, fetchStores, syncInitialData, getUserProfile, fetchHubs, createOrdersFromCart } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { MarketplaceProduct } from '../types/product';
 import { LatLng } from './utils/haversine';
 import { getUserLocation, DEFAULT_LOCATION, DEFAULT_LOCATION_LABEL, GeoResult } from './utils/geolocation';
 import { computeStoreDistances } from './utils/nearby';
+import type { CartItem } from '../types/order';
 
 import { Navbar } from '../components/shared/navbar';
 import Footer from '../components/shared/footer';
 import { GuidedTour, TourStep } from '../components/helpers';
 import { useI18n } from './i18n/I18nContext';
 
-type View = 'home' | 'market' | 'hub' | 'product' | 'map' | 'about' | 'profile' | 'login' | 'signup' | 'subscription';
+type View = 'home' | 'market' | 'hub' | 'product' | 'map' | 'about' | 'profile' | 'login' | 'signup' | 'subscription' | 'cart';
 type UserRole = 'customer' | 'retailer' | 'manufacturer';
 type UserProfile = {
   name: string;
@@ -41,7 +43,7 @@ type UserProfile = {
   productCount?: number;
 };
 
-const VALID_VIEWS: View[] = ['home', 'market', 'hub', 'product', 'map', 'about', 'profile', 'login', 'signup', 'subscription'];
+const VALID_VIEWS: View[] = ['home', 'market', 'hub', 'product', 'map', 'about', 'profile', 'login', 'signup', 'subscription', 'cart'];
 const HOME_PRODUCTS_LIMIT = 12;
 
 export default function App() {
@@ -66,6 +68,14 @@ export default function App() {
   const [allStores, setAllStores] = useState<any[]>([]);
   const [hubs, setHubs] = useState<any[]>([]);
   const [selectedHubId, setSelectedHubId] = useState<string | null>(null);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null);
+  const [checkoutInfo, setCheckoutInfo] = useState({
+    customerName: "",
+    customerPhone: "",
+    customerAddress: "",
+  });
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   /** Preserved `inviteCode` query param for manufacturer → retailer signup links (legacy `invite` also read). */
@@ -202,6 +212,23 @@ export default function App() {
     return () => window.removeEventListener('popstate', onPopState);
   }, [buildUrl, readRouteFromUrl, resolveViewForAccess]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = window.localStorage.getItem("krishidukan_cart_v1");
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw) as CartItem[];
+      if (Array.isArray(parsed)) setCartItems(parsed);
+    } catch {
+      // ignore malformed local cart
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("krishidukan_cart_v1", JSON.stringify(cartItems));
+  }, [cartItems]);
+
   // --- Geolocation state ---
   const [userLocation, setUserLocation] = useState<LatLng>(DEFAULT_LOCATION);
   const [locationLabel, setLocationLabel] = useState(DEFAULT_LOCATION_LABEL);
@@ -266,6 +293,11 @@ export default function App() {
             totalSeats: profileData.totalSeats || 0,
             productCount: profileData.productCount || 0
           });
+          setCheckoutInfo((prev) => ({
+            customerName: prev.customerName || profileData.name || "",
+            customerPhone: prev.customerPhone || profileData.phone || "",
+            customerAddress: prev.customerAddress || profileData.address || "",
+          }));
 
           // Paywall logic: if retailer/manufacturer and NOT paid, force subscription view
           if ((profileData.role === 'retailer' || profileData.role === 'manufacturer') && !isPaid) {
@@ -481,6 +513,75 @@ export default function App() {
     navigate('product', { productId: id });
   };
 
+  const addToCart = (product: MarketplaceProduct) => {
+    if (!product.isOnline) {
+      setCheckoutMessage("This product is offline store-only.");
+      return;
+    }
+    const sellerId = product.retailerId || product.manufacturerId || "";
+    if (!sellerId) {
+      setCheckoutMessage("This product is missing seller info and cannot be ordered online.");
+      return;
+    }
+    const sellerType = product.retailerId ? "retailer" : "manufacturer";
+    setCartItems((prev) => {
+      const found = prev.find((i) => i.productId === product.id);
+      if (found) {
+        return prev.map((i) =>
+          i.productId === product.id ? { ...i, qty: i.qty + 1 } : i
+        );
+      }
+      return [
+        ...prev,
+        {
+          productId: product.id,
+          sellerId,
+          sellerType,
+          name: product.name,
+          image: product.image,
+          price: product.price,
+          qty: 1,
+          sellMode: "online_delivery",
+        },
+      ];
+    });
+    setCheckoutMessage("Added to cart.");
+  };
+
+  const placeOrders = async () => {
+    if (!user || userRole !== "customer") {
+      setCheckoutMessage("Please login with a customer account.");
+      return;
+    }
+    if (!cartItems.length) {
+      setCheckoutMessage("Your cart is empty.");
+      return;
+    }
+    if (!checkoutInfo.customerName.trim() || !checkoutInfo.customerPhone.trim() || !checkoutInfo.customerAddress.trim()) {
+      setCheckoutMessage("Please fill name, phone, and delivery address.");
+      return;
+    }
+
+    setCheckoutLoading(true);
+    setCheckoutMessage(null);
+    try {
+      const orderIds = await createOrdersFromCart({
+        customerId: user.uid,
+        customerName: checkoutInfo.customerName,
+        customerPhone: checkoutInfo.customerPhone,
+        customerAddress: checkoutInfo.customerAddress,
+        items: cartItems,
+      });
+      setCartItems([]);
+      setCheckoutMessage(`Order placed successfully. Created ${orderIds.length} seller order(s).`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to place order.";
+      setCheckoutMessage(msg);
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
+
   const navigateToMap = (storeId?: string) => {
     navigate('map', { storeId: storeId || null });
   };
@@ -555,7 +656,34 @@ export default function App() {
             setProductSearch(storeName);
             navigate('market');
           }}
+          onAddToCart={addToCart}
         />;
+      case 'cart':
+        return (
+          <CartView
+            items={cartItems}
+            isLoggedIn={Boolean(user)}
+            isCustomer={userRole === "customer"}
+            customerName={checkoutInfo.customerName}
+            customerPhone={checkoutInfo.customerPhone}
+            customerAddress={checkoutInfo.customerAddress}
+            onCustomerFieldChange={(field, value) =>
+              setCheckoutInfo((prev) => ({ ...prev, [field]: value }))
+            }
+            onQtyChange={(productId, qty) =>
+              setCartItems((prev) =>
+                prev.map((item) => (item.productId === productId ? { ...item, qty } : item))
+              )
+            }
+            onRemove={(productId) =>
+              setCartItems((prev) => prev.filter((item) => item.productId !== productId))
+            }
+            onCheckout={placeOrders}
+            onGoLogin={() => navigate("login")}
+            loading={checkoutLoading}
+            message={checkoutMessage}
+          />
+        );
       case 'map':
         return (
           <StoreLocatorView 
@@ -631,6 +759,8 @@ export default function App() {
         allStores={allStores}
         onProductClick={navigateToProduct}
         onStoreClick={navigateToMap}
+        cartCount={cartItems.reduce((sum, item) => sum + item.qty, 0)}
+        onCartClick={() => navigate("cart")}
       />
 
       {/* Main Content */}

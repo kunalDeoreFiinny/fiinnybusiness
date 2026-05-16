@@ -53,6 +53,11 @@ function mapProduct(id: string, data: Record<string, unknown>): ProductDoc {
     createdAt: (data.createdAt as Timestamp) ?? null,
     updatedAt: (data.updatedAt as Timestamp) ?? null,
     isActive: data.isActive !== false,
+    retailerId: String(data.retailerId ?? ""),
+    store: String(data.store ?? ""),
+    sellMode:
+      data.sellMode === "online_delivery" ? "online_delivery" : "offline_store_only",
+    isOnline: data.isOnline === true || data.sellMode === "online_delivery",
     ownerId: data.ownerId ? String(data.ownerId) : undefined,
     ownerType:
       data.ownerType === "manufacturer"
@@ -230,6 +235,8 @@ export type AddProductInventoryInput = {
   reorderThreshold: number;
   description: string;
   imageUrl?: string;
+  storeName?: string;
+  sellMode: "online_delivery" | "offline_store_only";
 };
 
 export async function createProductAndInventory(
@@ -252,6 +259,9 @@ export async function createProductAndInventory(
   const image = (input.imageUrl ?? "").trim();
   const batch = writeBatch(db);
 
+  const sellMode =
+    input.sellMode === "online_delivery" ? "online_delivery" : "offline_store_only";
+
   // 1. Product
   const productRef = doc(collection(db, "products"));
   batch.set(productRef, {
@@ -269,6 +279,14 @@ export async function createProductAndInventory(
     source: "retailer_inventory",
     createdAt: now,
     updatedAt: now,
+    isActive: true,
+    retailerId,
+    store: input.storeName || "Local Store",
+    stock: "In Stock",
+    distance: "Nearby",
+    sellMode,
+    isOnline: sellMode === "online_delivery",
+    source: "retailer_inventory"
   });
 
   // 2. Inventory — linked by productId (ownerId-first approach)

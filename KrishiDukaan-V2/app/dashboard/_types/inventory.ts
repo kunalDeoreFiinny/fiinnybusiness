@@ -12,6 +12,10 @@ export interface ProductDoc {
   createdAt?: Timestamp | null;
   updatedAt?: Timestamp | null;
   isActive: boolean;
+  retailerId?: string;
+  store?: string;
+  sellMode?: "online_delivery" | "offline_store_only";
+  isOnline?: boolean;
 
   /** Ownership — primary query fields */
   ownerId?: string;

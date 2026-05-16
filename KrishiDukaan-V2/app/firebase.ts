@@ -12,7 +12,7 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
-  where
+  where,
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { getAnalytics, isSupported } from 'firebase/analytics';
@@ -48,6 +48,18 @@ export type RetailerProduct = {
   unit: string;
 };
 
+type CreateRetailProductInput = {
+  name: string;
+  price: string;
+  description: string;
+  image: string;
+  stock: string;
+  category: string;
+  store: string;
+  distance: string;
+  sellMode?: "online_delivery" | "offline_store_only";
+};
+
 export type RetailerApplication = {
   ownerName: string;
   shopName: string;
@@ -76,6 +88,7 @@ export type RetailerProfile = {
 };
 
 import { MarketplaceProduct } from '../types/product';
+import type { CartItem, OrderDoc, OrderStatus, SellerType } from '../types/order';
 
 export async function saveRetailerApplication(payload: RetailerApplication) {
   const products = payload.products
@@ -135,17 +148,9 @@ export async function saveRetailerProfile(retailerId: string, profile: RetailerP
 
 export async function saveRetailerProduct(
   retailerId: string,
-  product: {
-    name: string;
-    price: string;
-    description: string;
-    image: string;
-    stock: string;
-    category: string;
-    store: string;
-    distance: string;
-  }
+  product: CreateRetailProductInput
 ) {
+  const sellMode = product.sellMode === "online_delivery" ? "online_delivery" : "offline_store_only";
   // 1. Create the product
   await addDoc(collection(db, 'products'), {
     retailerId,
@@ -158,6 +163,8 @@ export async function saveRetailerProduct(
     stock: product.stock.trim() || 'In Stock',
     store: product.store.trim(),
     distance: product.distance.trim() || 'Nearby',
+    sellMode,
+    isOnline: sellMode === "online_delivery",
     source: 'retailer',
     createdAt: serverTimestamp()
   });
@@ -190,6 +197,8 @@ export async function fetchMarketplaceProducts(): Promise<MarketplaceProduct[]> 
           distance: String(data.distance || 'Nearby'),
           retailerId: data.retailerId ? String(data.retailerId) : undefined,
           manufacturerId: data.manufacturerId ? String(data.manufacturerId) : undefined,
+          sellMode: data.sellMode === "online_delivery" ? "online_delivery" : "offline_store_only",
+          isOnline: data.isOnline === true || data.sellMode === "online_delivery",
           availability: data.availability || undefined
         } as MarketplaceProduct;
       })
@@ -251,7 +260,17 @@ export async function fetchStores(): Promise<Store[]> {
   }
 }
 
-export async function saveUserProfile(uid: string, profile: { name: string, email: string, role: string }) {
+export async function saveUserProfile(
+  uid: string,
+  profile: {
+    name: string;
+    email: string;
+    role: string;
+    phone?: string;
+    authEmail?: string;
+    phoneNormalized?: string;
+  }
+) {
   await setDoc(doc(db, 'users', uid), {
     ...profile,
     isPaid: false,
@@ -371,6 +390,12 @@ export async function fetchRetailerProducts(retailerId: string): Promise<Marketp
 }
 
 export async function saveManufacturerProduct(manufacturerId: string, product: any) {
+  const sellMode = product?.sellMode === "online_delivery" ? "online_delivery" : "offline_store_only";
+  // 1. Create the product
+  await addDoc(collection(db, 'products'), {
+    ...product,
+    sellMode,
+    isOnline: sellMode === "online_delivery",
   // 1. Create the product — strip any stale ownership fields from the input
   const { retailerId: _r, ownerType: _ot, ownerId: _oi, store: _s, distance: _d, stock: _st, ...rest } = product;
   await addDoc(collection(db, 'products'), {
@@ -408,12 +433,18 @@ export async function fetchDealers(): Promise<any[]> {
 
 export async function fetchRetailerOrders(retailerId: string): Promise<any[]> {
   try {
-    const q = query(collection(db, 'orders'), where('retailerId', '==', retailerId));
+    const q = query(
+      collection(db, 'orders'),
+      where('sellerId', '==', retailerId),
+      where('sellerType', '==', 'retailer')
+    );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return docs.sort((a: any, b: any) => {
+      const ta = a.createdAt?.toMillis?.() ?? 0;
+      const tb = b.createdAt?.toMillis?.() ?? 0;
+      return tb - ta;
+    });
   } catch (error) {
     console.error('Error fetching retailer orders:', error);
     throw error;
@@ -432,6 +463,86 @@ export async function fetchRetailerInventory(retailerId: string): Promise<any[]>
     console.error('Error fetching retailer inventory:', error);
     throw error;
   }
+}
+
+export async function createOrdersFromCart(params: {
+  customerId: string;
+  customerName: string;
+  customerPhone: string;
+  customerAddress: string;
+  items: CartItem[];
+}): Promise<string[]> {
+  const { customerId, customerName, customerPhone, customerAddress, items } = params;
+  if (!items.length) return [];
+
+  const groups = new Map<string, CartItem[]>();
+  items.forEach((item) => {
+    if (item.sellMode !== "online_delivery") return;
+    const key = `${item.sellerType}:${item.sellerId}`;
+    const list = groups.get(key) ?? [];
+    list.push(item);
+    groups.set(key, list);
+  });
+
+  const createdOrderIds: string[] = [];
+
+  for (const [key, groupItems] of Array.from(groups.entries())) {
+    const [sellerType, sellerId] = key.split(":") as [SellerType, string];
+    const normalizedItems = groupItems.map((item) => ({
+      productId: item.productId,
+      name: item.name,
+      price: item.price,
+      qty: item.qty,
+      lineTotal: Number((item.price * item.qty).toFixed(2)),
+    }));
+    const subtotal = Number(
+      normalizedItems.reduce((sum, row) => sum + row.lineTotal, 0).toFixed(2)
+    );
+
+    const ref = await addDoc(collection(db, "orders"), {
+      customerId,
+      customerName: customerName.trim(),
+      customerPhone: customerPhone.trim(),
+      customerAddress: customerAddress.trim(),
+      sellerId,
+      sellerType,
+      items: normalizedItems,
+      subtotal,
+      deliveryMode: "delivery",
+      status: "placed",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+
+    createdOrderIds.push(ref.id);
+  }
+
+  return createdOrderIds;
+}
+
+export async function fetchIncomingOrdersForSeller(
+  sellerId: string,
+  sellerType: SellerType
+): Promise<OrderDoc[]> {
+  const q = query(
+    collection(db, "orders"),
+    where("sellerId", "==", sellerId),
+    where("sellerType", "==", sellerType)
+  );
+  const snapshot = await getDocs(q);
+  const docs = snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<OrderDoc, "id">) }));
+  return docs.sort((a, b) => {
+    const ta = (a.createdAt as any)?.toMillis?.() ?? 0;
+    const tb = (b.createdAt as any)?.toMillis?.() ?? 0;
+    return tb - ta;
+  });
+}
+
+export async function updateOrderStatus(orderId: string, status: OrderStatus): Promise<void> {
+  await updateDoc(doc(db, "orders", orderId), {
+    status,
+    updatedAt: serverTimestamp(),
+  });
 }
 
 export async function addDealerToContacts(manufacturerId: string, dealerId: string) {
@@ -515,6 +626,12 @@ export interface Hub {
   nutrition: { name: string; desc: string; icon: string }[];
   irrigation: { image: string; items: { name: string; price: string }[] };
   advisory: { title: string; description: string };
+  growthStages?: { phase: string; duration: string; description: string; products: string[] }[];
+  commonMistakes?: string[];
+  idealClimate?: string;
+  soilType?: string;
+  waterNeeds?: string;
+  bestSeason?: string;
 }
 
 export async function trackProductImpression(productId: string, position: number) {

@@ -14,6 +14,8 @@ export type MarketplaceProduct = {
   source?: string;
   /** Back-compat / reference fields */
   manufacturerId?: string;
+  sellMode?: "online_delivery" | "offline_store_only";
+  isOnline?: boolean;
   manufacturerProductId?: string;
   retailerId?: string;
   retailerDocId?: string;

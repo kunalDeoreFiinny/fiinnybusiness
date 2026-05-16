@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import { ICONS } from "../constants";
+import { Leaf, Store, Factory, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth, saveUserProfile } from "../firebase";
@@ -27,9 +28,10 @@ export default function SignupView({
 }: SignupViewProps) {
   const { t } = useI18n();
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"retailer" | "manufacturer">("retailer");
+  const [role, setRole] = useState<"customer" | "retailer" | "manufacturer">("customer");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inviteDetails, setInviteDetails] = useState<SignupInviteDetails | null>(null);
@@ -92,6 +94,13 @@ export default function SignupView({
   const manufacturerLabel =
     inviteDetails?.manufacturerName?.trim() || "this manufacturer";
 
+  const normalizePhone = (value: string) => value.replace(/\D/g, "");
+
+  const customerAuthEmailFromPhone = (value: string) => {
+    const normalized = normalizePhone(value);
+    return `customer.${normalized}@krishidukan.local`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -105,13 +114,34 @@ export default function SignupView({
       return;
     }
 
-    const effectiveRole: "retailer" | "manufacturer" = inviteRetailerOnly ? "retailer" : role;
+    const effectiveRole: "customer" | "retailer" | "manufacturer" = inviteRetailerOnly ? "retailer" : role;
+
+    const normalizedPhone = normalizePhone(phone);
+
+    let authEmail = email.trim().toLowerCase();
+    let profileEmail = authEmail;
+    if (effectiveRole === "customer") {
+      if (normalizedPhone.length < 10) {
+        setError("Please enter a valid mobile number.");
+        setLoading(false);
+        return;
+      }
+      authEmail = customerAuthEmailFromPhone(normalizedPhone);
+      profileEmail = authEmail;
+    }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, authEmail, password);
       const user = userCredential.user;
 
-      const profile = { name, email, role: effectiveRole };
+      const profile = {
+        name,
+        email: profileEmail,
+        role: effectiveRole,
+        phone: normalizedPhone,
+        authEmail,
+        phoneNormalized: normalizedPhone,
+      };
       await saveUserProfile(user.uid, profile);
 
       if (trimmedInvite && inviteDetails?.claimable) {
@@ -196,31 +226,81 @@ export default function SignupView({
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {!inviteRetailerOnly && (
-            <div className="mb-6 flex rounded-2xl border border-outline-variant bg-surface-container-low p-1">
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => setRole("retailer")}
-                className={`flex-1 rounded-xl py-2.5 text-xs font-black uppercase tracking-widest transition-all ${
-                  role === "retailer"
-                    ? "bg-white text-primary shadow-sm"
-                    : "text-on-surface-variant hover:text-on-surface"
-                }`}
-              >
-                {t("retailerShop")}
-              </button>
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => setRole("manufacturer")}
-                className={`flex-1 rounded-xl py-2.5 text-xs font-black uppercase tracking-widest transition-all ${
-                  role === "manufacturer"
-                    ? "bg-white text-primary shadow-sm"
-                    : "text-on-surface-variant hover:text-on-surface"
-                }`}
-              >
-                {t("distributorMfg")}
-              </button>
+            <div className="mb-2">
+              <p className="mb-3 ml-1 text-xs font-black uppercase tracking-widest text-on-surface-variant">
+                I am a…
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                {(
+                  [
+                    {
+                      value: "customer" as const,
+                      icon: Leaf,
+                      label: "Farmer",
+                      sub: "Buy products online",
+                      color: "text-green-600",
+                      bg: "bg-green-50",
+                      activeBg: "bg-green-600",
+                    },
+                    {
+                      value: "retailer" as const,
+                      icon: Store,
+                      label: "Retailer",
+                      sub: "Run an agri shop",
+                      color: "text-blue-600",
+                      bg: "bg-blue-50",
+                      activeBg: "bg-blue-600",
+                    },
+                    {
+                      value: "manufacturer" as const,
+                      icon: Factory,
+                      label: "Distributor",
+                      sub: "Supply & distribute",
+                      color: "text-orange-600",
+                      bg: "bg-orange-50",
+                      activeBg: "bg-orange-600",
+                    },
+                  ] as const
+                ).map(({ value, icon: Icon, label, sub, color, bg, activeBg }) => {
+                  const active = role === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      disabled={loading}
+                      onClick={() => setRole(value)}
+                      className={`relative flex flex-col items-center gap-2 rounded-2xl border-2 px-2 py-4 text-center transition-all disabled:opacity-50 ${
+                        active
+                          ? "border-primary bg-primary/5 shadow-sm"
+                          : "border-outline-variant/40 bg-surface-container-low hover:border-outline-variant hover:bg-surface-container"
+                      }`}
+                    >
+                      {active && (
+                        <CheckCircle2 className="absolute right-2 top-2 h-3.5 w-3.5 text-primary" />
+                      )}
+                      <span
+                        className={`flex h-11 w-11 items-center justify-center rounded-xl transition-colors ${
+                          active ? `${activeBg} text-white` : `${bg} ${color}`
+                        }`}
+                      >
+                        <Icon className="h-5 w-5" />
+                      </span>
+                      <span className="flex flex-col gap-0.5">
+                        <span
+                          className={`text-xs font-black leading-tight ${
+                            active ? "text-primary" : "text-on-surface"
+                          }`}
+                        >
+                          {label}
+                        </span>
+                        <span className="text-[10px] leading-tight text-on-surface-variant">
+                          {sub}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -240,6 +320,26 @@ export default function SignupView({
           </div>
 
           <div className="space-y-2">
+            {role === "customer" && (
+              <>
+                <label className="ml-1 text-xs font-black uppercase tracking-widest text-on-surface-variant">
+                  Mobile Number
+                </label>
+                <input
+                  type="tel"
+                  required
+                  disabled={loading}
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="10-digit mobile number"
+                  className="w-full rounded-2xl border border-outline-variant bg-surface-container-low px-5 py-4 text-sm transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+                />
+              </>
+            )}
+          </div>
+
+          {role !== "customer" && (
+            <div className="space-y-2">
             <label className="ml-1 text-xs font-black uppercase tracking-widest text-on-surface-variant">
               {t("emailAddress")}
             </label>
@@ -252,7 +352,8 @@ export default function SignupView({
               placeholder="name@example.com"
               className="w-full rounded-2xl border border-outline-variant bg-surface-container-low px-5 py-4 text-sm transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
             />
-          </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <label className="ml-1 text-xs font-black uppercase tracking-widest text-on-surface-variant">

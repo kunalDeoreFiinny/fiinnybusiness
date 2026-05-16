@@ -32,6 +32,7 @@ interface ProductDetailViewProps {
   onProductClick?: (id: string) => void;
   onViewSellerAll?: (storeName: string) => void;
   storesWithDistance?: StoreWithDistance[];
+  onAddToCart?: (product: MarketplaceProduct) => void;
 }
 
 export default function ProductDetailView({ 
@@ -42,6 +43,8 @@ export default function ProductDetailView({
   onStoreClick, 
   onProductClick, 
   onViewSellerAll,
+  storesWithDistance = [],
+  onAddToCart,
   storesWithDistance = []
 }: ProductDetailViewProps) {
   const { t } = useI18n();
@@ -268,6 +271,18 @@ export default function ProductDetailView({
           </HelperTooltip>
 
           <div className="flex items-center gap-4 sm:ml-auto">
+            {product.isOnline ? (
+              <button
+                onClick={() => onAddToCart?.(product)}
+                className="h-12 px-8 bg-primary text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2"
+              >
+                <ICONS.AddToCart className="w-5 h-5" /> Add to Cart
+              </button>
+            ) : (
+              <button className="h-12 px-8 bg-primary text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2">
+                <ICONS.Phone className="w-5 h-5" /> In-store Only
+              </button>
+            )}
             <HelperTooltip side="top" textKey="productContact">
               <button className="h-12 px-8 bg-primary text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2">
                 <ICONS.Phone className="w-5 h-5" /> {t('contactForAvailability')}
