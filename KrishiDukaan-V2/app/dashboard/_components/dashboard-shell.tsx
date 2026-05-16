@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { LayoutDashboard, Menu, Package, Settings, Star, UserCircle2 } from "lucide-react";
+import { LayoutDashboard, Menu, Package, ReceiptText, Settings, Star, UserCircle2 } from "lucide-react";
 import { Sidebar } from "./sidebar";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -12,7 +12,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const mobileNav = [
     { href: "/dashboard", label: "Home", icon: LayoutDashboard },
     { href: "/dashboard/inventory", label: "Stock", icon: Package },
-    { href: "/dashboard/reviews", label: "Reviews", icon: Star },
+    { href: "/dashboard/orders", label: "Orders", icon: ReceiptText },
     { href: "/dashboard/profile", label: "Profile", icon: UserCircle2 },
     { href: "/dashboard/settings", label: "Settings", icon: Settings },
   ] as const;

@@ -22,6 +22,7 @@ interface ProductDetailViewProps {
   onProductClick?: (id: string) => void;
   onViewSellerAll?: (storeName: string) => void;
   storesWithDistance?: StoreWithDistance[];
+  onAddToCart?: (product: MarketplaceProduct) => void;
 }
 
 export default function ProductDetailView({ 
@@ -32,7 +33,8 @@ export default function ProductDetailView({
   onStoreClick, 
   onProductClick, 
   onViewSellerAll,
-  storesWithDistance = [] 
+  storesWithDistance = [],
+  onAddToCart,
 }: ProductDetailViewProps) {
   const product = products.find(p => p.id === productId) || products[0];
   const [expandedStoreId, setExpandedStoreId] = useState<string | null>(null);
@@ -230,9 +232,18 @@ export default function ProductDetailView({
           </div>
 
           <div className="flex items-center gap-4 sm:ml-auto">
-            <button className="h-12 px-8 bg-primary text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2">
-              <ICONS.Phone className="w-5 h-5" /> Contact for Availability
-            </button>
+            {product.isOnline ? (
+              <button
+                onClick={() => onAddToCart?.(product)}
+                className="h-12 px-8 bg-primary text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2"
+              >
+                <ICONS.AddToCart className="w-5 h-5" /> Add to Cart
+              </button>
+            ) : (
+              <button className="h-12 px-8 bg-primary text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2">
+                <ICONS.Phone className="w-5 h-5" /> In-store Only
+              </button>
+            )}
           </div>
         </div>
       </div>

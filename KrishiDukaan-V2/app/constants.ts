@@ -23,7 +23,8 @@ import {
   Phone,
   MessageSquare,
   LocateFixed,
-  Navigation
+  Navigation,
+  X
 } from 'lucide-react';
 import { MarketplaceProduct } from '../types/product';
 
@@ -52,7 +53,8 @@ export const ICONS = {
   Phone,
   Chat: MessageSquare,
   MyPosition: LocateFixed,
-  Directions: Navigation
+  Directions: Navigation,
+  X
 };
 
 export const COLORS = {

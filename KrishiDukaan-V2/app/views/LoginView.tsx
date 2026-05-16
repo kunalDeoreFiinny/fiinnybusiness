@@ -13,10 +13,13 @@ interface LoginViewProps {
 
 export default function LoginView({ onBack, onNavigateToSignup, onSuccess }: LoginViewProps) {
   const { t } = useI18n();
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const normalizePhone = (value: string) => value.replace(/\D/g, "");
+  const customerAuthEmailFromPhone = (value: string) => `customer.${normalizePhone(value)}@krishidukan.local`;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +27,9 @@ export default function LoginView({ onBack, onNavigateToSignup, onSuccess }: Log
     setError(null);
     
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const trimmed = identifier.trim().toLowerCase();
+      const authEmail = trimmed.includes('@') ? trimmed : customerAuthEmailFromPhone(trimmed);
+      const userCredential = await signInWithEmailAndPassword(auth, authEmail, password);
       const user = userCredential.user;
       
       const profile = await getUserProfile(user.uid);
@@ -64,14 +69,16 @@ export default function LoginView({ onBack, onNavigateToSignup, onSuccess }: Log
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <label className="text-xs font-black uppercase tracking-widest text-on-surface-variant ml-1">{t('emailAddress')}</label>
+            <label className="text-xs font-black uppercase tracking-widest text-on-surface-variant ml-1">
+              Mobile / Email
+            </label>
             <input 
-              type="email" 
+              type="text"
               required
               disabled={loading}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@example.com"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              placeholder="Mobile number or email"
               className="w-full bg-surface-container-low border border-outline-variant rounded-2xl px-5 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-50"
             />
           </div>

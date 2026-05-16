@@ -14,6 +14,8 @@ export interface ProductDoc {
   isActive: boolean;
   retailerId?: string;
   store?: string;
+  sellMode?: "online_delivery" | "offline_store_only";
+  isOnline?: boolean;
 }
 
 /** Document in `inventory` — `id` is the Firestore document ID. */

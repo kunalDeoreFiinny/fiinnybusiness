@@ -41,6 +41,9 @@ function mapProduct(id: string, data: Record<string, unknown>): ProductDoc {
     isActive: data.isActive !== false,
     retailerId: String(data.retailerId ?? ""),
     store: String(data.store ?? ""),
+    sellMode:
+      data.sellMode === "online_delivery" ? "online_delivery" : "offline_store_only",
+    isOnline: data.isOnline === true || data.sellMode === "online_delivery",
   };
 }
 
@@ -122,6 +125,7 @@ export type AddProductInventoryInput = {
   description: string;
   imageUrl?: string;
   storeName?: string;
+  sellMode: "online_delivery" | "offline_store_only";
 };
 
 export async function createProductAndInventory(
@@ -131,6 +135,9 @@ export async function createProductAndInventory(
   const now = serverTimestamp();
   const price = input.sellingPrice;
   const image = (input.imageUrl ?? "").trim();
+
+  const sellMode =
+    input.sellMode === "online_delivery" ? "online_delivery" : "offline_store_only";
 
   const productRef = doc(collection(db, "products"));
   const inventoryRef = doc(collection(db, "inventory"));
@@ -150,6 +157,8 @@ export async function createProductAndInventory(
     store: input.storeName || "Local Store",
     stock: "In Stock",
     distance: "Nearby",
+    sellMode,
+    isOnline: sellMode === "online_delivery",
     source: "retailer_inventory"
   });
 

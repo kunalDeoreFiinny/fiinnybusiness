@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Package, PlusCircle, BarChart3, Star } from "lucide-react";
+import { Package, PlusCircle, BarChart3, ReceiptText } from "lucide-react";
 
 const actions = [
   {
@@ -21,10 +21,10 @@ const actions = [
     icon: BarChart3,
   },
   {
-    href: "/dashboard/reviews",
-    label: "Reply to reviews",
-    sub: "Recent feedback",
-    icon: Star,
+    href: "/dashboard/orders",
+    label: "Manage orders",
+    sub: "Incoming delivery orders",
+    icon: ReceiptText,
   },
 ] as const;
 

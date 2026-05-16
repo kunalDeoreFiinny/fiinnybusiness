@@ -29,6 +29,7 @@ interface ProductFormState {
   stock: string;
   category: string;
   distance: string;
+  sellMode: "online_delivery" | "offline_store_only";
 }
 
 const initialProductForm: ProductFormState = {
@@ -38,7 +39,8 @@ const initialProductForm: ProductFormState = {
   image: '',
   stock: 'In Stock',
   category: 'general',
-  distance: 'Nearby'
+  distance: 'Nearby',
+  sellMode: 'offline_store_only'
 };
 
 export default function ProfileView({
@@ -172,6 +174,10 @@ export default function ProfileView({
           <input type="text" required value={productForm.name} onChange={(e) => setProductForm((p) => ({ ...p, name: e.target.value }))} placeholder="Product Name" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
           <input type="number" required min="1" value={productForm.price} onChange={(e) => setProductForm((p) => ({ ...p, price: e.target.value }))} placeholder="Price (₹)" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
           <input type="text" required value={productForm.category} onChange={(e) => setProductForm((p) => ({ ...p, category: e.target.value }))} placeholder="Category (seeds/fertilizers/tools)" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+          <select value={productForm.sellMode} onChange={(e) => setProductForm((p) => ({ ...p, sellMode: e.target.value as "online_delivery" | "offline_store_only" }))} className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+            <option value="offline_store_only">Offline store only</option>
+            <option value="online_delivery">Online + Delivery</option>
+          </select>
           <input type="text" required value={productForm.stock} onChange={(e) => setProductForm((p) => ({ ...p, stock: e.target.value }))} placeholder="Stock Status (In Stock)" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
           <input type="text" required value={productForm.distance} onChange={(e) => setProductForm((p) => ({ ...p, distance: e.target.value }))} placeholder="Distance (e.g. 2.5km)" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
           <input type="url" required value={productForm.image} onChange={(e) => setProductForm((p) => ({ ...p, image: e.target.value }))} placeholder="Product Image URL" className="bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />

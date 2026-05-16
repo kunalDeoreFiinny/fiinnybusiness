@@ -11,7 +11,7 @@ import { MarketplaceProduct } from '../../types/product';
 import { reverseGeocodeToDisplay } from '../../app/utils/geolocation';
 import { HelperIcon } from '../helpers';
 
-type View = 'home' | 'market' | 'hub' | 'product' | 'map' | 'about' | 'profile' | 'login' | 'signup' | 'subscription';
+type View = 'home' | 'market' | 'hub' | 'product' | 'map' | 'about' | 'profile' | 'login' | 'signup' | 'subscription' | 'cart';
 
 interface NavbarProps {
   currentView?: View;
@@ -28,6 +28,8 @@ interface NavbarProps {
   allStores?: any[];
   onProductClick?: (id: string) => void;
   onStoreClick?: (id: string) => void;
+  cartCount?: number;
+  onCartClick?: () => void;
 }
 
 export function Navbar({
@@ -45,6 +47,8 @@ export function Navbar({
   allStores = [],
   onProductClick,
   onStoreClick,
+  cartCount = 0,
+  onCartClick,
 }: NavbarProps) {
   const router = useRouter();
   const [localUser, setLocalUser] = useState<any>(null);
@@ -370,13 +374,17 @@ export function Navbar({
         <div className="flex items-center gap-2 shrink-0">
           {/* Cart icon (placeholder) */}
           <button
+            onClick={() => {
+              if (onCartClick) onCartClick();
+              else navigate('cart');
+            }}
             className="relative p-2 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-colors text-on-surface"
             aria-label="Cart"
-            title="Cart (coming soon)"
+            title="Cart"
           >
-            <ICONS.Market className="w-4 h-4" />
+            <ICONS.Cart className="w-4 h-4" />
             <span className="absolute -top-1 -right-1 bg-secondary text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
-              0
+              {Math.min(99, cartCount)}
             </span>
           </button>
 

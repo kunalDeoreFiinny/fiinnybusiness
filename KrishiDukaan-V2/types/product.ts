@@ -12,6 +12,8 @@ export type MarketplaceProduct = {
   distance: string;
   retailerId?: string;
   manufacturerId?: string;
+  sellMode?: "online_delivery" | "offline_store_only";
+  isOnline?: boolean;
   availability?: {
     storeId: string;
     stockLevel: string;

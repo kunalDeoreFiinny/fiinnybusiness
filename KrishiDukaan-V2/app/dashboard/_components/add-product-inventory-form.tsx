@@ -14,6 +14,7 @@ const empty = {
   reorderThreshold: "",
   description: "",
   imageUrl: "",
+  sellMode: "offline_store_only" as "online_delivery" | "offline_store_only",
 };
 
 type AddProductInventoryFormProps = {
@@ -78,6 +79,7 @@ export function AddProductInventoryForm({
         description: form.description,
         imageUrl: form.imageUrl.trim() || undefined,
         storeName: storeName,
+        sellMode: form.sellMode,
       });
       setForm(empty);
       setMessage({ type: "ok", text: "Product and inventory created." });
@@ -175,6 +177,24 @@ export function AddProductInventoryForm({
             <option value="bundle">Bundle</option>
             <option value="can">Can</option>
             <option value="drum">Drum</option>
+          </select>
+        </label>
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="font-medium text-on-surface">Sell mode</span>
+          <select
+            required
+            disabled={disabled || submitting || !retailerId || isLimitReached || noSeats}
+            className="rounded-xl border border-outline-variant/40 bg-surface-container-low px-3 py-2 text-on-surface outline-none ring-primary/30 focus:ring-2 disabled:opacity-50 appearance-none"
+            value={form.sellMode}
+            onChange={(e) =>
+              setForm((f) => ({
+                ...f,
+                sellMode: e.target.value as "online_delivery" | "offline_store_only",
+              }))
+            }
+          >
+            <option value="offline_store_only">Offline store only</option>
+            <option value="online_delivery">Online + Delivery</option>
           </select>
         </label>
         <label className="flex flex-col gap-1.5 text-sm">
