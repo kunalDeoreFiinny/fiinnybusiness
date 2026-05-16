@@ -11,11 +11,13 @@ import {
 
 type InviteCardProps = {
   inviteCode: string;
+  shopName: string;
+  /** Used as the mailto recipient — may be empty if retailer has no email. */
   retailerEmail: string;
   onDismiss: () => void;
 };
 
-export function InviteCard({ inviteCode, retailerEmail, onDismiss }: InviteCardProps) {
+export function InviteCard({ inviteCode, shopName, retailerEmail, onDismiss }: InviteCardProps) {
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
@@ -62,9 +64,12 @@ export function InviteCard({ inviteCode, retailerEmail, onDismiss }: InviteCardP
       >
         <X className="h-4 w-4" />
       </button>
-      <p className="pr-10 text-sm font-semibold text-primary">Invite created</p>
+
+      <p className="pr-10 text-sm font-semibold text-primary">Retailer added</p>
       <p className="mt-1 text-sm text-on-surface-variant">
-        Share this signup link with <span className="font-medium text-on-surface">{retailerEmail}</span>
+        Share this signup link with{" "}
+        <span className="font-medium text-on-surface">{shopName || "the retailer"}</span> so they can
+        create their account and join your network.
       </p>
       <p className="mt-2 break-all font-mono text-xs text-on-surface-variant">{inviteLink}</p>
 
@@ -100,13 +105,15 @@ export function InviteCard({ inviteCode, retailerEmail, onDismiss }: InviteCardP
           <MessageCircle className="h-4 w-4" />
           Share on WhatsApp
         </a>
-        <a
-          href={mailtoHref}
-          className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/40 bg-surface-container-low px-3 py-2 text-sm font-medium text-on-surface hover:bg-surface-container"
-        >
-          <Mail className="h-4 w-4" />
-          Share via email
-        </a>
+        {retailerEmail ? (
+          <a
+            href={mailtoHref}
+            className="inline-flex items-center gap-2 rounded-xl border border-outline-variant/40 bg-surface-container-low px-3 py-2 text-sm font-medium text-on-surface hover:bg-surface-container"
+          >
+            <Mail className="h-4 w-4" />
+            Share via email
+          </a>
+        ) : null}
       </div>
     </div>
   );

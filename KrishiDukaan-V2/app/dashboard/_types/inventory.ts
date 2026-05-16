@@ -12,20 +12,36 @@ export interface ProductDoc {
   createdAt?: Timestamp | null;
   updatedAt?: Timestamp | null;
   isActive: boolean;
-  retailerId?: string;
-  store?: string;
+
+  /** Ownership — primary query fields */
+  ownerId?: string;
+  ownerType?: "manufacturer" | "retailer";
+  createdBy?: string;
+  source?: string;
+
+  /** Set on assigned copies — links back to original manufacturer product */
+  manufacturerId?: string;
+  manufacturerProductId?: string;
+  retailerDocId?: string;
 }
 
-/** Document in `inventory` — `id` is the Firestore document ID. */
+/**
+ * Document in `inventory` collection.
+ * New records are keyed by productId; legacy records may also carry `retailerId`.
+ */
 export interface InventoryDoc {
   id: string;
-  retailerId: string;
+  /** Legacy field — present on older retailer inventory records. */
+  retailerId?: string;
   productId: string;
   stockQuantity: number;
   sellingPrice: number;
   reorderThreshold: number;
   isAvailable: boolean;
   updatedAt?: Timestamp | null;
+  assignedByManufacturer?: boolean;
+  manufacturerProductId?: string;
+  retailerDocId?: string;
 }
 
 export type StockStatus = "out_of_stock" | "low_stock" | "in_stock";
@@ -41,6 +57,20 @@ export interface InventoryRow {
   sellingPrice: number;
   reorderThreshold: number;
   status: StockStatus;
+  updatedAt: Date | null;
+  /** 'retailer_inventory' | 'manufacturer_assigned' */
+  source?: string;
+}
+
+/** Row for the manufacturer's catalogue table (no stock/inventory data). */
+export interface ManufacturerProductRow {
+  productId: string;
+  productName: string;
+  category: string;
+  unit: string;
+  price: number;
+  source: string;
+  isActive: boolean;
   updatedAt: Date | null;
 }
 

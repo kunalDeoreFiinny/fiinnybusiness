@@ -156,16 +156,23 @@ export default function ProfilePage() {
       }
       autocompleteListenerRef.current = null;
 
+      // Include establishment type so users can search their own business by name.
+      // place.name auto-fills businessName; address_components fill address fields.
       const autocomplete = new window.google.maps.places.Autocomplete(addressInputRef.current, {
-        fields: ["formatted_address", "geometry", "address_components"],
-        types: ["geocode"],
+        fields: ["name", "formatted_address", "geometry", "address_components"],
+        types: ["establishment", "geocode"],
       });
 
       const listener = autocomplete.addListener("place_changed", () => {
         const place = autocomplete.getPlace();
-        if (!place || !place.address_components?.length) return;
-        const nextFields = extractAddressFields(place as Parameters<typeof extractAddressFields>[0]);
-        setForm((prev) => ({ ...prev, ...nextFields }));
+        if (!place) return;
+        if (place.name) {
+          setForm((prev) => ({ ...prev, businessName: place.name }));
+        }
+        if (place.address_components?.length) {
+          const nextFields = extractAddressFields(place as Parameters<typeof extractAddressFields>[0]);
+          setForm((prev) => ({ ...prev, ...nextFields }));
+        }
         applyPlaceGeometry(place);
       });
 
@@ -358,15 +365,20 @@ export default function ProfilePage() {
             </label>
 
             <label className="md:col-span-2 flex flex-col gap-1.5 text-sm">
-              <span className="font-medium text-on-surface">Address</span>
+              <span className="font-medium text-on-surface">
+                Search business on Google Maps
+                <span className="ml-1 font-normal text-on-surface-variant">
+                  — auto-fills name & address
+                </span>
+              </span>
               <input
                 ref={addressInputRef}
                 required
                 value={form.line1}
                 onChange={(e) => setForm((p) => ({ ...p, line1: e.target.value }))}
                 className="rounded-xl border border-outline-variant/40 bg-surface-container-low px-3 py-2 text-on-surface outline-none ring-primary/30 focus:ring-2"
-                placeholder="Start typing and select an address"
-                autoComplete="street-address"
+                placeholder="Type your business name or address to search Google Maps"
+                autoComplete="off"
               />
             </label>
 

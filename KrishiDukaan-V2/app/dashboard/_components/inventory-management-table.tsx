@@ -99,7 +99,7 @@ export function InventoryManagementTable({
   if (!hasRows) {
     return (
       <div className="rounded-2xl border border-dashed border-outline-variant/50 bg-surface-container-low/50 px-4 py-12 text-center text-sm text-on-surface-variant">
-        No inventory yet. Add a product using the form below.
+        No inventory yet. Add a product using the form below, or wait for a manufacturer to assign one.
       </div>
     );
   }

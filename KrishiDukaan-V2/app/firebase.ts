@@ -294,7 +294,7 @@ export async function updateSubscriptionStatus(
     updatedAt: timestamp
   }, { merge: true });
 
-  // 2. Create a payment record for tracking
+  // 2. Create payment + subscription records for tracking
   if (status === 'paid') {
     try {
       await addDoc(collection(db, 'payments'), {
@@ -307,6 +307,28 @@ export async function updateSubscriptionStatus(
         timestamp: timestamp,
         status: 'success'
       });
+
+      // Write to subscriptions collection — one record per payment, never overwrite
+      const now = new Date();
+      const expiry = new Date(now);
+      expiry.setMonth(expiry.getMonth() + 1); // 1-month seat validity
+      const { Timestamp: FsTimestamp } = await import('firebase/firestore');
+      await addDoc(collection(db, 'subscriptions'), {
+        ownerId: uid,
+        ownerType: 'manufacturer',
+        planName: 'Standard',
+        seatsPurchased: seatCount,
+        amountPaid: seatCount * 21,
+        currency: 'INR',
+        razorpayOrderId: paymentDetails?.orderId ?? null,
+        razorpayPaymentId: paymentDetails?.paymentId ?? null,
+        subscriptionStatus: 'active',
+        startDate: FsTimestamp.fromDate(now),
+        expiryDate: FsTimestamp.fromDate(expiry),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+
       return { profileUpdated: true, paymentLogged: true };
     } catch (error) {
       const paymentLogError = error instanceof Error ? error.message : 'Unable to write payment log.';
@@ -320,12 +342,14 @@ export async function updateSubscriptionStatus(
 
 export async function fetchManufacturerProducts(manufacturerId: string): Promise<MarketplaceProduct[]> {
   try {
-    const q = query(collection(db, 'products'), where('manufacturerId', '==', manufacturerId));
+    // ownerId == manufacturerId returns only own products — assigned copies now belong to retailer
+    const q = query(
+      collection(db, 'products'),
+      where('ownerId', '==', manufacturerId),
+      where('ownerType', '==', 'manufacturer'),
+    );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as MarketplaceProduct));
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MarketplaceProduct));
   } catch (error) {
     console.error('Error fetching manufacturer products:', error);
     throw error;
@@ -347,11 +371,15 @@ export async function fetchRetailerProducts(retailerId: string): Promise<Marketp
 }
 
 export async function saveManufacturerProduct(manufacturerId: string, product: any) {
-  // 1. Create the product
+  // 1. Create the product — strip any stale ownership fields from the input
+  const { retailerId: _r, ownerType: _ot, ownerId: _oi, store: _s, distance: _d, stock: _st, ...rest } = product;
   await addDoc(collection(db, 'products'), {
-    ...product,
+    ...rest,
+    ownerId: manufacturerId,
+    ownerType: 'manufacturer',
+    createdBy: manufacturerId,
     manufacturerId,
-    source: 'manufacturer',
+    source: 'manufacturer_inventory',
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   });
