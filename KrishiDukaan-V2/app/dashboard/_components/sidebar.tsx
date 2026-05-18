@@ -39,6 +39,31 @@ const manufacturerExtras = [
   { href: "/dashboard/manufacturer/retailers", label: "Retailer network", icon: UsersRound },
 ] as const;
 
+function hrefToTourKey(href: string): string {
+  switch (href) {
+    case "/dashboard":
+      return "overview";
+    case "/dashboard/analytics":
+      return "analytics";
+    case "/dashboard/inventory":
+      return "inventory";
+    case "/dashboard/subscription":
+      return "subscription";
+    case "/dashboard/orders":
+      return "orders";
+    case "/dashboard/reviews":
+      return "reviews";
+    case "/dashboard/profile":
+      return "profile";
+    case "/dashboard/settings":
+      return "settings";
+    case "/dashboard/manufacturer/retailers":
+      return "retailer-network";
+    default:
+      return "";
+  }
+}
+
 type SidebarProps = {
   mobileOpen: boolean;
   onMobileOpenChange: (open: boolean) => void;
@@ -131,10 +156,12 @@ export function Sidebar({ mobileOpen, onMobileOpenChange }: SidebarProps) {
               href === "/dashboard"
                 ? pathname === "/dashboard"
                 : pathname.startsWith(href);
+            const tourKey = hrefToTourKey(href);
             return (
               <Link
                 key={href}
                 href={href}
+                data-tour-dash={tourKey}
                 onClick={() => onMobileOpenChange(false)}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
