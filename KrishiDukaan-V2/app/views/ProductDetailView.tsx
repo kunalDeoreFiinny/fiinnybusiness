@@ -15,14 +15,6 @@ type StoreListItem = {
   stock?: string[];
 };
 
-// type StoreListItem = {
-//   id: string;
-//   name: string;
-//   distance?: string;
-//   status?: string;
-//   stock?: string[];
-// };
-
 interface ProductDetailViewProps {
   products?: MarketplaceProduct[];
   stores?: StoreListItem[];
@@ -43,12 +35,8 @@ export default function ProductDetailView({
   onStoreClick, 
   onProductClick, 
   onViewSellerAll,
-<<<<<<< HEAD
   storesWithDistance = [],
   onAddToCart,
-=======
-  storesWithDistance = []
->>>>>>> teammate2/main
 }: ProductDetailViewProps) {
   const { t } = useI18n();
   const product = products.find(p => p.id === productId) || products[0];
@@ -274,26 +262,20 @@ export default function ProductDetailView({
           </HelperTooltip>
 
           <div className="flex items-center gap-4 sm:ml-auto">
-<<<<<<< HEAD
             {product.isOnline ? (
               <button
                 onClick={() => onAddToCart?.(product)}
                 className="h-12 px-8 bg-primary text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2"
               >
-                <ICONS.AddToCart className="w-5 h-5" /> Add to Cart
+                <ICONS.AddToCart className="w-5 h-5" /> {t('addToCart')}
               </button>
             ) : (
-              <button className="h-12 px-8 bg-primary text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2">
-                <ICONS.Phone className="w-5 h-5" /> In-store Only
-              </button>
+              <HelperTooltip side="top" textKey="productContact">
+                <button className="h-12 px-8 bg-primary text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2">
+                  <ICONS.Phone className="w-5 h-5" /> {t('contactForAvailability')}
+                </button>
+              </HelperTooltip>
             )}
-=======
-            <HelperTooltip side="top" textKey="productContact">
-              <button className="h-12 px-8 bg-primary text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2">
-                <ICONS.Phone className="w-5 h-5" /> {t('contactForAvailability')}
-              </button>
-            </HelperTooltip>
->>>>>>> teammate2/main
           </div>
         </div>
       </div>
