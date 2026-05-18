@@ -279,14 +279,12 @@ export async function createProductAndInventory(
     source: "retailer_inventory",
     createdAt: now,
     updatedAt: now,
-    isActive: true,
-    retailerId,
+    retailerId: ownerId,
     store: input.storeName || "Local Store",
     stock: "In Stock",
     distance: "Nearby",
     sellMode,
     isOnline: sellMode === "online_delivery",
-    source: "retailer_inventory"
   });
 
   // 2. Inventory — linked by productId (ownerId-first approach)

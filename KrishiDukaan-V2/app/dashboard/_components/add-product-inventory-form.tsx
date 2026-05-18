@@ -34,11 +34,21 @@ type AddProductInventoryFormProps = {
   seatStats: SeatStats;
 };
 
-const emptyForm = {
+const emptyForm: {
+  name: string;
+  category: typeof CATEGORIES[number];
+  unit: string;
+  sellingPrice: string;
+  stockQuantity: string;
+  description: string;
+  imageUrl: string;
+  sellMode: "offline_store_only" | "online_delivery";
+} = {
   name: "",
   category: CATEGORIES[0],
   unit: "pkt",
   sellingPrice: "",
+  stockQuantity: "",
   description: "",
   imageUrl: "",
   sellMode: "offline_store_only" as "online_delivery" | "offline_store_only",
@@ -217,7 +227,7 @@ export function AddProductInventoryForm({
           <span className="font-medium text-on-surface">Sell mode</span>
           <select
             required
-            disabled={disabled || submitting || !retailerId || isLimitReached || noSeats}
+            disabled={isDisabled}
             className="rounded-xl border border-outline-variant/40 bg-surface-container-low px-3 py-2 text-on-surface outline-none ring-primary/30 focus:ring-2 disabled:opacity-50 appearance-none"
             value={form.sellMode}
             onChange={(e) =>
@@ -238,7 +248,7 @@ export function AddProductInventoryForm({
             type="number"
             min={0}
             step={1}
-            disabled={disabled || submitting || !retailerId || isLimitReached || noSeats}
+            disabled={isDisabled}
             className="rounded-xl border border-outline-variant/40 bg-surface-container-low px-3 py-2 text-on-surface outline-none ring-primary/30 focus:ring-2 disabled:opacity-50"
             value={form.stockQuantity}
             onChange={(e) => setForm((f) => ({ ...f, stockQuantity: e.target.value }))}

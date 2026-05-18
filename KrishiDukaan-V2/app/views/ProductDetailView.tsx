@@ -45,7 +45,6 @@ export default function ProductDetailView({
   onViewSellerAll,
   storesWithDistance = [],
   onAddToCart,
-  storesWithDistance = []
 }: ProductDetailViewProps) {
   const { t } = useI18n();
   const product = products.find(p => p.id === productId) || products[0];

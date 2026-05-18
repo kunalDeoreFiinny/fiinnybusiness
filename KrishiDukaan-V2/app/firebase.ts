@@ -391,12 +391,7 @@ export async function fetchRetailerProducts(retailerId: string): Promise<Marketp
 
 export async function saveManufacturerProduct(manufacturerId: string, product: any) {
   const sellMode = product?.sellMode === "online_delivery" ? "online_delivery" : "offline_store_only";
-  // 1. Create the product
-  await addDoc(collection(db, 'products'), {
-    ...product,
-    sellMode,
-    isOnline: sellMode === "online_delivery",
-  // 1. Create the product — strip any stale ownership fields from the input
+  // Strip stale ownership fields from input before saving
   const { retailerId: _r, ownerType: _ot, ownerId: _oi, store: _s, distance: _d, stock: _st, ...rest } = product;
   await addDoc(collection(db, 'products'), {
     ...rest,
