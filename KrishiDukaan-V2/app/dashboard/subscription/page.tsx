@@ -392,7 +392,7 @@ export default function SubscriptionPage() {
                 </h2>
                 <p className="text-sm text-on-surface-variant">
                   Manufacturers have placed these products in your store. They consume the
-                  manufacturer's seats, not yours. Manage stock in Inventory.
+                  manufacturer&apos;s seats, not yours. Manage stock in Inventory.
                 </p>
               </div>
               <div className="overflow-hidden rounded-2xl border border-outline-variant/30 bg-surface-container-lowest shadow-ambient">

@@ -103,10 +103,17 @@ export function Sidebar({ mobileOpen, onMobileOpenChange }: SidebarProps) {
         <div className="flex h-14 items-center justify-between gap-2 border-b border-outline-variant/30 px-4 md:h-16">
           <Link
             href="/dashboard"
-            className="font-semibold text-primary"
+            className="flex items-center gap-2 hover:scale-[1.02] transition-transform"
             onClick={() => onMobileOpenChange(false)}
           >
-            Shop Dashboard
+            <img 
+              src="/images/krishidukan icon.webp" 
+              alt="Logo" 
+              className="w-8 h-8 object-contain"
+            />
+            <span className="font-black text-sm text-primary tracking-tight">
+              Krishi<span className="text-secondary">Dukan</span>
+            </span>
           </Link>
           <button
             type="button"

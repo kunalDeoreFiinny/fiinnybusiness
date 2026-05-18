@@ -373,7 +373,7 @@ export default function MarketView({
                       <div className="flex items-center gap-1.5 text-secondary bg-secondary/5 px-2 py-0.5 rounded-lg cursor-help">
                         <ICONS.Market className="w-3 h-3" />
                         <span className="text-[10px] font-bold tracking-tight">
-                          {product.store} • {formatDistance(dist)}
+                          {product.store} • {formatDistance(dist, t('nearby'))}
                         </span>
                       </div>
                     </HelperTooltip>
