@@ -10,7 +10,7 @@ import { HelperIcon } from '../../components/helpers';
 interface HomeViewProps {
   products?: MarketplaceProduct[];
   onProductClick: (id: string) => void;
-  onHubClick: () => void;
+  onHubClick: (hubId?: string) => void;
   onCategoryClick?: (categoryId: string) => void;
 }
 
@@ -255,7 +255,7 @@ export default function HomeView({
             <motion.button
               key={crop.id}
               whileHover={{ y: -3 }}
-              onClick={onHubClick}
+              onClick={() => onHubClick(crop.id)}
               className="group bg-surface-container-low rounded-2xl p-3 flex flex-col items-center gap-2 shadow-sm hover:shadow-ambient hover:bg-surface-container transition-all border border-transparent hover:border-outline-variant"
             >
               <div className="w-14 h-14 rounded-full bg-white shadow-sm overflow-hidden border border-surface-container-highest group-hover:scale-110 transition-transform">

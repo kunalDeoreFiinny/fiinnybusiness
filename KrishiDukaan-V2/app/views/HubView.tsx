@@ -340,6 +340,47 @@ const FALLBACK_HUBS: Hub[] = [
       'Neglecting thrips control in early stages.',
       'High nitrogen application during bulb storage preparation.'
     ]
+  },
+  {
+    id: 'orange',
+    name: 'Orange',
+    heroImage: 'https://images.unsplash.com/photo-1582979512210-99b6a53386f9?auto=format&fit=crop&q=80',
+    tagline: 'Advanced Citrus Management for Vibrant Color and High Brix Value.',
+    idealClimate: 'Warm temperate to Tropical (15°C - 35°C)',
+    soilType: 'Deep, well-drained loamy soil',
+    waterNeeds: 'Moderate but Regular',
+    bestSeason: 'Spring Flowering',
+    seeds: [
+      { name: 'Nagpur Mandarin', price: 120, img: 'https://images.unsplash.com/photo-1557800636-894a64c1696f?auto=format&fit=crop&q=80' },
+      { name: 'Power Plus Booster', price: 1350, img: '/product-images/Product_Images/Power Plus.png' }
+    ],
+    nutrition: [
+      { name: 'Zinc Sulphate', desc: 'Prevents interveinal chlorosis and mottling', icon: 'Science' },
+      { name: 'Potassium Nitrate', desc: 'Improves fruit weight and rind quality', icon: 'Water' }
+    ],
+    irrigation: {
+      image: 'https://images.unsplash.com/photo-1533728646964-b5b6329fc5f4?auto=format&fit=crop&q=80',
+      items: [
+        { name: 'Micro-sprinklers', price: '₹85/pc' },
+        { name: 'Filter Unit', price: '₹3500/pc' }
+      ]
+    },
+    advisory: {
+      title: 'Citrus Dieback Prevention Strategy',
+      description: 'Dieback is often caused by root rot and micronutrient deficiency. Ensure your drainage is perfect. Use Bordeaux mixture as a protective spray after every pruning session.'
+    },
+    growthStages: [
+      { phase: 'Dormancy', duration: 'Winter', description: 'The tree stores energy; ideal time for corrective pruning.', products: ['Bordeaux Mixture'] },
+      { phase: 'Flowering', duration: 'Spring', description: 'Main bloom period; sensitive to sudden temperature shifts.', products: ['Zinc', 'Boron'] },
+      { phase: 'Fruit Set', duration: 'Late Spring', description: 'Initial fruit drop is normal; maintain consistent moisture.', products: ['Potassium Nitrate'] },
+      { phase: 'Color Break', duration: 'Autumn', description: 'Fruit turns from green to orange as temperatures drop.', products: ['Calcium Nitrate'] },
+      { phase: 'Harvest', duration: 'Winter', description: 'Harvest once the Brix-Acid ratio is optimal for taste.', products: ['Power Plus'] }
+    ],
+    commonMistakes: [
+      'Neglecting the removal of "Water Sprouts" (vigorous non-fruiting stems).',
+      'Over-irrigation leading to Phytophthora root rot.',
+      'Late-season nitrogen application reducing cold hardiness.'
+    ]
   }
 ];
 
