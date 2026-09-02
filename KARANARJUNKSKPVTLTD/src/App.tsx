@@ -10,6 +10,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import ModuleGate from './components/ModuleGate';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import type { AppScreen } from './contexts/AuthContext';
+import { navFeatureGroupForPath, isFeatureGroupAllowed } from './utils/subscriptionCatalog';
 import { SchemaProvider } from './contexts/SchemaContext';
 import { ToastProvider } from './contexts/ToastContext';
 import ToastContainer from './components/ToastContainer';
@@ -23,6 +24,7 @@ const DashboardPage          = lazy(() => import('./pages/DashboardPage'));
 const B2CDashboardPage       = lazy(() => import('./pages/B2CDashboardPage'));
 const LoginPage              = lazy(() => import('./pages/LoginPage'));
 const AdminHubPage           = lazy(() => import('./pages/AdminHubPage'));
+const SuperAdminSubscriptionsPage = lazy(() => import('./pages/SuperAdminSubscriptionsPage'));
 const TeamPerformancePage    = lazy(() => import('./pages/TeamPerformancePage'));
 const StorefrontPage         = lazy(() => import('./pages/StorefrontPage'));
 const ErpHandoffPage         = lazy(() => import('./pages/ErpHandoffPage'));
@@ -127,7 +129,7 @@ function Layout({ children, currentTheme, toggleTheme }: { children: React.React
   const location = useLocation();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { currentUser, userRole, tenantData, permissions, logout } = useAuth();
+  const { currentUser, userRole, tenantData, tenantId, permissions, logout, hasPlanScreen, planEntitlements, subscriptionLoading } = useAuth();
   const can = useFeaturePermissions();
 
   const handleLogout = () => {
@@ -162,6 +164,57 @@ function Layout({ children, currentTheme, toggleTheme }: { children: React.React
           </div>
         </div>
         <main style={{ padding: '2rem', maxWidth: '1100px', margin: '0 auto' }}>{children}</main>
+      </div>
+    );
+  }
+
+  // Subscription inactive guard — shown for any non-master tenant whose subscription
+  // is missing, suspended, or cancelled. Bypassed while the subscription is still
+  // resolving to avoid a flash. Master tenant (super admin) is never blocked.
+  const subscriptionActive =
+    !planEntitlements.hasSubscription
+      ? false
+      : ['active', 'trial', 'past_due'].includes(planEntitlements.status ?? '');
+  const showInactiveScreen =
+    !subscriptionLoading &&
+    !!currentUser &&
+    !!tenantId &&
+    tenantId !== 'master' &&
+    !subscriptionActive;
+
+  if (showInactiveScreen) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--surface-base)', display: 'flex', flexDirection: 'column' }}>
+        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.5rem', background: 'var(--surface-raised)', borderBottom: '1px solid var(--surface-border)' }}>
+          <h2 className="primary-gradient-text" style={{ fontSize: '1.35rem', margin: 0, letterSpacing: '-0.03em' }}>
+            {tenantData?.businessName || 'Fiinny ERP'}
+          </h2>
+          <button
+            onClick={handleLogout}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: 'transparent', border: '1px solid var(--surface-border)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-secondary)', font: 'inherit', fontSize: '0.875rem' }}
+          >
+            <LogOut size={16} /> Logout
+          </button>
+        </header>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', textAlign: 'center' }}>
+          <div style={{ maxWidth: '480px' }}>
+            <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'hsla(0,84%,60%,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+              <ShieldAlert size={36} style={{ color: 'var(--danger)' }} />
+            </div>
+            <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>
+              Subscription Not Active
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', lineHeight: 1.6, marginBottom: '0' }}>
+              Your subscription is not active. Please contact{' '}
+              <strong style={{ color: 'var(--text-primary)' }}>Anshul Dhanpure</strong>{' '}
+              at{' '}
+              <a href="tel:8658032795" style={{ color: 'var(--primary-light)', fontWeight: 600, textDecoration: 'none' }}>
+                8658032795
+              </a>{' '}
+              to activate your subscription.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -229,6 +282,11 @@ function Layout({ children, currentTheme, toggleTheme }: { children: React.React
     if (isSalesUser) return SALES_NAV_PATHS.includes(item.path);
     if (!isOwner && !isShopkeeper) return false;
     if (isShopkeeper && BASIC_PLAN_HIDDEN_PATHS.includes(item.path)) return false;
+    // Subscription plan gate — hide screens the tenant's plan excludes (rule 1),
+    // plus the feature group for screen-sharing modules (e.g. Supplier Ledger).
+    if (!hasPlanScreen(item.screenKey as AppScreen)) return false;
+    const navGroup = navFeatureGroupForPath(item.path);
+    if (navGroup && !isFeatureGroupAllowed(navGroup, planEntitlements)) return false;
     // Module-level role permission gate (existing behaviour).
     if (userRole && permissions && !permissions[userRole]?.[item.screenKey as AppScreen]) return false;
     // Main Navbar Feature Matrix — single source of truth for the tabs it covers.
@@ -246,9 +304,19 @@ function Layout({ children, currentTheme, toggleTheme }: { children: React.React
     { path: '/settings',                   icon: <Settings size={17} />,    label: t('common.settings'),              screenKey: 'settings' },
     { path: '/krishidukan',                icon: <Package size={17} />,     label: '🌾 KrishiDukan',                  screenKey: 'krishidukan' },
   ].filter(item => {
+    // Subscription plan gate first, then the module-level role permission gate.
+    if (!hasPlanScreen(item.screenKey as AppScreen)) return false;
+    const navGroup = navFeatureGroupForPath(item.path);
+    if (navGroup && !isFeatureGroupAllowed(navGroup, planEntitlements)) return false;
     if (userRole && permissions && !permissions[userRole]?.[item.screenKey as AppScreen]) return false;
     return true;
   });
+
+  // Platform Super Admin entry — only the master tenant admin sees it. Not
+  // screen/plan-gated (it is how the super admin seeds and assigns plans).
+  if (tenantId === 'master' && userRole === 'admin') {
+    adminItems.push({ path: '/super-admin', icon: <ShieldAlert size={17} />, label: '🛡️ Super Admin', screenKey: 'admin' });
+  }
 
   const isAdminPath = adminItems.some(i => location.pathname === i.path || location.pathname.startsWith(i.path + '/'));
 
@@ -463,7 +531,7 @@ function App() {
 }
 
 function AppRoutes() {
-  const { currentUser, tenantId, userRole, loading, roleLandingPages } = useAuth();
+  const { currentUser, tenantId, userRole, loading, roleLandingPages, planEntitlements } = useAuth();
   const locationHook = useLocation();
 
   if (loading) return null;
@@ -502,10 +570,17 @@ function AppRoutes() {
   const landingFor = (role: string | null, allowed?: string[]): string => {
     const configured = (role && roleLandingPages?.[role]) || '';
     const fallback = (role && DEFAULT_LANDING[role]) || '/dashboard';
-    if (!configured) return fallback;
-    // For confined roles, ignore a configured landing outside their allowed paths.
-    if (allowed && !allowed.some(p => configured.startsWith(p))) return fallback;
-    return configured;
+    if (configured) {
+      // For confined roles, ignore a configured landing outside their allowed paths.
+      if (allowed && !allowed.some(p => configured.startsWith(p))) return fallback;
+      return configured;
+    }
+    // Plan-level default applies to admin/analyst — confined roles ignore it.
+    if (!allowed && (role === 'admin' || role === 'analyst')) {
+      const planDefault = planEntitlements.defaultLandingPath || '';
+      if (planDefault) return planDefault;
+    }
+    return fallback;
   };
   const onEntryPage = locationHook.pathname === '/' || locationHook.pathname === '/login';
 
@@ -630,6 +705,10 @@ function AppRoutes() {
       {/* Admin — single hash-based hub. Sub-tabs live at /admin#<tab>; each
           tab's own role/permission gate is enforced inside AdminHubPage. */}
       <Route path="/admin" element={<ProtectedRoute requireRole={['admin', 'analyst']} appScreen="admin"><AdminHubPage /></ProtectedRoute>} />
+      {/* Super Admin subscription management — platform-level. NO appScreen (never
+          plan-gated, so the master admin can always reach it to seed/assign plans);
+          the page itself hard-guards to the master tenant admin. */}
+      <Route path="/super-admin" element={<ProtectedRoute requireRole={['admin']}><SuperAdminSubscriptionsPage /></ProtectedRoute>} />
       {/* Team Performance — also a standalone navbar destination; navbar visibility
           is driven by the Main Navbar Feature Matrix (navbar.teamPerformance.view).
           The Admin sub-tab at /admin#team-performance remains intact. */}
@@ -637,7 +716,7 @@ function AppRoutes() {
       <Route path="/customers" element={<ProtectedRoute requireRole={['admin', 'analyst', 'shopkeeper']} appScreen="customers"><CustomersPage /></ProtectedRoute>} />
       <Route path="/customers/:id" element={<ProtectedRoute requireRole={['admin', 'analyst', 'shopkeeper']} appScreen="customers"><CustomerProfilePage /></ProtectedRoute>} />
       {/* Legacy /admin/* deep links → hash equivalents (bookmarks stay working) */}
-      <Route path="/admin/manage-roles" element={<Navigate to="/admin#role-matrix" replace />} />
+      <Route path="/admin/manage-roles" element={<Navigate to="/admin#feature-permissions" replace />} />
       <Route path="/admin/data-security" element={<Navigate to="/admin#data-security" replace />} />
       <Route path="/admin/audit-log" element={<Navigate to="/admin#audit-log" replace />} />
       <Route path="/admin/manage-retailers" element={<Navigate to="/admin#manage-retailers" replace />} />
